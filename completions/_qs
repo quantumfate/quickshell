@@ -1,0 +1,83 @@
+#compdef qs quickshell
+# Zsh completion for Quickshell, focused on the `ipc` surface.
+#
+# IPC targets and functions are read live from `qs [-c <config>] ipc show`, so
+# this never goes stale as the shell's IpcHandlers change. Config names complete
+# from $XDG_CONFIG_HOME/quickshell/*/shell.qml.
+#
+# Install: put this file in a directory on your $fpath (e.g. symlink into
+#   ~/.local/share/zsh/site-functions/_qs) and ensure `autoload -U compinit`
+#   runs. See the quickshell repo README.
+
+_qs_configs() {
+  local -a configs
+  configs=(${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/*/shell.qml(N:h:t))
+  _describe -t configs 'config' configs
+}
+
+_qs_subcommands() {
+  local -a cmds
+  cmds=(
+    'ipc:communicate with a running instance'
+    'list:list running instances'
+    'kill:kill instances'
+    'log:show instance logs'
+  )
+  _describe -t commands 'qs command' cmds
+}
+
+_qs_ipc() {
+  local state
+  _arguments -C \
+    '1:subcommand:(call show)' \
+    '*::arg:->ipcargs'
+
+  [[ $state == ipcargs ]] || return
+  [[ $words[1] == call ]] || return
+
+  local -a lines
+  lines=(${(f)"$(qs ${_qs_cfg:+-c $_qs_cfg} ipc show 2>/dev/null)"})
+
+  if (( CURRENT == 2 )); then
+    # Complete the target name.
+    local -a targets
+    targets=(${(M)lines:#target *})
+    targets=(${targets#target })
+    _describe -t targets 'ipc target' targets
+  elif (( CURRENT == 3 )); then
+    # Complete a function of the chosen target.
+    local target=$words[2] cur='' l
+    local -a funcs
+    for l in $lines; do
+      if [[ $l == target\ * ]]; then
+        cur=${l#target }
+      elif [[ $l == '  function '* && $cur == $target ]]; then
+        l=${l#  function }
+        funcs+=(${l%%\(*})
+      fi
+    done
+    _describe -t functions 'ipc function' funcs
+  fi
+}
+
+_qs() {
+  local curcontext="$curcontext" state
+  typeset -A opt_args
+
+  _arguments -C \
+    '(-c --config)'{-c,--config}'[config name]:config:_qs_configs' \
+    '(-p --path)'{-p,--path}'[config path]:path:_files' \
+    '(-h --help)'{-h,--help}'[print help]' \
+    '1: :_qs_subcommands' \
+    '*::arg:->args'
+
+  # Remember the selected config for sub-completers.
+  typeset -g _qs_cfg=${opt_args[-c]:-${opt_args[--config]}}
+
+  [[ $state == args ]] || return
+  case $words[1] in
+    ipc) _qs_ipc ;;
+  esac
+}
+
+_qs "$@"

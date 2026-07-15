@@ -1,6 +1,12 @@
 # quantumfate quickshell
 
-Desktop shell built on [Quickshell](https://quickshell.outfoxxed.me/).
+Desktop shell built on [Quickshell](https://quickshell.outfoxxed.me/). Part of
+the quantumfate desktop, alongside the
+[**hypr**](https://github.com/quantumfate/hypr) compositor config and the
+[**scripts**](https://github.com/quantumfate/scripts) CLI helpers.
+
+**See [ARCHITECTURE.md](ARCHITECTURE.md)** for how the UI and Hyprland config
+bridge (shared JSON state + IPC).
 
 ## Run
 
@@ -79,6 +85,29 @@ The order lives in **one** JSON file; everything else reads it.
    qs -c quantumfate ipc call dofus select duo  # switch active team
    qs -c quantumfate ipc call dofusPanel toggle # show/hide the HUD
    ```
+
+## IPC surface
+
+```sh
+qs -c quantumfate ipc show           # raw signatures of every target
+qs -c quantumfate ipc call help all  # annotated overview with examples
+```
+
+Targets: `help`, `theme`, `dofus`, `dofusPanel`, `cheatsheet`. When you add an
+`IpcHandler`, document it in `modules/common/IpcHelp.qml`.
+
+### zsh completion
+
+`completions/_qs` completes configs, `ipc` subcommands, and — by reading
+`qs ipc show` live — every target and its functions (so it never goes stale).
+Install by putting it on your `$fpath`:
+
+```sh
+mkdir -p ~/.local/share/zsh/site-functions
+ln -s "$PWD/completions/_qs" ~/.local/share/zsh/site-functions/_qs
+# ensure this dir is on $fpath before `compinit` in ~/.zshrc:
+#   fpath=(~/.local/share/zsh/site-functions $fpath)
+```
 
 Writers (UI, scripts) edit the JSON; `DofusState` watches the file and reloads,
 so all consumers converge. Editing in the UI writes the file back.
