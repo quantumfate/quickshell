@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Read/query the Dofus team SoT from shell scripts (dofus_swap.py, hypr, etc).
+# The JSON is the truth; Quickshell is just one editor of it.
+#
+#   dofus-team names            ordered names of the active team (one per line)
+#   dofus-team names <team>     ordered names of a specific team
+#   dofus-team titles           names with the "Dofus " window-title prefix
+#   dofus-team selected         active team key
+#   dofus-team path             path to the SoT file
+#
+# Prefer the live Quickshell value if it's running (in case of unsaved edits),
+# else fall back to the file directly.
+set -euo pipefail
+
+FILE="${XDG_STATE_HOME:-$HOME/.local/state}/dofus/team.json"
+
+_names_file() {
+    local team="${1:-$(jq -r .selected "$FILE")}"
+    jq -r --arg t "$team" '.teams[$t][]' "$FILE"
+}
+
+case "${1:-names}" in
+    names)
+        if qs -c quantumfate ipc call dofus team 2>/dev/null; then :; else
+            _names_file "${2:-}"
+        fi
+        ;;
+    titles)
+        prefix="$(jq -r '.title_prefix' "$FILE")"
+        _names_file "${2:-}" | sed "s/^/$prefix/"
+        ;;
+    selected) jq -r .selected "$FILE" ;;
+    path)     printf '%s\n' "$FILE" ;;
+    *) echo "usage: dofus-team {names|titles|selected|path} [team]" >&2; exit 2 ;;
+esac

@@ -1,0 +1,3 @@
+singleton Config Config.qml
+singleton DofusState DofusState.qml
+Store Store.qml
