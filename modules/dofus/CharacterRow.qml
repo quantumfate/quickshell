@@ -12,14 +12,14 @@ RowLayout {
 
     Text {
         text: (row.index + 1) + "."
-        color: "#8892b0"
+        color: Theme.subtext
         font.pixelSize: 13
         Layout.preferredWidth: 18
     }
 
     Text {
         text: row.name
-        color: "white"
+        color: Theme.text
         font.pixelSize: 14
         Layout.fillWidth: true
         elide: Text.ElideRight
@@ -33,9 +33,9 @@ RowLayout {
     component RowButton: Rectangle {
         property string label
         signal clicked
-        width: 20; height: 20; radius: 4
-        color: ma.containsMouse ? "#33ffffff" : "transparent"
-        Text { anchors.centerIn: parent; text: parent.label; color: "#c0c8e0"; font.pixelSize: 11 }
+        width: 20; height: 20; radius: Theme.radiusSmall
+        color: ma.containsMouse ? Theme.surface : "transparent"
+        Text { anchors.centerIn: parent; text: parent.label; color: Theme.subtext; font.pixelSize: 11 }
         MouseArea { id: ma; anchors.fill: parent; hoverEnabled: true; onClicked: parent.clicked() }
     }
 }

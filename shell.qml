@@ -3,8 +3,12 @@
 // Each top-level widget is a Scope/window. Add bars, notifications, etc. here.
 import Quickshell
 import "modules/dofus"
+import "modules/cheatsheet"
 
 ShellRoot {
     // Dofus team HUD + editor. Toggled via IPC / Hyprland submap.
     DofusTeam {}
+
+    // Themed which-key keybind cheatsheet. Toggled via IPC.
+    CheatSheet {}
 }

@@ -37,18 +37,18 @@ Scope {
 
         Rectangle {
             anchors.fill: parent
-            radius: 12
-            color: "#dd1b1e2b"
-            border { width: 1; color: "#33ffffff" }
+            radius: Theme.radius
+            color: Theme.withAlpha(Theme.background, 0.87)
+            border { width: 1; color: Theme.border }
 
             ColumnLayout {
                 id: col
-                anchors { fill: parent; margins: 12 }
+                anchors { fill: parent; margins: Theme.pad }
                 spacing: 6
 
                 Text {
                     text: DofusState.selected.toUpperCase()
-                    color: "#8fb3ff"
+                    color: Theme.accent
                     font { pixelSize: 12; bold: true; letterSpacing: 1 }
                 }
 
