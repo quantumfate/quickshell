@@ -34,6 +34,7 @@ Scope {
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None   // don't steal game focus
+        WlrLayershell.namespace: "quickshell-dofus"          // targeted by hypr layerrules
 
         Rectangle {
             anchors.fill: parent
