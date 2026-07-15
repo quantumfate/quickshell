@@ -21,6 +21,32 @@ Install (symlink so edits are live):
 ln -s ~/Projects/github/quantumfate/quickshell ~/.config/quickshell/quantumfate
 ```
 
+## Editor setup (QML completion)
+
+Completion/diagnostics come from the QML language server, `qmlls`. Two things
+matter:
+
+1. **Use a real Qt `qmlls`** (e.g. `qmlls6`, Qt 6.11 — matching the Qt Quickshell
+   is built against), not a minimal standalone build. The Qt one knows the
+   default import root.
+2. **Point it at the import path** so `import Quickshell` / `import QtQuick`
+   resolve: pass `-I /usr/lib/qt6/qml` (where Quickshell installs its modules).
+
+Neovim (this repo's owner uses lspconfig):
+
+```lua
+qmlls = {
+  cmd = { "qmlls6", "-I", "/usr/lib/qt6/qml" },
+  filetypes = { "qml", "qmljs" },
+  root_markers = { ".qmlls.ini", "shell.qml", ".git" },
+}
+```
+
+When `qs` is running it also drops a `.qmlls.ini` symlink here pointing at its
+per-launch VFS `buildDir`, which gives qmlls type info for *your own* components
+and singletons on top of the installed modules. That file is git-ignored (the
+path is ephemeral); the stable, editor-agnostic setup is the `-I` flag above.
+
 ## Layout
 
 ```
