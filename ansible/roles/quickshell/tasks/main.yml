@@ -1,0 +1,37 @@
+---
+- name: Install Quickshell runtime packages
+  become: true
+  community.general.pacman:
+    name: "{{ quickshell_packages }}"
+    state: present
+  when: quickshell_install_packages | bool
+
+- name: Install extra Dofus tooling
+  become: true
+  community.general.pacman:
+    name: "{{ quickshell_extra_packages }}"
+    state: present
+  when: quickshell_install_extra_packages | bool
+
+- name: Ensure the quickshell config directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_user_dir }}/.config/quickshell"
+    state: directory
+    mode: "0755"
+
+- name: Symlink this config into place
+  ansible.builtin.file:
+    src: "{{ quickshell_repo_path | realpath }}"
+    dest: "{{ ansible_user_dir }}/.config/quickshell/{{ quickshell_config_name }}"
+    state: link
+    force: true
+
+# State files (team.json, theme.json) are self-seeded by the shell on first run
+# via Store defaults, so we only need the directory to exist.
+- name: Ensure the XDG state directory exists
+  ansible.builtin.file:
+    path: >-
+      {{ (ansible_env.XDG_STATE_HOME | default(ansible_user_dir + '/.local/state'))
+         + '/dofus' }}
+    state: directory
+    mode: "0755"

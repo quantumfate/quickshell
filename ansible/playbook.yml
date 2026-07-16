@@ -1,0 +1,15 @@
+---
+# Standalone entrypoint — deploy this Quickshell config to the local machine:
+#
+#   ansible-playbook ansible/playbook.yml --ask-become-pass
+#
+# From a separate controller, import instead of running directly (see README):
+#   - import_playbook: path/to/quickshell/ansible/playbook.yml
+# or include just the role:
+#   roles: [{ role: quickshell }]   # with ansible/roles on your roles_path
+- name: Deploy quantumfate Quickshell config
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - role: quickshell

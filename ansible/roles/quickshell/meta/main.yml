@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: quickshell
+  namespace: quantumfate
+  author: quantumfate
+  description: Deploy the quantumfate Quickshell desktop config.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Archlinux
+      versions:
+        - all
+  galaxy_tags:
+    - quickshell
+    - wayland
+    - hyprland
+    - desktop
+dependencies: []

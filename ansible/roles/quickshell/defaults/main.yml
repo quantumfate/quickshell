@@ -1,0 +1,25 @@
+---
+# Config name: installed at ~/.config/quickshell/<name>, run with `qs -c <name>`.
+quickshell_config_name: quantumfate
+
+# Path to this repo checkout on the target. Defaults to the repo this role ships
+# in; override when importing from a controller that clones it elsewhere.
+quickshell_repo_path: "{{ playbook_dir }}/.."
+
+# Runtime packages (Arch). Set false to manage them yourself.
+quickshell_install_packages: true
+quickshell_packages:
+  - quickshell        # the shell itself
+  - qt6-declarative   # qmlls6 + QtQuick modules
+  - jq                # shell-side store queries
+  - libnotify         # notify-send for IPC query bindings
+  - uwsm              # session-scoped autostart
+
+# Extra tooling used by the Dofus turn-swap script (optional).
+quickshell_install_extra_packages: false
+quickshell_extra_packages:
+  - python-pillow
+  - python-imagehash
+  - grim
+  - slurp
+  - xdotool

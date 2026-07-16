@@ -21,6 +21,34 @@ Install (symlink so edits are live):
 ln -s ~/Projects/github/quantumfate/quickshell ~/.config/quickshell/quantumfate
 ```
 
+State files (`team.json`, `theme.json`) are **self-seeded** on first run from
+`Store` defaults, so a fresh checkout just works — no manual copying.
+
+## Deploy
+
+Two provisioning paths, each an importable "output" you can wire into a larger
+controller/config:
+
+- **Ansible** — `ansible/`. Run directly:
+  ```sh
+  ansible-galaxy collection install -r ansible/requirements.yml
+  ansible-playbook ansible/playbook.yml --ask-become-pass
+  ```
+  Or import the `quickshell` role from your own controller (see
+  `ansible/requirements.yml`). Installs runtime packages (Arch), symlinks the
+  config, ensures the state dir.
+
+- **Nix flake** — `flake.nix`. Import the home-manager module:
+  ```nix
+  # inputs.quantumfate-quickshell.url = "github:quantumfate/quickshell";
+  imports = [ inputs.quantumfate-quickshell.homeManagerModules.default ];
+  programs.quantumfate-quickshell.enable = true;
+  ```
+  Also exposes `packages.<system>.default` (the config tree) and a
+  `devShells.<system>.default` with `quickshell` + `qmlls` + tools.
+
+Both rely on the shell self-seeding state, so neither copies data files.
+
 ## Editor setup (QML completion)
 
 Completion/diagnostics come from the QML language server, `qmlls`. Two things
