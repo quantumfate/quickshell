@@ -21,8 +21,14 @@ Item {
     required property string name
     readonly property string path: Config.stateDir + "/" + name + ".json"
 
+    // Seed written on first run when the file is missing or empty, so a fresh
+    // checkout/machine works with no manual provisioning. Leave {} for none.
+    property var defaults: ({})
+
     property var data: ({})
     signal changed()
+
+    function _hasDefaults() { return Object.keys(root.defaults).length > 0; }
 
     function get(...keys) {
         let v = root.data;
@@ -52,13 +58,22 @@ Item {
         watchChanges: true
         onFileChanged: reload()
         onLoaded: {
+            const raw = (text() || "").trim();
+            if ((raw === "" || raw === "{}") && root._hasDefaults()) {
+                root.put(root.defaults); // seed an empty/blank file
+                return;
+            }
             try {
-                root.data = JSON.parse(text() || "{}");
+                root.data = JSON.parse(raw || "{}");
                 root.changed();
             } catch (e) {
                 console.warn("Store(" + root.name + "): bad JSON", e);
             }
         }
-        onLoadFailed: (err) => console.warn("Store(" + root.name + "): load failed", err)
+        // Missing file: seed defaults (which creates it), else just warn.
+        onLoadFailed: (err) => {
+            if (root._hasDefaults()) root.put(root.defaults);
+            else console.warn("Store(" + root.name + "): load failed", err);
+        }
     }
 }

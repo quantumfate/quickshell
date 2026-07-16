@@ -12,7 +12,22 @@ import "."
 Singleton {
     id: root
 
-    Store { id: store; name: "dofus/team" }
+    Store {
+        id: store
+        name: "dofus/team"
+        // Seed on first run (fresh machine/checkout) so the team exists without
+        // manual provisioning. Order is meaningful.
+        defaults: ({
+            title_prefix: "Dofus ",
+            selected: "pioneer",
+            teams: {
+                pioneer: [
+                    "Reminiscer", "Sayer", "Rejecter", "Draintouch",
+                    "Traumafactory", "Memoryfracture", "Dissipate", "Miserymaker"
+                ]
+            }
+        })
+    }
 
     readonly property string titlePrefix: store.get("title_prefix") ?? "Dofus "
     readonly property string selected: store.get("selected") ?? "pioneer"

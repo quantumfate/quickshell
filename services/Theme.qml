@@ -15,7 +15,7 @@ import "."
 Singleton {
     id: root
 
-    Store { id: store; name: "theme" }
+    Store { id: store; name: "theme"; defaults: ({ palette: "frappe" }) }
 
     readonly property string name: store.get("palette") ?? "frappe"
 
