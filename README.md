@@ -150,15 +150,31 @@ qs -c quantumfate ipc call help all  # annotated overview with examples
 Targets: `help`, `theme`, `dofus`, `dofusPanel`, `cheatsheet`. When you add an
 `IpcHandler`, document it in `modules/common/IpcHelp.qml`.
 
+### `qfs` wrapper
+
+`qfs` (in the [scripts](https://github.com/quantumfate/scripts) repo) wraps the
+IPC surface so you rarely type the long form:
+
+```sh
+qfs                       # annotated overview  (ipc call help all)
+qfs show                  # raw signatures      (ipc show)
+qfs theme cycle           # ipc call theme cycle
+qfs window rename "..."   # ipc call window rename ...
+qfs kill | log | list     # passthrough to qs -c <config>
+```
+
+Config name via `$QFS_CONFIG` (default `quantumfate`).
+
 ### zsh completion
 
-`completions/_qs` completes configs, `ipc` subcommands, and — by reading
-`qs ipc show` live — every target and its functions (so it never goes stale).
-Install by putting it on your `$fpath`:
+`completions/_qs` (for raw `qs`) and `completions/_qfs` (for `qfs`) both read
+`qs ipc show` live, so every target and function completes and never goes stale.
+Install by putting them on your `$fpath`:
 
 ```sh
 mkdir -p ~/.local/share/zsh/site-functions
-ln -s "$PWD/completions/_qs" ~/.local/share/zsh/site-functions/_qs
+ln -s "$PWD/completions/_qs"  ~/.local/share/zsh/site-functions/_qs
+ln -s "$PWD/completions/_qfs" ~/.local/share/zsh/site-functions/_qfs
 # ensure this dir is on $fpath before `compinit` in ~/.zshrc:
 #   fpath=(~/.local/share/zsh/site-functions $fpath)
 ```

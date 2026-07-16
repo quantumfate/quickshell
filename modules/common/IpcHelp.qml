@@ -36,6 +36,9 @@ Scope {
                 "",
                 "cheatsheet  — keybind overlay (modules/cheatsheet/CheatSheet.qml)",
                 "  show | hide | toggle     Which-key list for the active submap.",
+                "",
+                "window  — focused-window control (modules/common/WindowIpc.qml)",
+                "  rename <title>           Rename the active (XWayland) window's title.",
                 ""
             ].join("\n");
         }

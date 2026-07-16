@@ -1,0 +1,44 @@
+#compdef qfs
+# Completion for `qfs` (quantumfate shell IPC wrapper, in the scripts repo).
+# Targets and functions are read live from `qs -c <config> ipc show`, so it never
+# goes stale as IpcHandlers change. Config via $QFS_CONFIG (default quantumfate).
+#
+# Install: put on your $fpath, e.g. symlink into ~/.local/share/zsh/site-functions.
+
+_qfs() {
+  local config="${QFS_CONFIG:-quantumfate}"
+  local -a lines
+  lines=(${(f)"$(qs -c $config ipc show 2>/dev/null)"})
+
+  if (( CURRENT == 2 )); then
+    local -a specials targets
+    specials=(
+      'show:raw target/function signatures'
+      'help:annotated overview'
+      'list:running instances'
+      'kill:kill instances'
+      'log:instance logs'
+    )
+    targets=(${${(M)lines:#target *}#target })
+    _describe -t commands 'qfs command' specials
+    _describe -t targets 'ipc target' targets
+
+  elif (( CURRENT == 3 )); then
+    case $words[2] in
+      show|help|list|kill|log) return ;;
+    esac
+    local target=$words[2] cur='' l
+    local -a funcs
+    for l in $lines; do
+      if [[ $l == target\ * ]]; then
+        cur=${l#target }
+      elif [[ $l == '  function '* && $cur == $target ]]; then
+        l=${l#  function }
+        funcs+=(${l%%\(*})
+      fi
+    done
+    _describe -t functions 'ipc function' funcs
+  fi
+}
+
+_qfs "$@"
