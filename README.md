@@ -47,7 +47,11 @@ controller/config:
   Also exposes `packages.<system>.default` (the config tree) and a
   `devShells.<system>.default` with `quickshell` + `qmlls` + tools.
 
-Both rely on the shell self-seeding state, so neither copies data files.
+Both handle the **full** manual setup — runtime packages (incl. `xdotool` for
+window rename), the config symlink, the `_qs`/`_qfs` zsh completions + `fpath`
+wiring — and rely on the shell self-seeding state, so neither copies data files.
+(`qfs` itself ships in the [scripts](https://github.com/quantumfate/scripts)
+repo; autostart lives in the [hypr](https://github.com/quantumfate/hypr) config.)
 
 ## Editor setup (QML completion)
 

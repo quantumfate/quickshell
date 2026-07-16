@@ -13,7 +13,19 @@ quickshell_packages:
   - qt6-declarative   # qmlls6 + QtQuick modules
   - jq                # shell-side store queries
   - libnotify         # notify-send for IPC query bindings
+  - xdotool           # window rename IPC + launch renaming
   - uwsm              # session-scoped autostart
+
+# Install the _qs/_qfs zsh completions and add the dir to fpath.
+quickshell_install_zsh_completions: true
+quickshell_completion_dir: "{{ ansible_user_dir }}/.local/share/zsh/site-functions"
+quickshell_completions:
+  - _qs
+  - _qfs
+# Add the completion dir to fpath in .zshrc (before compinit). Set false to wire
+# fpath yourself.
+quickshell_manage_zshrc: true
+quickshell_zshrc: "{{ ansible_user_dir }}/.zshrc"
 
 # Extra tooling used by the Dofus turn-swap script (optional).
 quickshell_install_extra_packages: false

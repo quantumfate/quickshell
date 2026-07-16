@@ -35,3 +35,31 @@
          + '/dofus' }}
     state: directory
     mode: "0755"
+
+- name: Ensure the zsh completion directory exists
+  ansible.builtin.file:
+    path: "{{ quickshell_completion_dir }}"
+    state: directory
+    mode: "0755"
+  when: quickshell_install_zsh_completions | bool
+
+- name: Symlink the zsh completions (_qs, _qfs)
+  ansible.builtin.file:
+    src: "{{ (quickshell_repo_path | realpath) + '/completions/' + item }}"
+    dest: "{{ quickshell_completion_dir }}/{{ item }}"
+    state: link
+    force: true
+  loop: "{{ quickshell_completions }}"
+  when: quickshell_install_zsh_completions | bool
+
+- name: Add the completion dir to fpath (before compinit)
+  ansible.builtin.blockinfile:
+    path: "{{ quickshell_zshrc }}"
+    marker: "# {mark} ANSIBLE quantumfate quickshell completions"
+    insertbefore: BOF
+    create: false
+    block: |
+      fpath=({{ quickshell_completion_dir }} $fpath)
+  when:
+    - quickshell_install_zsh_completions | bool
+    - quickshell_manage_zshrc | bool

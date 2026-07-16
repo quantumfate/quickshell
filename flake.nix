@@ -37,7 +37,7 @@
             installPhase = ''
               dest="$out/share/quickshell/quantumfate"
               mkdir -p "$dest"
-              cp -r shell.qml services modules assets "$dest/"
+              cp -r shell.qml services modules assets completions "$dest/"
             '';
           };
         }
@@ -82,20 +82,41 @@
               defaultText = lib.literalExpression "quickshell.packages.\${system}.default";
               description = "Quickshell package to install.";
             };
+            enableZshCompletions = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Install the _qs/_qfs zsh completions and add them to fpath (needs programs.zsh).";
+            };
           };
 
-          config = lib.mkIf cfg.enable {
-            # Symlink the whole config tree into place. State files live in
-            # $XDG_STATE_HOME and are self-seeded by the shell, so nothing here is
-            # written to at runtime except the git-ignored .qmlls.ini (harmless if
-            # the store path is read-only).
-            xdg.configFile."quickshell/${cfg.name}".source = self;
-            home.packages = [
-              cfg.package
-              pkgs.jq
-              pkgs.libnotify
-            ];
-          };
+          config = lib.mkIf cfg.enable (lib.mkMerge [
+            {
+              # Symlink the whole config tree into place. State files live in
+              # $XDG_STATE_HOME and are self-seeded by the shell, so nothing here
+              # is written at runtime except the git-ignored .qmlls.ini (harmless
+              # if the store path is read-only).
+              xdg.configFile."quickshell/${cfg.name}".source = self;
+
+              # Runtime deps: the shell, jq (store queries), libnotify
+              # (notify-send IPC bindings), xdotool (window rename + launch).
+              home.packages = [
+                cfg.package
+                pkgs.jq
+                pkgs.libnotify
+                pkgs.xdotool
+              ];
+            }
+
+            (lib.mkIf cfg.enableZshCompletions {
+              home.file.".local/share/zsh/site-functions/_qs".source = ./completions/_qs;
+              home.file.".local/share/zsh/site-functions/_qfs".source = ./completions/_qfs;
+              # Put the dir on fpath before compinit. Requires programs.zsh; for
+              # HM < 25.05 use initExtraBeforeCompInit instead of initContent.
+              programs.zsh.initContent = lib.mkOrder 550 ''
+                fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
+              '';
+            })
+          ]);
         };
     };
 }
