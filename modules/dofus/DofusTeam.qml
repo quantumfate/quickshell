@@ -5,7 +5,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
-import "root:/services"   // DofusState, Config singletons
+import "../../services"   // DofusState, Config singletons
 
 Scope {
     id: scope

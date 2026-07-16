@@ -2,7 +2,7 @@
 // Editing here mutates DofusState, which persists to team.json.
 import QtQuick
 import QtQuick.Layouts
-import "root:/services"   // DofusState
+import "../../services"   // DofusState
 
 RowLayout {
     id: row
