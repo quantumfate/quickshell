@@ -10,8 +10,9 @@ ShellRoot {
     // `qs -c quantumfate ipc call help all` — annotated IPC overview.
     IpcHelp {}
 
-    // `qs -c quantumfate ipc call window rename "..."` — rename focused window.
-    WindowIpc {}
+    // Window renaming: headless `window rename`, and the `window prompt` widget
+    // opened from the Dofus team submap.
+    WindowRename {}
 
     // Dofus team HUD + editor. Toggled via IPC / Hyprland submap.
     DofusTeam {}
