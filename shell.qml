@@ -19,4 +19,8 @@ ShellRoot {
 
     // Themed which-key keybind cheatsheet. Toggled via IPC.
     CheatSheet {}
+
+    // Passive peek variant: non-focus, non-dimming contextual panel driven by
+    // the Hyprland submap event system (hypr/events/peek.lua).
+    CheatSheetPeek {}
 }

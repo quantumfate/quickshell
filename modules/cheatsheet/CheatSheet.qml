@@ -15,6 +15,7 @@ import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"
+import "CheatParse.js" as CheatParse
 
 Scope {
     id: scope
@@ -22,10 +23,7 @@ Scope {
     property bool shown: false
     property string submap: ""          // "" = root/default
     property var cats: []               // [{ name, rows: [{ combo, desc }] }]
-    readonly property var columns: splitColumns(cats)  // [leftCats, rightCats]
-
-    // Hyprland modmask bit flags -> readable names.
-    readonly property var modNames: ({ 1: "SHIFT", 4: "CTRL", 8: "ALT", 64: "SUPER" })
+    readonly property var columns: CheatParse.splitColumns(cats)  // [leftCats, rightCats]
 
     // Preferred category ordering; unlisted categories sort alphabetically after.
     readonly property var categoryOrder: [
@@ -58,67 +56,8 @@ Scope {
         id: refresh
         command: ["hyprctl", "binds", "-j"]
         stdout: StdioCollector {
-            onStreamFinished: scope.cats = scope.parse(text)
+            onStreamFinished: scope.cats = CheatParse.parse(text, scope.submap, scope.categoryOrder)
         }
-    }
-
-    function combo(modmask, key) {
-        let parts = [];
-        for (const bit in scope.modNames)
-            if ((modmask & bit) === Number(bit)) parts.push(scope.modNames[bit]);
-        parts.push(key);
-        return parts.join(" + ");
-    }
-
-    // Derive a category + tidy label from a bind description. A "Cat: label"
-    // prefix wins (e.g. "Workspace: Focus 5"); otherwise bucket by keywords.
-    function categorize(desc) {
-        const m = desc.match(/^([A-Za-z][\w &/'-]*?):\s*(.+)$/);
-        if (m) return { cat: m[1], label: m[2] };
-        if (desc.endsWith("…") || desc.endsWith("...")) return { cat: "Menus", label: desc };
-        const d = desc.toLowerCase();
-        if (/volume|mute|media|player|track|brightness/.test(d)) return { cat: "Media", label: desc };
-        if (/window|focus|swap|close|minimize|float|fullscreen|maximize/.test(d)) return { cat: "Window", label: desc };
-        if (/workspace/.test(d)) return { cat: "Workspace", label: desc };
-        if (/keyboard layout|screen|capture|hyprpicker|hex|picker/.test(d)) return { cat: "Utilities", label: desc };
-        return { cat: "General", label: desc };
-    }
-
-    function parse(jsonText) {
-        let binds;
-        try { binds = JSON.parse(jsonText); } catch (e) { return []; }
-        const seen = {};
-        const groups = {};   // category -> [{ combo, desc }]
-        for (const b of binds) {
-            if (!b.description) continue;
-            if ((b.submap || "") !== scope.submap) continue;
-            const c = combo(b.modmask || 0, b.key);
-            const parts = categorize(b.description);
-            const dedup = parts.cat + "|" + c + "|" + parts.label;
-            if (seen[dedup]) continue;
-            seen[dedup] = true;
-            (groups[parts.cat] || (groups[parts.cat] = [])).push({ combo: c, desc: parts.label });
-        }
-        const order = scope.categoryOrder;
-        const rank = (n) => { const i = order.indexOf(n); return i === -1 ? order.length : i; };
-        return Object.keys(groups)
-            .sort((a, b) => (rank(a) - rank(b)) || a.localeCompare(b))
-            .map((name) => ({
-                name: name,
-                rows: groups[name].sort((x, y) => x.combo.localeCompare(y.combo))
-            }));
-    }
-
-    // Greedily balance categories across two columns by total height (rows+header).
-    function splitColumns(list) {
-        const left = [], right = [];
-        let lh = 0, rh = 0;
-        for (const c of (list || [])) {
-            const h = c.rows.length + 1;
-            if (lh <= rh) { left.push(c); lh += h; }
-            else { right.push(c); rh += h; }
-        }
-        return [left, right];
     }
 
     PanelWindow {
