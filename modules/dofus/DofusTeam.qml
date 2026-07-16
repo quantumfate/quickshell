@@ -57,8 +57,6 @@ Scope {
                     model: DofusState.team
                     delegate: CharacterRow {
                         Layout.fillWidth: true
-                        index: model.index
-                        name: modelData
                     }
                 }
             }

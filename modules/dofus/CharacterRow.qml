@@ -6,8 +6,11 @@ import "../../services"   // DofusState
 
 RowLayout {
     id: row
-    property int index
-    property string name
+    // Repeater delegate: the model's `index` and `modelData` roles bind to
+    // these required properties (avoids implicit context-property injection).
+    required property int index
+    required property string modelData
+    readonly property string name: modelData
     spacing: 8
 
     Text {
