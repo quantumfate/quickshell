@@ -30,10 +30,12 @@ Two provisioning paths, each an importable "output" you can wire into a larger
 controller/config:
 
 - **Ansible** — `ansible/`. Run directly:
+
   ```sh
   ansible-galaxy collection install -r ansible/requirements.yml
   ansible-playbook ansible/playbook.yml --ask-become-pass
   ```
+
   Or import the `quickshell` role from your own controller (see
   `ansible/requirements.yml`). Installs runtime packages (Arch), symlinks the
   config, ensures the state dir.
@@ -75,7 +77,7 @@ qmlls = {
 ```
 
 When `qs` is running it also drops a `.qmlls.ini` symlink here pointing at its
-per-launch VFS `buildDir`, which gives qmlls type info for *your own* components
+per-launch VFS `buildDir`, which gives qmlls type info for _your own_ components
 and singletons on top of the installed modules. That file is git-ignored (the
 path is ephemeral); the stable, editor-agnostic setup is the `-I` flag above.
 
@@ -130,11 +132,13 @@ The order lives in **one** JSON file; everything else reads it.
 ### How scripts interact
 
 1. **File directly** (always works, even if the shell isn't running):
+
    ```sh
    scripts/dofus-team names     # ordered names, one per line
    scripts/dofus-team titles    # names prefixed with "Dofus "
    scripts/dofus-team selected  # active team key
    ```
+
    or raw: `jq -r '.teams[.selected][]' ~/.local/state/dofus/team.json`
 
 2. **IPC into the running shell** (sees unsaved in-memory edits):

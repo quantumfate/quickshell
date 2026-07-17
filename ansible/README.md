@@ -24,7 +24,7 @@ analogue of the flake's home-manager module. Add this repo to your controller
       vars:
         quickshell_config_name: quantumfate
         quickshell_repo_path: /path/to/checkout
-        quickshell_install_extra_packages: true   # Dofus swap tooling
+        quickshell_install_extra_packages: true # Dofus swap tooling
 ```
 
 ## Variables

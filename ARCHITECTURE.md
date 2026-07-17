@@ -5,11 +5,11 @@ the bridges between the Quickshell UI and the Hyprland config.
 
 ## The three repositories
 
-| Repo | Role |
-|------|------|
-| [**quickshell**](https://github.com/quantumfate/quickshell) (this) | The desktop shell / UI: widgets, theming, shared-state singletons. |
-| [**hypr**](https://github.com/quantumfate/hypr) | The Hyprland compositor config (Lua): keybinds, submaps, window rules, services. |
-| [**scripts**](https://github.com/quantumfate/scripts) | Standalone CLI helpers on `$PATH` (e.g. `dofus_swap.py`, `dofus-team`). |
+| Repo                                                               | Role                                                                             |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| [**quickshell**](https://github.com/quantumfate/quickshell) (this) | The desktop shell / UI: widgets, theming, shared-state singletons.               |
+| [**hypr**](https://github.com/quantumfate/hypr)                    | The Hyprland compositor config (Lua): keybinds, submaps, window rules, services. |
+| [**scripts**](https://github.com/quantumfate/scripts)              | Standalone CLI helpers on `$PATH` (e.g. `dofus_swap.py`, `dofus-team`).          |
 
 They are separate processes that cooperate over two well-defined bridges. There
 is no daemon and no bespoke socket protocol.
@@ -38,11 +38,11 @@ Rule of thumb: **state goes through a Store (a file); commands go through IPC.**
 A shared piece of state lives in `$XDG_STATE_HOME/<name>.json`. Each side has a
 thin reactive wrapper over that file, and they converge automatically:
 
-| direction | mechanism |
-|-----------|-----------|
+| direction                           | mechanism                                                                     |
+| ----------------------------------- | ----------------------------------------------------------------------------- |
 | Quickshell edits → Hyprland sees it | Lua `Store.define` handle, mtime-cached, re-reads on next access (a keypress) |
-| Hyprland edits → Quickshell sees it | QML `Store { }` uses `FileView.watchChanges` — instant, reactive |
-| either writes | atomic tmp + rename bumps mtime → the other side notices |
+| Hyprland edits → Quickshell sees it | QML `Store { }` uses `FileView.watchChanges` — instant, reactive              |
+| either writes                       | atomic tmp + rename bumps mtime → the other side notices                      |
 
 - QML side: [`services/Store.qml`](services/Store.qml) — `Store { name: "dofus/team" }`.
 - Lua side: [`hypr/lib/store.lua`](https://github.com/quantumfate/hypr/blob/main/hypr/lib/store.lua) + vendored `hypr/lib/json.lua` (no `jq`).
@@ -53,7 +53,7 @@ no coordination — it just reads the JSON.
 
 ### Bridge 2 — Command (IPC)
 
-Actions that are *not* state — "toggle the panel", "show the cheatsheet",
+Actions that are _not_ state — "toggle the panel", "show the cheatsheet",
 "switch palette" — go over Quickshell's IPC:
 
 ```

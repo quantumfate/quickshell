@@ -20,16 +20,19 @@ _names_file() {
 }
 
 case "${1:-names}" in
-    names)
-        if qs -c quantumfate ipc call dofus team 2>/dev/null; then :; else
-            _names_file "${2:-}"
-        fi
-        ;;
-    titles)
-        prefix="$(jq -r '.title_prefix' "$FILE")"
-        _names_file "${2:-}" | sed "s/^/$prefix/"
-        ;;
-    selected) jq -r .selected "$FILE" ;;
-    path)     printf '%s\n' "$FILE" ;;
-    *) echo "usage: dofus-team {names|titles|selected|path} [team]" >&2; exit 2 ;;
+names)
+    if qs -c quantumfate ipc call dofus team 2>/dev/null; then :; else
+        _names_file "${2:-}"
+    fi
+    ;;
+titles)
+    prefix="$(jq -r '.title_prefix' "$FILE")"
+    _names_file "${2:-}" | sed "s/^/$prefix/"
+    ;;
+selected) jq -r .selected "$FILE" ;;
+path) printf '%s\n' "$FILE" ;;
+*)
+    echo "usage: dofus-team {names|titles|selected|path} [team]" >&2
+    exit 2
+    ;;
 esac
