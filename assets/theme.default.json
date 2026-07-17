@@ -1,3 +1,4 @@
 {
-  "palette": "frappe"
+  "palette": "frappe",
+  "cheatsheet_peek_ms": 6000
 }

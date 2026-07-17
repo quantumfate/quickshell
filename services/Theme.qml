@@ -15,7 +15,11 @@ import "."
 Singleton {
     id: root
 
-    Store { id: store; name: "theme"; defaults: ({ palette: "frappe" }) }
+    Store {
+        id: store
+        name: "theme"
+        defaults: ({ palette: "frappe", cheatsheet_peek_ms: 6000 })
+    }
 
     readonly property string name: store.get("palette") ?? "frappe"
 
@@ -87,6 +91,9 @@ Singleton {
     readonly property int radiusSmall: 6
     readonly property int gap: 8
     readonly property int pad: 12
+
+    // Behaviour tokens (stored, editable in theme.json).
+    readonly property int cheatsheetPeekMs: store.get("cheatsheet_peek_ms") ?? 6000
 
     // color + alpha (0..1) -> rgba, for translucent panels/backdrops.
     function withAlpha(color, a) {

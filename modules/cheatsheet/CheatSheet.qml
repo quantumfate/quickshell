@@ -41,7 +41,7 @@ Scope {
 
     // Auto-hide countdown for peeks; restarted on each peek, stopped for a
     // manual (persistent) show. See hypr submap.on_enter -> cheatsheet peek.
-    Timer { id: peekTimer; interval: 6000; onTriggered: scope.hide(); }
+    Timer { id: peekTimer; interval: Theme.cheatsheetPeekMs; onTriggered: scope.hide(); }
 
     function show() { refresh.running = true; shown = true; peekTimer.stop(); }
     function peek() { refresh.running = true; shown = true; peekTimer.restart(); }
