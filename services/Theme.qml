@@ -92,9 +92,6 @@ Singleton {
     readonly property int gap: 8
     readonly property int pad: 12
 
-    // Behaviour tokens (stored, editable in theme.json).
-    readonly property int cheatsheetPeekMs: store.get("cheatsheet_peek_ms") ?? 6000
-
     // color + alpha (0..1) -> rgba, for translucent panels/backdrops.
     function withAlpha(color, a) {
         return Qt.rgba(color.r, color.g, color.b, a);
