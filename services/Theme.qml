@@ -18,10 +18,10 @@ Singleton {
     Store {
         id: store
         name: "theme"
-        defaults: ({ palette: "frappe", cheatsheet_peek_ms: 6000 })
+        defaults: ({ palette: "macchiato", cheatsheet_peek_ms: 6000 })
     }
 
-    readonly property string name: store.get("palette") ?? "frappe"
+    readonly property string name: store.get("palette") ?? "macchiato"
 
     // Raw palettes. Add more here; switching is just a name change. `cycle`
     // walks them in insertion order.
@@ -69,7 +69,7 @@ Singleton {
     })
 
     // Current raw palette (named colors: Theme.c.mauve, ...).
-    readonly property var c: palettes[name] ?? palettes.frappe
+    readonly property var c: palettes[name] ?? palettes.macchiato
 
     // Semantic roles — prefer these in widgets so a palette swap Just Works.
     readonly property color background:    c.base
