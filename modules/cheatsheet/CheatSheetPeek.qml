@@ -82,7 +82,7 @@ Scope {
             // Fixed width: the two-column layout uses fillWidth children, which
             // have no intrinsic width, so the card must define it (content-sizing
             // would collapse). Height still follows content.
-            implicitWidth: 420
+            implicitWidth: 600
             implicitHeight: Math.min(header.implicitHeight + cols.implicitHeight + 3 * Theme.pad, 900)
             radius: Theme.radius
             color: Theme.withAlpha(Theme.background, 0.85)

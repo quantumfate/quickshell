@@ -87,10 +87,10 @@ Singleton {
     readonly property color error:         c.red
 
     // Shape/spacing tokens, so widgets stay visually consistent too.
-    readonly property int radius: 12
-    readonly property int radiusSmall: 6
-    readonly property int gap: 8
-    readonly property int pad: 12
+    readonly property int radius: 2
+    readonly property int radiusSmall: 2
+    readonly property int gap: 12
+    readonly property int pad: 16
 
     // color + alpha (0..1) -> rgba, for translucent panels/backdrops.
     function withAlpha(color, a) {
