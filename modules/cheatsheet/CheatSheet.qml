@@ -34,11 +34,18 @@ Scope {
         target: "cheatsheet"
         function toggle(): void { scope.shown ? scope.hide() : scope.show(); }
         function show(): void { scope.show(); }
+        // Peek: show as a transient preview that auto-hides (submap entry).
+        function peek(): void { scope.peek(); }
         function hide(): void { scope.hide(); }
     }
 
-    function show() { refresh.running = true; shown = true; }
-    function hide() { shown = false; }
+    // Auto-hide countdown for peeks; restarted on each peek, stopped for a
+    // manual (persistent) show. See hypr submap.on_enter -> cheatsheet peek.
+    Timer { id: peekTimer; interval: 6000; onTriggered: scope.hide(); }
+
+    function show() { refresh.running = true; shown = true; peekTimer.stop(); }
+    function peek() { refresh.running = true; shown = true; peekTimer.restart(); }
+    function hide() { shown = false; peekTimer.stop(); }
 
     // Keep the active submap current so a toggle shows the right context.
     Connections {
