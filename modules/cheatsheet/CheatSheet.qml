@@ -34,23 +34,11 @@ Scope {
         target: "cheatsheet"
         function toggle(): void { scope.shown ? scope.hide() : scope.show(); }
         function show(): void { scope.show(); }
-        // Peek: show as a transient preview that auto-hides. The submap is passed
-        // explicitly (submap.on_enter knows it) so we filter to the right context
-        // without racing the async Hyprland submap event.
-        function peek(sub: string): void { scope.peek(sub); }
         function hide(): void { scope.hide(); }
     }
 
-    // Auto-hide countdown for peeks; restarted on each peek, stopped for a
-    // manual (persistent) show. See hypr submap.on_enter -> cheatsheet peek.
-    Timer { id: peekTimer; interval: Theme.cheatsheetPeekMs; onTriggered: scope.hide(); }
-
-    function show() { refresh.running = true; shown = true; peekTimer.stop(); }
-    function peek(sub) {
-        if (sub && sub.length > 0) scope.submap = sub;
-        refresh.running = true; shown = true; peekTimer.restart();
-    }
-    function hide() { shown = false; peekTimer.stop(); }
+    function show() { refresh.running = true; shown = true; }
+    function hide() { shown = false; }
 
     // Keep the active submap current so a toggle shows the right context.
     Connections {
