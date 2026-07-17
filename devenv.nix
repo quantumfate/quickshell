@@ -5,7 +5,7 @@
     just
     pre-commit
     yamllint
-    nodePackages.prettier
+    prettier
     nixpkgs-fmt
   ];
 
