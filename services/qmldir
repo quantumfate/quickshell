@@ -1,4 +1,9 @@
 singleton Config Config.qml
 singleton Theme Theme.qml
 singleton DofusState DofusState.qml
+singleton DofusWindows DofusWindows.qml
+singleton DofusSwap DofusSwap.qml
+singleton Hypr Hypr.qml
+singleton Notify Notify.qml
 Store Store.qml
+singleton Tip Tip.qml
