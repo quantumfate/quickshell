@@ -13,9 +13,6 @@ WindowStrip {
     required property var screen
     screenName: screen.name
 
-    // Plain default taskbar: no focused-window highlight.
-    highlightActive: false
-
     // Bumped on any compositor change so `slots` recomputes from live state.
     property int _tick: 0
     Connections { target: Hyprland.toplevels; function onValuesChanged() { taskbar._tick++; } }

@@ -118,7 +118,6 @@ Scope {
                         screen: bar.screen
                         visible: scope.taskbarShown && !parent.dofusActive
                     }
-                    WindowTitle { screen: bar.screen; Layout.maximumWidth: 320 }
                     Submap {}
                     HyprLayout {}
                     Language {}
