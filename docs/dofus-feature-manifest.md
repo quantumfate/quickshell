@@ -7,81 +7,81 @@ the input, and the side effect.
 
 ## Repos
 
-| Repo | Path | Role |
-| ---- | ---- | ---- |
-| quickshell | `~/Projects/github/quantumfate/quickshell` (symlinked `~/.config/quickshell/quantumfate`) | UI: bar, taskbar, state services, IPC surface |
-| hypr | `~/.config/hypr` (github `quantumfate/hypr`) | Compositor config: keybinds, submaps, launch flow |
-| scripts | `~/Projects/github/quantumfate/scripts/bin` (on `$PATH`) | `dofus_swap.py` OCR turn detector |
+| Repo       | Path                                                                                      | Role                                              |
+| ---------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| quickshell | `~/Projects/github/quantumfate/quickshell` (symlinked `~/.config/quickshell/quantumfate`) | UI: bar, taskbar, state services, IPC surface     |
+| hypr       | `~/.config/hypr` (github `quantumfate/hypr`)                                              | Compositor config: keybinds, submaps, launch flow |
+| scripts    | `~/Projects/github/quantumfate/scripts/bin` (on `$PATH`)                                  | `dofus_swap.py` OCR turn detector                 |
 
 ## State (single source of truth = files)
 
-| File | Writer(s) | Schema |
-| ---- | --------- | ------ |
+| File                              | Writer(s)                                          | Schema                                                                                                   |
+| --------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `$XDG_STATE_HOME/dofus/team.json` | quickshell `DofusState`, hypr `store.lua`, scripts | `{ title_prefix: "Dofus ", selected: "pioneer", teams: { <key>: [name, …] } }` — list ORDER = turn order |
-| `~/.config/dofus-swap.json` | `dofus_swap.py` ONLY | `{ region: {left,top,width,height}, hashes: { <lowercased-name>: <phash-hex> } }` |
-| `$XDG_STATE_HOME/dofus_swap.log` | `dofus_swap.py run` | detector stdout/stderr |
+| `~/.config/dofus-swap.json`       | `dofus_swap.py` ONLY                               | `{ region: {left,top,width,height}, hashes: { <lowercased-name>: <phash-hex> } }`                        |
+| `$XDG_STATE_HOME/dofus_swap.log`  | `dofus_swap.py run`                                | detector stdout/stderr                                                                                   |
 
 Join key across all three: the **character name** (`team.json` order ↔ window
 title `"Dofus <Name>"` ↔ `hashes` key, lowercased). No window ids are persisted.
 
 ## quickshell — files
 
-| Path | Responsibility |
-| ---- | -------------- |
-| `services/DofusState.qml` | team.json read/write; reorder/rename/add/remove; `dofus` IPC |
-| `services/DofusWindows.qml` | live join of `Hyprland.toplevels` (title-prefix) × team order → `slots`; focus/rename/close/cycle/activate; `dofusWindows` IPC |
-| `services/DofusSwap.qml` | reflects `dofus-swap.json`; shells `dofus_swap.py`; detector via `setsid`/`pkill`/`pgrep`; `dofusSwap` IPC |
-| `services/Hypr.qml` | window actions over the Lua dispatch layer (focus/close by selector, retitle by pid) — shared by every taskbar |
-| `services/Notify.qml` | in-shell feedback bus; `Notify.send(summary, body, level)` |
-| `services/Store.qml` | generic reactive JSON-file bridge |
-| `services/Theme.qml` | palette + bar typography/tokens |
-| `modules/bar/Bar.qml` | per-monitor bar (`Variants`, excludes `HDMI-A-1`); per-screen taskbar setting (`taskbarByScreen`); `bar` + compat `dofusPanel` IPC |
-| `modules/bar/WindowStrip.qml` | GENERIC taskbar: takes resolved `slots` + action handlers; a button shows only where its handler is wired |
-| `modules/bar/WindowChip.qml` | GENERIC chip: focus/rename/reorder/close/capture, content-wrapped, tips below bar, Dofus capture-feedback |
-| `modules/bar/DofusTaskbar.qml` | WindowStrip wired to Dofus (order=team.json, +reorder/capture); present windows only |
-| `modules/bar/WorkspaceTaskbar.qml` | WindowStrip wired to the bar monitor's active workspace (focus/rename/close); the "default" bar |
-| `modules/bar/SwapControl.qml` | calibrate-region + run/stop detector |
-| `modules/bar/Toasts.qml` | renders the Notify queue under the bar |
-| `modules/bar/PollText.qml` | waybar exec-model label (command on interval + click/scroll) |
-| `modules/bar/{Workspaces,Cpu,Memory,Disk,Network,WindowTitle,Submap,HyprLayout,Language,Tray,Brightness,Pulseaudio,Mako,Clock,Wlogout,HoverTip}.qml` | bar modules |
-| `modules/common/WindowRename.qml` | `window` IPC (headless rename + prompt widget) |
-| `scripts/dofus-team` | shell read access to team.json for non-QML consumers |
+| Path                                                                                                                                                 | Responsibility                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `services/DofusState.qml`                                                                                                                            | team.json read/write; reorder/rename/add/remove; `dofus` IPC                                                                       |
+| `services/DofusWindows.qml`                                                                                                                          | live join of `Hyprland.toplevels` (title-prefix) × team order → `slots`; focus/rename/close/cycle/activate; `dofusWindows` IPC     |
+| `services/DofusSwap.qml`                                                                                                                             | reflects `dofus-swap.json`; shells `dofus_swap.py`; detector via `setsid`/`pkill`/`pgrep`; `dofusSwap` IPC                         |
+| `services/Hypr.qml`                                                                                                                                  | window actions over the Lua dispatch layer (focus/close by selector, retitle by pid) — shared by every taskbar                     |
+| `services/Notify.qml`                                                                                                                                | in-shell feedback bus; `Notify.send(summary, body, level)`                                                                         |
+| `services/Store.qml`                                                                                                                                 | generic reactive JSON-file bridge                                                                                                  |
+| `services/Theme.qml`                                                                                                                                 | palette + bar typography/tokens                                                                                                    |
+| `modules/bar/Bar.qml`                                                                                                                                | per-monitor bar (`Variants`, excludes `HDMI-A-1`); per-screen taskbar setting (`taskbarByScreen`); `bar` + compat `dofusPanel` IPC |
+| `modules/bar/WindowStrip.qml`                                                                                                                        | GENERIC taskbar: takes resolved `slots` + action handlers; a button shows only where its handler is wired                          |
+| `modules/bar/WindowChip.qml`                                                                                                                         | GENERIC chip: focus/rename/reorder/close/capture, content-wrapped, tips below bar, Dofus capture-feedback                          |
+| `modules/bar/DofusTaskbar.qml`                                                                                                                       | WindowStrip wired to Dofus (order=team.json, +reorder/capture); present windows only                                               |
+| `modules/bar/WorkspaceTaskbar.qml`                                                                                                                   | WindowStrip wired to the bar monitor's active workspace (focus/rename/close); the "default" bar                                    |
+| `modules/bar/SwapControl.qml`                                                                                                                        | calibrate-region + run/stop detector                                                                                               |
+| `modules/bar/Toasts.qml`                                                                                                                             | renders the Notify queue under the bar                                                                                             |
+| `modules/bar/PollText.qml`                                                                                                                           | waybar exec-model label (command on interval + click/scroll)                                                                       |
+| `modules/bar/{Workspaces,Cpu,Memory,Disk,Network,WindowTitle,Submap,HyprLayout,Language,Tray,Brightness,Pulseaudio,Mako,Clock,Wlogout,HoverTip}.qml` | bar modules                                                                                                                        |
+| `modules/common/WindowRename.qml`                                                                                                                    | `window` IPC (headless rename + prompt widget)                                                                                     |
+| `scripts/dofus-team`                                                                                                                                 | shell read access to team.json for non-QML consumers                                                                               |
 
 ## IPC surface — `qs -c quantumfate ipc call <target> <fn> [arg]`
 
-| Target | Function | Effect |
-| ------ | -------- | ------ |
-| `dofus` | `team` / `selected` | print roster / active key |
-| `dofus` | `select <key>` / `reload` | switch team (persist) / re-read file |
-| `dofusWindows` | `slots` | `name\tpresent\taddress` per slot |
-| `dofusWindows` | `focus <name>` | focus + raise that window |
-| `dofusWindows` | `next` / `prev` | cycle present windows in turn order |
-| `dofusWindows` | `activate <index0>` | focus + raise team member (0-based) |
-| `dofusSwap` | `calibrate` | `dofus_swap.py calibrate` (slurp region) |
-| `dofusSwap` | `learn <name>` | `dofus_swap.py learn <name>` (hash current region) |
-| `dofusSwap` | `run` / `stop` / `toggle` | detached detector on/off |
-| `dofusSwap` | `status` | running/calibrated/learned summary |
-| `bar` | `toggleTaskbar` / `showTaskbar` / `hideTaskbar` | taskbar visibility |
-| `dofusPanel` | `show` / `hide` / `toggle` | back-compat alias → taskbar (hypr submap) |
-| `window` | `rename <title>` / `prompt <pid>` | headless retitle / rename widget |
-| `theme` | `get` / `set <palette>` / `cycle` | palette |
-| `help` | `all` | annotated IPC overview |
+| Target         | Function                                        | Effect                                             |
+| -------------- | ----------------------------------------------- | -------------------------------------------------- |
+| `dofus`        | `team` / `selected`                             | print roster / active key                          |
+| `dofus`        | `select <key>` / `reload`                       | switch team (persist) / re-read file               |
+| `dofusWindows` | `slots`                                         | `name\tpresent\taddress` per slot                  |
+| `dofusWindows` | `focus <name>`                                  | focus + raise that window                          |
+| `dofusWindows` | `next` / `prev`                                 | cycle present windows in turn order                |
+| `dofusWindows` | `activate <index0>`                             | focus + raise team member (0-based)                |
+| `dofusSwap`    | `calibrate`                                     | `dofus_swap.py calibrate` (slurp region)           |
+| `dofusSwap`    | `learn <name>`                                  | `dofus_swap.py learn <name>` (hash current region) |
+| `dofusSwap`    | `run` / `stop` / `toggle`                       | detached detector on/off                           |
+| `dofusSwap`    | `status`                                        | running/calibrated/learned summary                 |
+| `bar`          | `toggleTaskbar` / `showTaskbar` / `hideTaskbar` | taskbar visibility                                 |
+| `dofusPanel`   | `show` / `hide` / `toggle`                      | back-compat alias → taskbar (hypr submap)          |
+| `window`       | `rename <title>` / `prompt <pid>`               | headless retitle / rename widget                   |
+| `theme`        | `get` / `set <palette>` / `cycle`               | palette                                            |
+| `help`         | `all`                                           | annotated IPC overview                             |
 
 ## Actions — who does what, with which command
 
-| Action | Owner | Underlying command |
-| ------ | ----- | ------------------ |
-| Focus + raise a window | `DofusWindows.focus` / hypr | `hyprctl dispatch focuswindow address:…` + `alterzorder top` |
-| Rename a window | `DofusWindows.rename` / `WindowRename` | `xdotool set_window --name` + `DofusState.rename` |
-| Close a window | `DofusWindows.close` | `hyprctl dispatch closewindow address:…` |
-| Reorder | `DofusState.reorder` | team.json splice (persist) |
-| Cycle turn order | hypr `team.iterate` → `dofusWindows next/prev` | UI join (no hyprctl query) |
-| Activate F1..F8 | hypr `team.activate` → `dofusWindows activate` | UI join |
-| Calibrate region | `dofus_swap.py calibrate` | `slurp` |
-| Learn turn-hash | `dofus_swap.py learn <name>` | `grim` region + `imagehash.phash` |
-| Detector run/stop | `DofusSwap` + hypr `swap.lua` | `setsid dofus_swap.py run` / `pkill -f 'dofus_swap.py run'` |
-| Broadcast click | hypr `team.press` | detached `xdotool` focus+click loop |
-| Auto double-click | hypr `team.double_click_*` | detached `xdotool click --repeat 2` |
+| Action                 | Owner                                          | Underlying command                                           |
+| ---------------------- | ---------------------------------------------- | ------------------------------------------------------------ |
+| Focus + raise a window | `DofusWindows.focus` / hypr                    | `hyprctl dispatch focuswindow address:…` + `alterzorder top` |
+| Rename a window        | `DofusWindows.rename` / `WindowRename`         | `xdotool set_window --name` + `DofusState.rename`            |
+| Close a window         | `DofusWindows.close`                           | `hyprctl dispatch closewindow address:…`                     |
+| Reorder                | `DofusState.reorder`                           | team.json splice (persist)                                   |
+| Cycle turn order       | hypr `team.iterate` → `dofusWindows next/prev` | UI join (no hyprctl query)                                   |
+| Activate F1..F8        | hypr `team.activate` → `dofusWindows activate` | UI join                                                      |
+| Calibrate region       | `dofus_swap.py calibrate`                      | `slurp`                                                      |
+| Learn turn-hash        | `dofus_swap.py learn <name>`                   | `grim` region + `imagehash.phash`                            |
+| Detector run/stop      | `DofusSwap` + hypr `swap.lua`                  | `setsid dofus_swap.py run` / `pkill -f 'dofus_swap.py run'`  |
+| Broadcast click        | hypr `team.press`                              | detached `xdotool` focus+click loop                          |
+| Auto double-click      | hypr `team.double_click_*`                     | detached `xdotool click --repeat 2`                          |
 
 ## hypr — files
 
@@ -98,12 +98,12 @@ dispatcher. So the usual `focuswindow`, `alterzorder`, `closewindow` strings
 silently fail to parse. Everything that focuses/raises/closes a window must send
 **Lua expressions** instead:
 
-| Intent | String passed to `Hyprland.dispatch(...)` / `hyprctl dispatch …` |
-| ------ | --------------------------------------------------------------- |
-| focus by title | `hl.dsp.focus({ window = [[title:Dofus <Name>]] })` |
-| raise (float)  | `hl.dsp.window.bring_to_top()` |
-| close (active) | `hl.dsp.window.close()` (focus the target first) |
-| run arbitrary  | `hyprctl -q eval '<lua>'` (what `dofus_swap.py` uses) |
+| Intent         | String passed to `Hyprland.dispatch(...)` / `hyprctl dispatch …` |
+| -------------- | ---------------------------------------------------------------- |
+| focus by title | `hl.dsp.focus({ window = [[title:Dofus <Name>]] })`              |
+| raise (float)  | `hl.dsp.window.bring_to_top()`                                   |
+| close (active) | `hl.dsp.window.close()` (focus the target first)                 |
+| run arbitrary  | `hyprctl -q eval '<lua>'` (what `dofus_swap.py` uses)            |
 
 `[[ ]]` are Lua long-string brackets (title may contain spaces). Windows are
 matched by **title**, not address: XWayland Dofus toplevels expose no stable
