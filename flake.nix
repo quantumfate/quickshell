@@ -27,20 +27,21 @@
         # and test it. Mirrors the ansible role (ansible/roles/quickshell).
         pythonSwap = pkgs.python3.withPackages (ps: with ps; [ pillow imagehash ]);
         runtimeDeps = with pkgs; [
-          quickshell               # the shell itself
-          jq                       # store queries + workspace probe
-          libnotify                # notify-send bindings
-          xdotool                  # window rename / retitle
-          pamixer                  # Pulseaudio module
-          networkmanager           # Network module (nmcli)
-          networkmanagerapplet     # nm-connection-editor
-          mako                     # Mako module (makoctl)
-          grim                     # dofus_swap.py capture
-          slurp                    # dofus_swap.py region calibrate
-          pythonSwap               # python + pillow + imagehash (dofus_swap.py)
+          quickshell # the shell itself
+          jq # store queries + workspace probe
+          libnotify # notify-send bindings
+          xdotool # window rename / retitle
+          pamixer # Pulseaudio module
+          networkmanager # Network module (nmcli)
+          networkmanagerapplet # nm-connection-editor
+          mako # Mako module (makoctl)
+          grim # dofus_swap.py capture
+          slurp # dofus_swap.py region calibrate
+          pythonSwap # python + pillow + imagehash (dofus_swap.py)
           nerd-fonts.jetbrains-mono # bar font + glyphs
         ];
-      in {
+      in
+      {
         devShells.default = pkgs.mkShell {
           packages = devTools ++ runtimeDeps;
           # Wire the repo into git on shell entry.
