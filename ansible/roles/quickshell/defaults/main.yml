@@ -9,12 +9,25 @@ quickshell_repo_path: "{{ playbook_dir }}/.."
 # Runtime packages (Arch). Set false to manage them yourself.
 quickshell_install_packages: true
 quickshell_packages:
-  - quickshell        # the shell itself
-  - qt6-declarative   # qmlls6 + QtQuick modules
-  - jq                # shell-side store queries
+  # --- core shell ---
+  - quickshell               # the shell itself
+  - qt6-declarative          # qmlls6 + QtQuick modules
+  - qt6-svg                  # tray/icon rendering (Quickshell.Services.SystemTray)
+  - ttf-jetbrains-mono-nerd  # bar font + nerd-font glyphs
+  # --- shell-side helpers invoked from QML / bindings ---
+  - jq                # store queries + DofusWindows workspace probe
   - libnotify         # notify-send for IPC query bindings
   - xdotool           # window rename IPC + launch renaming
   - uwsm              # session-scoped autostart
+  # --- bar module backends (invoked directly by bar widgets) ---
+  - pamixer               # Pulseaudio module (volume/mute)
+  - networkmanager        # Network module (nmcli)
+  - nm-connection-editor  # Network module right-click
+  - mako                  # Mako module (makoctl do-not-disturb toggle)
+  # The brightness / language / volume / power modules also shell out to the
+  # user's own waybar scripts (~/.config/waybar/scripts/*, `,brightness.sh`,
+  # `,volume.sh`), which in turn expect their own tools (brightnessctl, wlogout,
+  # etc.) — those stay the user's responsibility, not declared here.
 
 # Install the _qs/_qfs zsh completions and add the dir to fpath.
 quickshell_install_zsh_completions: true
