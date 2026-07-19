@@ -30,8 +30,10 @@ Rectangle {
                 required property var modelData
                 readonly property bool onThisMonitor: modelData.monitor === root._monitor
                 readonly property bool active: modelData.active
+                // Special workspaces have negative ids — never list them.
+                readonly property bool special: modelData.id < 0
 
-                visible: onThisMonitor
+                visible: onThisMonitor && !special
                 implicitWidth: label.implicitWidth + 14; implicitHeight: 20
                 radius: 8
                 color: "transparent"

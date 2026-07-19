@@ -35,6 +35,8 @@ WindowStrip {
         for (const w of (Hyprland.toplevels?.values || [])) {
             const ipc = w?.lastIpcObject;
             const wid = ipc?.workspace?.id;
+            // Special workspaces have negative ids — exclude them entirely.
+            if (wid !== undefined && wid < 0) continue;
             if (wsId !== undefined && wid !== undefined && wid !== wsId) continue;
             const title = (ipc?.title) ?? w?.title ?? "(untitled)";
             out.push({
