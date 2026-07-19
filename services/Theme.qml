@@ -89,8 +89,14 @@ Singleton {
     // Shape/spacing tokens, so widgets stay visually consistent too.
     readonly property int radius: 2
     readonly property int radiusSmall: 2
+    readonly property int radiusPill: 10   // rounded module pills (workspaces, clock)
     readonly property int gap: 12
     readonly property int pad: 16
+
+    // Bar typography, matching the retired waybar (JetBrainsMono Nerd Font 600).
+    readonly property string fontFamily: "JetBrainsMono Nerd Font"
+    readonly property int barFontSize: 14
+    readonly property int barFontWeight: Font.DemiBold
 
     // color + alpha (0..1) -> rgba, for translucent panels/backdrops.
     function withAlpha(color, a) {
