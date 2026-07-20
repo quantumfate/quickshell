@@ -13,8 +13,14 @@ ShellRoot {
     // Top bar (per-monitor), replacing waybar. Hosts the Dofus taskbar.
     Bar {}
 
-    // In-shell feedback toasts (Notify bus), on the multibox screen.
+    // Notification toasts + persisted history panel (Notify is now the system
+    // notification daemon). Toasts show on the wide screen; the center is docked
+    // wherever it's toggled.
     Toasts { screen: Quickshell.screens.find(s => s.name === "DP-1") ?? null }
+    NotificationCenter {}
+
+    // System-monitor detail popout (CPU/RAM/disk/net), driven by the SysMon bus.
+    SysPanel {}
 
     // Window renaming: headless `window rename`, and the `window prompt` widget
     // opened from the Dofus team submap.
