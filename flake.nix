@@ -28,17 +28,24 @@
         pythonSwap = pkgs.python3.withPackages (ps: with ps; [ pillow imagehash ]);
         runtimeDeps = with pkgs; [
           quickshell # the shell itself
-          jq # store queries + workspace probe
-          libnotify # notify-send bindings
+          jq # store queries + workspace probe (Hypr/SysStats)
+          libnotify # notify-send → Notify daemon (org.freedesktop.Notifications)
           xdotool # window rename / retitle
-          pamixer # Pulseaudio module
-          networkmanager # Network module (nmcli)
-          networkmanagerapplet # nm-connection-editor
-          mako # Mako module (makoctl)
+          networkmanager # SysStats wifi probe (nmcli)
+          iproute2 # SysStats default-iface probe (ip route)
+          gawk # SysStats probe field parsing (awk)
+          procps # DofusSwap detector state (pgrep/pkill)
+          util-linux # DofusSwap detached launch (setsid)
+          curl # Weather widget (wttr.in)
+          xdg-utils # Weather click (xdg-open)
+          uwsm # session-scoped launches from bindings
           grim # dofus_swap.py capture
           slurp # dofus_swap.py region calibrate
           pythonSwap # python + pillow + imagehash (dofus_swap.py)
           nerd-fonts.jetbrains-mono # bar font + glyphs
+          # GPU stats (SysMonitor/SysPanel) use `nvidia-smi` when present — it
+          # ships with the proprietary driver, so it's intentionally not declared
+          # here (driver packaging is host/hardware specific).
         ];
       in
       {

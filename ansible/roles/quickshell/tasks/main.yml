@@ -13,6 +13,18 @@
     state: present
   when: quickshell_install_extra_packages | bool
 
+# The shell IS the notification daemon (Notify.qml owns
+# org.freedesktop.Notifications). A running mako would race for the same DBus
+# name, so stop and disable its user service. Ignored if mako isn't installed.
+- name: Disable the mako notification daemon (shell serves notifications now)
+  ansible.builtin.systemd_service:
+    name: mako.service
+    scope: user
+    state: stopped
+    enabled: false
+  failed_when: false
+  when: quickshell_disable_mako | bool
+
 - name: Ensure the quickshell config directory exists
   ansible.builtin.file:
     path: "{{ ansible_user_dir }}/.config/quickshell"

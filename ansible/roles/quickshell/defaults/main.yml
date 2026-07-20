@@ -15,19 +15,33 @@ quickshell_packages:
   - qt6-svg                  # tray/icon rendering (Quickshell.Services.SystemTray)
   - ttf-jetbrains-mono-nerd  # bar font + nerd-font glyphs
   # --- shell-side helpers invoked from QML / bindings ---
-  - jq                # store queries + DofusWindows workspace probe
-  - libnotify         # notify-send for IPC query bindings
+  - jq                # store queries + Hypr/SysStats/DofusWindows probes
+  - libnotify         # notify-send → the Notify daemon (below)
   - xdotool           # window rename IPC + launch renaming
   - uwsm              # session-scoped autostart
+  - iproute2          # SysStats default-iface probe (ip route)
+  - gawk              # SysStats probe field parsing (awk)
+  - procps-ng         # DofusSwap detector state (pgrep/pkill)
+  - curl              # Weather widget (wttr.in)
+  - xdg-utils         # Weather click (xdg-open)
+  # util-linux (setsid, DofusSwap) + coreutils (df/tr, SysStats) are in `base`.
   # --- bar module backends (invoked directly by bar widgets) ---
-  - pamixer               # Pulseaudio module (volume/mute)
-  - networkmanager        # Network module (nmcli)
-  - nm-connection-editor  # Network module right-click
-  - mako                  # Mako module (makoctl do-not-disturb toggle)
+  - networkmanager        # SysStats wifi probe (nmcli)
+  # GPU stats (SysMonitor/SysPanel) call `nvidia-smi` when present; it ships with
+  # nvidia-utils (proprietary driver) — install per-host, not declared here.
+  # Volume is now event-driven via Pipewire (Quickshell.Services.Pipewire), so
+  # no pamixer. Notifications are served by the shell itself (Notify.qml IS the
+  # org.freedesktop.Notifications daemon), so mako must NOT run — disable it:
+  #   systemctl --user disable --now mako.service   (or drop it from autostart)
+  # A second notification daemon would fight for the DBus name.
   # The brightness / language / volume / power modules also shell out to the
   # user's own waybar scripts (~/.config/waybar/scripts/*, `,brightness.sh`,
   # `,volume.sh`), which in turn expect their own tools (brightnessctl, wlogout,
   # etc.) — those stay the user's responsibility, not declared here.
+
+# Stop + disable mako's user service (the shell is the notification daemon now).
+# Set false if you manage mako yourself or use a different session manager.
+quickshell_disable_mako: true
 
 # Install the _qs/_qfs zsh completions and add the dir to fpath.
 quickshell_install_zsh_completions: true
