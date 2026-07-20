@@ -7,8 +7,10 @@
 //   right   tray · brightness · volume · battery · power-profile ·
 //           notifications · clock · wlogout
 //
-// The Dofus taskbar region collapses via IPC so the bar stays useful elsewhere:
-//   qs -c quantumfate ipc call bar toggleTaskbar
+// The center taskbar is ALWAYS present (Dofus strip on the multibox workspace,
+// the generic workspace taskbar everywhere else). Only the on-demand Dofus swap
+// controls toggle, from the Hyprland Dofus submap:
+//   qs -c quantumfate ipc call dofusPanel toggle
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -31,24 +33,26 @@ Scope {
     readonly property string defaultTaskbar: "workspace"
     function taskbarMode(name) { return scope.taskbarByScreen[name] || scope.defaultTaskbar; }
 
-    // Show the Dofus taskbar region; toggled from the Hyprland Dofus submap.
-    property bool taskbarShown: true
+    // On-demand Dofus TEAM-MANAGEMENT controls (the swap detector panel), opened
+    // from the Hyprland Dofus submap and hidden on leaving it. This does NOT gate
+    // the taskbar — a taskbar is always present; only these extra controls toggle.
+    property bool dofusControlsShown: false
 
     IpcHandler {
         target: "bar"
-        function toggleTaskbar(): void { scope.taskbarShown = !scope.taskbarShown; }
-        function showTaskbar(): void { scope.taskbarShown = true; }
-        function hideTaskbar(): void { scope.taskbarShown = false; }
+        function toggleTaskbar(): void { scope.dofusControlsShown = !scope.dofusControlsShown; }
+        function showTaskbar(): void { scope.dofusControlsShown = true; }
+        function hideTaskbar(): void { scope.dofusControlsShown = false; }
     }
 
-    // Back-compat: the Dofus submap in the Hyprland config still drives the old
-    // `dofusPanel` target (was the retired HUD). Repointed onto the taskbar so
-    // those binds keep working with no hypr-side change.
+    // The Dofus submap drives the `dofusPanel` target (show on demand, hide on
+    // leave) — now the swap-controls panel, not the taskbar. Names kept so the
+    // existing hypr binds work unchanged.
     IpcHandler {
         target: "dofusPanel"
-        function toggle(): void { scope.taskbarShown = !scope.taskbarShown; }
-        function show(): void { scope.taskbarShown = true; }
-        function hide(): void { scope.taskbarShown = false; }
+        function toggle(): void { scope.dofusControlsShown = !scope.dofusControlsShown; }
+        function show(): void { scope.dofusControlsShown = true; }
+        function hide(): void { scope.dofusControlsShown = false; }
     }
 
     // Tooltip surfaces, one per bar screen (drawn below the bar by TipLayer).
@@ -122,19 +126,19 @@ Scope {
                     // The Dofus strip is active on the dofus monitor while this
                     // monitor's current workspace holds Dofus windows (special
                     // excluded). Empty ⇒ fall through to the workspace taskbar.
-                    // Both the chips and swap controls follow this.
-                    readonly property bool dofusActive: scope.taskbarShown && mode === "dofus"
-                        && bar.dofusOnActiveWs
+                    // The taskbar is ALWAYS shown; only the swap controls toggle.
+                    readonly property bool dofusActive: mode === "dofus" && bar.dofusOnActiveWs
 
                     DofusTaskbar { visible: parent.dofusActive; screenName: bar.screen.name; activeWs: bar.activeWs }
-                    SwapControl { visible: parent.dofusActive; screenName: bar.screen.name }
+                    // Team-management (swap detector) controls — on demand only.
+                    SwapControl { visible: parent.dofusActive && scope.dofusControlsShown; screenName: bar.screen.name }
 
                     // Default taskbar: every screen, every workspace where the Dofus
                     // strip isn't showing — so ordinary workspaces (Obsidian, etc.)
-                    // get their windows too.
+                    // get their windows too. Always present.
                     WorkspaceTaskbar {
                         screen: bar.screen
-                        visible: scope.taskbarShown && !parent.dofusActive
+                        visible: !parent.dofusActive
                     }
                     Submap {}
                     HyprLayout {}
