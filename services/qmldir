@@ -5,5 +5,7 @@ singleton DofusWindows DofusWindows.qml
 singleton DofusSwap DofusSwap.qml
 singleton Hypr Hypr.qml
 singleton Notify Notify.qml
+singleton SysStats SysStats.qml
+singleton SysMon SysMon.qml
 Store Store.qml
 singleton Tip Tip.qml
