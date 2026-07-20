@@ -2,9 +2,10 @@
 //
 // A Variants spawns one PanelWindow per eligible screen (the small vertical
 // HDMI panel is excluded). Each bar has three regions mirroring the old waybar:
-//   left    workspaces · cpu · memory · disk · network
+//   left    workspaces · sysmonitor (cpu/ram/disk/net, hover-peek) · weather · media
 //   center  Dofus taskbar · window title · submap · layout · language
-//   right   tray · brightness · pulseaudio · mako · clock · wlogout
+//   right   tray · brightness · volume · battery · power-profile ·
+//           notifications · clock · wlogout
 //
 // The Dofus taskbar region collapses via IPC so the bar stays useful elsewhere:
 //   qs -c quantumfate ipc call bar toggleTaskbar
@@ -73,13 +74,29 @@ Scope {
             // Bumped on every compositor event to track workspace switches.
             property int _wsTick: 0
             Connections { target: Hyprland; function onRawEvent(e) { bar._wsTick++; } }
+            // This monitor's current workspace id, and whether the team is on it.
+            readonly property int activeWs: {
+                bar._wsTick;   // dependency
+                return Hyprland.monitorFor(bar.screen)?.activeWorkspace?.id ?? -1;
+            }
             readonly property bool dofusOnActiveWs: {
                 bar._wsTick;   // dependency
-                return DofusWindows.onWorkspace(Hyprland.monitorFor(bar.screen)?.activeWorkspace?.id);
+                return DofusWindows.onWorkspace(bar.activeWs);
             }
 
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "quickshell-bar"
+            // Accept the keyboard only while a chip on THIS screen is being
+            // renamed. OnDemand (NOT Exclusive): the compositor keeps control and
+            // restores focus normally — an Exclusive grab left dangling by a
+            // destroyed surface locks up keyboard input system-wide. None the
+            // rest of the time so clicking the bar never steals focus.
+            WlrLayershell.keyboardFocus: (BarInput.renaming && BarInput.screen === bar.screen.name)
+                ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+            // First eligible bar screen is the default target for the sysmon
+            // keybind/IPC toggle (when no hover has set an anchor yet).
+            Component.onCompleted: if (!SysMon.homeScreen) SysMon.homeScreen = bar.screen.name;
 
             Rectangle {
                 anchors.fill: parent
@@ -90,10 +107,9 @@ Scope {
                     anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: Theme.gap }
                     spacing: Theme.gap
                     Workspaces { screen: bar.screen }
-                    Cpu {}
-                    Memory {}
-                    Disk {}
-                    Network {}
+                    SysMonitor { screenName: bar.screen.name }
+                    Weather {}
+                    Media { screenName: bar.screen.name }
                 }
 
                 // center region, fixed-center like the old waybar.
@@ -103,12 +119,14 @@ Scope {
                     // The taskbar strip for this monitor, per the setting above.
                     readonly property string mode: scope.taskbarMode(bar.screen.name)
 
-                    // The Dofus strip is active only on the dofus monitor while its
-                    // active workspace holds the team. Both the chips and the swap
-                    // controls follow this — everywhere else it's the default bar.
-                    readonly property bool dofusActive: scope.taskbarShown && mode === "dofus" && bar.dofusOnActiveWs
+                    // The Dofus strip is active on the dofus monitor while this
+                    // monitor's current workspace holds Dofus windows (special
+                    // excluded). Empty ⇒ fall through to the workspace taskbar.
+                    // Both the chips and swap controls follow this.
+                    readonly property bool dofusActive: scope.taskbarShown && mode === "dofus"
+                        && bar.dofusOnActiveWs
 
-                    DofusTaskbar { visible: parent.dofusActive; screenName: bar.screen.name }
+                    DofusTaskbar { visible: parent.dofusActive; screenName: bar.screen.name; activeWs: bar.activeWs }
                     SwapControl { visible: parent.dofusActive; screenName: bar.screen.name }
 
                     // Default taskbar: every screen, every workspace where the Dofus
@@ -129,8 +147,10 @@ Scope {
                     spacing: Theme.gap
                     Tray {}
                     Brightness {}
-                    Pulseaudio {}
-                    Mako {}
+                    Pulseaudio { screenName: bar.screen.name }
+                    Battery { screenName: bar.screen.name }
+                    PowerProfile { screenName: bar.screen.name }
+                    NotifIndicator { screenName: bar.screen.name }
                     Clock {}
                     Wlogout {}
                 }

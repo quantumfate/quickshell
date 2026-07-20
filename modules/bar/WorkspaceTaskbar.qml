@@ -29,15 +29,21 @@ WindowStrip {
 
     // Live windows on this monitor's active workspace, as strip slots. Address
     // is the stable selector when present; title otherwise (matches Hypr.focus).
+    //
+    // STRICT inclusion: a window shows only when its workspace is definitively
+    // known, non-special (>= 0), and equal to a known current workspace. Anything
+    // uncertain (undefined workspace, no current workspace) is excluded, not
+    // leaked onto every taskbar. `workspace.id` (Quickshell-tracked) is preferred
+    // over lastIpcObject, which can lag or read undefined mid-transition.
     function _windowsOnActiveWorkspace() {
         const wsId = Hyprland.monitorFor(screen)?.activeWorkspace?.id;
+        if (wsId === undefined || wsId < 0) return [];   // no real current ws → show nothing
         const out = [];
         for (const w of (Hyprland.toplevels?.values || [])) {
             const ipc = w?.lastIpcObject;
-            const wid = ipc?.workspace?.id;
-            // Special workspaces have negative ids — exclude them entirely.
-            if (wid !== undefined && wid < 0) continue;
-            if (wsId !== undefined && wid !== undefined && wid !== wsId) continue;
+            const wid = (w?.workspace?.id) ?? (ipc?.workspace?.id);
+            if (wid === undefined || wid < 0) continue;   // unknown or special
+            if (wid !== wsId) continue;                    // different workspace
             const title = (ipc?.title) ?? w?.title ?? "(untitled)";
             out.push({
                 name: title,
