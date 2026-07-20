@@ -6,7 +6,7 @@
 // Capture feedback (busy / ✓ / ✗) is Dofus-only and appears when `showCapture`.
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Theme, DofusSwap
+import "../../services"   // Theme, DofusSwap, BarInput
 
 Rectangle {
     id: chip
@@ -75,9 +75,10 @@ Rectangle {
         anchors { fill: parent; leftMargin: 8; rightMargin: 4 }
         spacing: 4
 
-        // Dofus learned-hash dot (only when capture is enabled).
+        // Dofus learned-hash dot (only when capture is enabled, on a team slot —
+        // an unmatched/un-named window has no roster identity to learn).
         Rectangle {
-            visible: chip.showCapture
+            visible: chip.showCapture && chip.slot.team
             width: 6; height: 6; radius: 3
             color: DofusSwap.learned(chip.slot.name) ? Theme.success : Theme.overlay
             Layout.alignment: Qt.AlignVCenter
@@ -122,20 +123,20 @@ Rectangle {
             verticalAlignment: TextInput.AlignVCenter
             clip: true; selectByMouse: true
             onEditingFinished: chip.commitRename()
-            Keys.onEscapePressed: editor.visible = false
+            Keys.onEscapePressed: chip.cancelRename()
         }
 
         ChipButton {
-            visible: chip.showCapture; symbol: "◎"; enabled: DofusSwap.calibrated
+            visible: chip.showCapture && chip.slot.team; symbol: "◎"; enabled: DofusSwap.calibrated
             tip: "Capture turn-hash for " + chip.slot.name + " (press during their turn)"
             onActivated: chip.captureRequested()
         }
         ChipButton {
-            visible: chip.showReorder; symbol: "◀"; enabled: chip.canLeft
+            visible: chip.showReorder && chip.slot.team; symbol: "◀"; enabled: chip.canLeft
             onActivated: chip.reorderRequested(-1)
         }
         ChipButton {
-            visible: chip.showReorder; symbol: "▶"; enabled: chip.canRight
+            visible: chip.showReorder && chip.slot.team; symbol: "▶"; enabled: chip.canRight
             onActivated: chip.reorderRequested(1)
         }
         ChipButton {
@@ -154,16 +155,37 @@ Rectangle {
              : Theme.withAlpha(Theme.warning, 0.20)
     }
 
+    // Guards against the focus-loss editingFinished re-firing commit after we've
+    // already committed/cancelled (hiding the field drops focus).
+    property bool _renaming: false
+
     function beginRename() {
-        editor.text = chip.slot.name;
+        BarInput.begin(chip.screenName);   // let THIS screen's bar grab the keyboard
+        chip._renaming = true;
+        // Team chips prefill their name; an un-named window starts blank (its
+        // label is the "unnamed" placeholder, not a real name to edit).
+        editor.text = chip.slot.team ? chip.slot.name : "";
         editor.visible = true;
-        editor.forceActiveFocus();
-        editor.selectAll();
+        // Defer the focus grab until after the layer surface has switched to
+        // Exclusive keyboard focus, else the keys have nowhere to land.
+        Qt.callLater(() => { editor.forceActiveFocus(); editor.selectAll(); });
     }
     function commitRename() {
+        if (!chip._renaming) return;
+        chip._renaming = false;
         editor.visible = false;
+        BarInput.end();
         chip.renameRequested(editor.text);
     }
+    function cancelRename() {
+        chip._renaming = false;
+        editor.visible = false;
+        BarInput.end();
+    }
+
+    // If the chip is torn down mid-rename (window closed, strip rebuilt), make
+    // sure we release the keyboard grab — never leave the bar holding focus.
+    Component.onDestruction: if (chip._renaming) BarInput.end();
 
     // A tiny square action button; greys out and ignores clicks when disabled.
     // `tip` (optional) explains a non-obvious action, rendered below the bar.

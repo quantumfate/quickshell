@@ -7,5 +7,6 @@ singleton Hypr Hypr.qml
 singleton Notify Notify.qml
 singleton SysStats SysStats.qml
 singleton SysMon SysMon.qml
+singleton BarInput BarInput.qml
 Store Store.qml
 singleton Tip Tip.qml
