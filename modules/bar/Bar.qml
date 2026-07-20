@@ -106,14 +106,16 @@ Scope {
                 anchors.fill: parent
                 color: Theme.background
 
-                // left region, pinned to the start.
+                // left region, pinned to the start: workspaces pill + a stats/media cluster.
                 RowLayout {
                     anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: Theme.gap }
                     spacing: Theme.gap
                     Workspaces { screen: bar.screen }
-                    SysMonitor { screenName: bar.screen.name }
-                    Weather {}
-                    Media { screenName: bar.screen.name }
+                    Cluster {
+                        SysMonitor { screenName: bar.screen.name }
+                        Weather {}
+                        Media { screenName: bar.screen.name }
+                    }
                 }
 
                 // center region, fixed-center like the old waybar.
@@ -145,18 +147,28 @@ Scope {
                     Language {}
                 }
 
-                // right region, pinned to the end.
+                // right region, pinned to the end: a system-controls cluster,
+                // then the clock pill and the standalone power button.
                 RowLayout {
                     anchors { right: parent.right; top: parent.top; bottom: parent.bottom; rightMargin: Theme.gap }
                     spacing: Theme.gap
-                    Tray {}
-                    Brightness {}
-                    Pulseaudio { screenName: bar.screen.name }
-                    Battery { screenName: bar.screen.name }
-                    PowerProfile { screenName: bar.screen.name }
-                    NotifIndicator { screenName: bar.screen.name }
+                    Cluster {
+                        Tray {}
+                        Brightness {}
+                        Pulseaudio { screenName: bar.screen.name }
+                        Battery { screenName: bar.screen.name }
+                        PowerProfile { screenName: bar.screen.name }
+                        NotifIndicator { screenName: bar.screen.name }
+                    }
                     Clock {}
                     Wlogout {}
+                }
+
+                // Hairline along the bottom edge for definition against wallpaper.
+                Rectangle {
+                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+                    height: 1
+                    color: Theme.withAlpha(Theme.border, 0.6)
                 }
             }
         }
