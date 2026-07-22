@@ -5,6 +5,7 @@ import Quickshell
 import "modules/common"
 import "modules/cheatsheet"
 import "modules/bar"
+import "modules/dofus"
 
 ShellRoot {
     // `qs -c quantumfate ipc call help all` — annotated IPC overview.
@@ -25,6 +26,14 @@ ShellRoot {
     // Window renaming: headless `window rename`, and the `window prompt` widget
     // opened from the Dofus team submap.
     WindowRename {}
+
+    // Dofus team selector: pick the active team from a list. Opened via the
+    // Dofus submap or IPC.
+    TeamSelector {}
+
+    // Dofus class assigner: bind each character to a class (standalone from the
+    // team panel). Opened via the Dofus submap or IPC.
+    ClassAssigner {}
 
     // Themed which-key keybind cheatsheet. Toggled via IPC.
     CheatSheet {}

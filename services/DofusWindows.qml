@@ -122,14 +122,16 @@ Singleton {
             address: w.address,
             selector: w.selector,
             ws: w.ws,
+            focusHistoryId: w.focusHistoryId,
             team: false
         }));
     }
 
-    // Every live Dofus window (class Dofus.x64, or a "Dofus <Name>" title as a
-    // fallback), with the fields actions need. `name` is "" for an un-titled
-    // window; `selector` prefers the stable address, falling back to the title;
-    // `key` de-dupes a window across the slot/unmatched split.
+    // Every live Dofus window, matched STRICTLY by window class (Dofus.x64) —
+    // never by title, so unrelated windows that merely carry "Dofus" in their
+    // title (a browser tab, an editor) are excluded. `name` is "" for an
+    // un-titled window; `selector` prefers the stable address, falling back to
+    // the title; `key` de-dupes a window across the slot/unmatched split.
     function _dofusWindows() {
         const prefix = root.titlePrefix;
         const out = [];
@@ -138,7 +140,7 @@ Singleton {
             const ipc = w?.lastIpcObject;
             const cls = (ipc?.class) ?? "";
             const title = (ipc?.title) ?? w?.title ?? "";
-            if (cls !== "Dofus.x64" && !title.startsWith(prefix)) continue;
+            if (cls !== "Dofus.x64") continue;
             const name = title.startsWith(prefix) ? title.slice(prefix.length).trim() : "";
             const address = ipc?.address ?? "";
             out.push({
@@ -146,6 +148,9 @@ Singleton {
                 address: address,
                 selector: address ? ("address:" + address) : ("title:" + title),
                 focused: !!w?.activated,
+                // Hyprland's recency rank (0 = most-recently focused); used to
+                // order the unmatched windows when cycling past the team.
+                focusHistoryId: ipc?.focusHistoryID ?? 999999,
                 // Workspace from the hyprctl probe (Quickshell's own value is
                 // unreliable for XWayland); -1 until the probe has seen it.
                 ws: (address in root.wsByAddress) ? root.wsByAddress[address] : -1,
@@ -171,6 +176,31 @@ Singleton {
         if (name.length === 0) return;
         Hypr.retitle(pid, root.titlePrefix + name);
         if (index >= 0) DofusState.rename(index, name);
+    }
+
+    // Retitle a live window to `prefix + name` WITHOUT touching team.json — the
+    // Active Windows zone's "assign a name" gesture. If the name is a team
+    // member, the window joins that slot on the next rebuild.
+    function setName(pid, name) {
+        const n = (name || "").trim();
+        if (pid > 0 && n.length > 0) Hypr.retitle(pid, root.titlePrefix + n);
+    }
+
+    // Clear a window's character name (mark it "unnamed"): retitle to the bare
+    // prefix, so it drops out of every team slot on the next rebuild.
+    function clearName(pid) {
+        if (pid > 0) Hypr.retitle(pid, root.titlePrefix.trim());
+    }
+
+    // Retitle any present window wearing `oldName`, keeping it matched after a
+    // pool/team character rename. State is rewritten by DofusState.renameCharacter.
+    function renameCharacter(oldName, newName) {
+        const n = (newName || "").trim();
+        if (!n) return;
+        for (const s of (root.slots || []).concat(root.unmatched || [])) {
+            if (s.present && s.name === oldName && s.pid > 0) Hypr.retitle(s.pid, root.titlePrefix + n);
+        }
+        DofusState.renameCharacter(oldName, newName);
     }
 
     // Close a window by selector. Team state is left untouched (a closed team
@@ -228,10 +258,35 @@ Singleton {
         root.focus(present[next].selector);
     }
 
+    // Like cycle(), but once past the present team it continues into the
+    // unmatched Dofus windows (ordered by focus recency), then wraps. So H/L
+    // walk the whole roster, spilling over to stray windows at the ends.
+    function _cycleOrder() {
+        const extra = (root.unmatched || []).slice()
+            .sort((a, b) => a.focusHistoryId - b.focusHistoryId);
+        return root._present().concat(extra);
+    }
+    function cycleAll(reversed) {
+        const list = root._cycleOrder();
+        if (list.length === 0) return;
+        const at = list.findIndex(s => s.focused);
+        const n = list.length;
+        const next = at < 0 ? 0 : (reversed ? (at - 1 + n) % n : (at + 1) % n);
+        root.focus(list[next].selector);
+    }
+
     // Focus+raise the team member at a 0-based team index (no-op if absent).
     function activate(index) {
         const s = (root.slots || [])[index];
         if (s && s.present) root.focus(s.selector);
+    }
+
+    // Focus+raise the 0-based Nth PRESENT (alive) team member, in team order.
+    // Unlike activate(), this ignores absent slots — so with only 2 windows open,
+    // indices 0 and 1 hit them regardless of their raw position in the team.
+    function activatePresent(index) {
+        const s = root._present()[index];
+        if (s) root.focus(s.selector);
     }
 
     // ---- scripting surface: qs -c quantumfate ipc call dofusWindows <fn> ----
@@ -251,6 +306,10 @@ Singleton {
         // Turn-order navigation, offloaded from the Hyprland config.
         function next(): void { root.cycle(false); }
         function prev(): void { root.cycle(true); }
+        // Same, but spilling into unmatched windows at the ends (for MOD+H/L).
+        function nextAll(): void { root.cycleAll(false); }
+        function prevAll(): void { root.cycleAll(true); }
         function activate(index: int): void { root.activate(index); }
+        function activatePresent(index: int): void { root.activatePresent(index); }
     }
 }

@@ -7,6 +7,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Theme, DofusSwap, BarInput
+import "../common"        // ClassIcon
 
 Rectangle {
     id: chip
@@ -74,6 +75,15 @@ Rectangle {
         id: rowContent
         anchors { fill: parent; leftMargin: 8; rightMargin: 4 }
         spacing: 4
+
+        // Class emblem (mauve) — auto-hides when this character has no class set.
+        ClassIcon {
+            cls: DofusState.classOf(chip.slot.name)   // DofusState is a singleton
+            size: 18
+            Layout.preferredWidth: visible ? size : 0
+            Layout.preferredHeight: size
+            Layout.alignment: Qt.AlignVCenter
+        }
 
         // Dofus learned-hash dot (only when capture is enabled, on a team slot —
         // an unmatched/un-named window has no roster identity to learn).
