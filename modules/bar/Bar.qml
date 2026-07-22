@@ -111,6 +111,7 @@ Scope {
                     anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: Theme.gap }
                     spacing: Theme.gap
                     Workspaces { screen: bar.screen }
+                    Separator {}
                     Cluster {
                         SysMonitor { screenName: bar.screen.name }
                         Weather {}
@@ -142,6 +143,7 @@ Scope {
                         screen: bar.screen
                         visible: !parent.dofusActive
                     }
+                    Separator {}
                     Submap {}
                     HyprLayout {}
                     Language {}
@@ -160,7 +162,9 @@ Scope {
                         PowerProfile { screenName: bar.screen.name }
                         NotifIndicator { screenName: bar.screen.name }
                     }
+                    Separator {}
                     Clock {}
+                    Separator {}
                     Wlogout {}
                 }
 

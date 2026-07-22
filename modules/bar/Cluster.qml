@@ -1,24 +1,21 @@
-// Cluster — a rounded surface group for a row of bar modules, so related widgets
-// read as one segment instead of floating loose on the bar background. Matches
-// the Workspaces/Clock pills. Children are laid out in an internal Row.
+// Cluster — a transparent group for a row of related bar modules. Just an
+// internal Row with comfortable spacing; grouping now reads from the spacing
+// and the Separators between clusters, not a background.
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Theme
 
-Rectangle {
+Item {
     id: root
     // Modules placed inside a Cluster go into the internal row.
     default property alias content: row.data
 
-    color: Theme.surface
-    radius: Theme.radiusPill
-    border { width: 1; color: Theme.withAlpha(Theme.border, 0.5) }
-    implicitWidth: row.implicitWidth + 12
+    implicitWidth: row.implicitWidth
     implicitHeight: 22
 
     RowLayout {
         id: row
-        anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 6 }
-        spacing: 2
+        anchors { verticalCenter: parent.verticalCenter; left: parent.left }
+        spacing: 8
     }
 }

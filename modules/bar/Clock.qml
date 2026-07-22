@@ -5,9 +5,8 @@ import "../../services"   // Theme
 
 Rectangle {
     id: clock
-    color: Theme.c.surface0
-    radius: Theme.radiusPill
-    implicitWidth: label.implicitWidth + 28
+    color: "transparent"
+    implicitWidth: label.implicitWidth + 8
     implicitHeight: 22
 
     readonly property var _clock: SystemClock { precision: SystemClock.Seconds }
