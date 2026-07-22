@@ -92,6 +92,27 @@ scripts/             shell glue for non-QML consumers
 assets/              seed state files, images, fonts
 ```
 
+## Delivery & dependencies
+
+Dual, equal delivery of the shell + its runtime deps (mirrors the sibling
+`hypr` repo):
+
+| Path        | Target machines                | Installs + deploys via                                                                                            |
+| ----------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| **Ansible** | Arch/CachyOS and other non-nix | `ansible/roles/quickshell` (pacman)                                                                               |
+| **Nix**     | NixOS / nix-managed hosts      | `flake.nix`: `nixosModules.quickshell` (packages) + `homeManagerModules.quickshell` (deploy config + completions) |
+
+Dependency completeness (verified against the QML imports): the `quickshell`
+package pulls its hard deps (qt6-base/declarative/svg/wayland, libpipewire,
+polkit), but two needs are **not** hard deps and are declared explicitly in both
+paths — `Qt5Compat.GraphicalEffects` → `qt6-5compat` (nix `qt6.qt5compat`), and
+`Services.UPower` → `upower`. The `Services.Pipewire` service needs the pipewire
+daemon + wireplumber **running** (system services, not packaged here). Binaries
+the shell shells out to (`jq`, `notify-send`, `xdotool`, `nmcli`, `ip`, `awk`,
+`pgrep`, `curl`, `xdg-open`, `grim`, `slurp`, `python`+pillow/imagehash) are all
+declared. `nvidia-smi` (GPU stats) ships with the proprietary driver and is
+intentionally host-specific.
+
 ## Adding things
 
 - **A shared state** → pick a `name`; `Store.define(name)` in Lua, `Store { name }` in QML. Done.
