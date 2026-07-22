@@ -40,14 +40,20 @@ controller/config:
   `ansible/requirements.yml`). Installs runtime packages (Arch), symlinks the
   config, ensures the state dir.
 
-- **Nix flake** — `flake.nix`. Import the home-manager module:
+- **Nix flake** — `flake.nix`. Import the modules
+  (`inputs.quantumfate-quickshell.url = "github:quantumfate/quickshell"`):
+
   ```nix
-  # inputs.quantumfate-quickshell.url = "github:quantumfate/quickshell";
-  imports = [ inputs.quantumfate-quickshell.homeManagerModules.default ];
-  programs.quantumfate-quickshell.enable = true;
+  # home-manager: deploy the config + zsh completions
+  imports = [ inputs.quantumfate-quickshell.homeManagerModules.quickshell ];
+  programs.quickshellDesktop.enable = true;   # optional: .name = "quantumfate"
+
+  # NixOS: install the runtime packages
+  imports = [ inputs.quantumfate-quickshell.nixosModules.quickshell ];
+  programs.quickshellDesktop.enable = true;
   ```
-  Also exposes `packages.<system>.default` (the config tree) and a
-  `devShells.<system>.default` with `quickshell` + `qmlls` + tools.
+
+  `devShells.<system>.default` gives `quickshell` + tools for `nix develop`.
 
 Both handle the **full** manual setup — runtime packages (incl. `xdotool` for
 window rename), the config symlink, the `_qs`/`_qfs` zsh completions + `fpath`
