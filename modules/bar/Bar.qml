@@ -133,8 +133,9 @@ Scope {
                     readonly property bool dofusActive: mode === "dofus" && bar.dofusOnActiveWs
 
                     DofusTaskbar { visible: parent.dofusActive; screenName: bar.screen.name; activeWs: bar.activeWs }
-                    // Team-management (swap detector) controls — on demand only.
-                    SwapControl { visible: parent.dofusActive && scope.dofusControlsShown; screenName: bar.screen.name }
+                    // Swap-detector controls (recalibrate + run/stop) — visible
+                    // whenever the Dofus strip is, so they're always at hand.
+                    SwapControl { visible: parent.dofusActive; screenName: bar.screen.name }
 
                     // Default taskbar: every screen, every workspace where the Dofus
                     // strip isn't showing — so ordinary workspaces (Obsidian, etc.)
