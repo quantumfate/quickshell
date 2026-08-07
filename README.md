@@ -1,33 +1,32 @@
 # quantumfate quickshell
 
 Desktop shell built on [Quickshell](https://quickshell.outfoxxed.me/). Part of
-the quantumfate desktop, alongside the
-[**hypr**](https://github.com/quantumfate/hypr) compositor config and the
-[**scripts**](https://github.com/quantumfate/scripts) CLI helpers.
+the quantumfate desktop, alongside the [hypr](https://codeberg.org/quantumfate/hypr)
+compositor config and the [scripts](https://github.com/quantumfate/scripts) CLI
+helpers.
 
-**See [ARCHITECTURE.md](ARCHITECTURE.md)** for how the UI and Hyprland config
-bridge (shared JSON state + IPC).
+**See [ARCHITECTURE.md](ARCHITECTURE.md)** for how the UI and the Hyprland
+config bridge (shared JSON state + IPC).
 
 ## Run
 
 ```sh
 qs -c quantumfate          # if symlinked into ~/.config/quickshell/quantumfate
-qs -p ~/Projects/github/quantumfate/quickshell/shell.qml
+qs -p ~/Projects/codeberg/quantumfate/quickshell/shell.qml
 ```
 
 Install (symlink so edits are live):
 
 ```sh
-ln -s ~/Projects/github/quantumfate/quickshell ~/.config/quickshell/quantumfate
+ln -s ~/Projects/codeberg/quantumfate/quickshell ~/.config/quickshell/quantumfate
 ```
 
-State files (`team.json`, `theme.json`) are **self-seeded** on first run from
-`Store` defaults, so a fresh checkout just works — no manual copying.
+State files (`team.json`, `theme.json`) seed themselves on first run from
+`Store` defaults, so a fresh checkout just works.
 
 ## Deploy
 
-Two provisioning paths, each an importable "output" you can wire into a larger
-controller/config:
+Two provisioning paths, each importable as an "output" of a larger config:
 
 - **Ansible** — `ansible/`. Run directly:
 
@@ -37,11 +36,12 @@ controller/config:
   ```
 
   Or import the `quickshell` role from your own controller (see
-  `ansible/requirements.yml`). Installs runtime packages (Arch), symlinks the
-  config, ensures the state dir.
+  `ansible/requirements.yml`). Installs the runtime packages (Arch), symlinks
+  the config, creates the state dir.
 
-- **Nix flake** — `flake.nix`. Import the modules
-  (`inputs.quantumfate-quickshell.url = "github:quantumfate/quickshell"`):
+- **Nix flake** — `flake.nix`. Add it as an input
+  (`url = "https://codeberg.org/quantumfate/quickshell"`) and import the
+  modules:
 
   ```nix
   # home-manager: deploy the config + zsh completions
@@ -55,24 +55,20 @@ controller/config:
 
   `devShells.<system>.default` gives `quickshell` + tools for `nix develop`.
 
-Both handle the **full** manual setup — runtime packages (incl. `xdotool` for
-window rename), the config symlink, the `_qs`/`_qfs` zsh completions + `fpath`
-wiring — and rely on the shell self-seeding state, so neither copies data files.
-(`qfs` itself ships in the [scripts](https://github.com/quantumfate/scripts)
-repo; autostart lives in the [hypr](https://github.com/quantumfate/hypr) config.)
+Both handle the full manual setup — runtime packages (incl. `xdotool` for
+window rename), the config symlink, the `_qs`/`_qfs` completions + `fpath`
+wiring — without copying data files. (`qfs` ships in the [scripts](https://github.com/quantumfate/scripts)
+repo; autostart lives in the [hypr](https://codeberg.org/quantumfate/hypr) config.)
 
 ## Editor setup (QML completion)
 
-Completion/diagnostics come from the QML language server, `qmlls`. Two things
-matter:
+Completion comes from the QML language server, `qmlls`:
 
-1. **Use a real Qt `qmlls`** (e.g. `qmlls6`, Qt 6.11 — matching the Qt Quickshell
-   is built against), not a minimal standalone build. The Qt one knows the
-   default import root.
-2. **Point it at the import path** so `import Quickshell` / `import QtQuick`
-   resolve: pass `-I /usr/lib/qt6/qml` (where Quickshell installs its modules).
+1. Use a real Qt `qmlls` (e.g. `qmlls6`, Qt 6.11 — matching what Quickshell is
+   built against), not a minimal standalone build.
+2. Point it at the import path: `-I /usr/lib/qt6/qml`.
 
-Neovim (this repo's owner uses lspconfig):
+Neovim (lspconfig):
 
 ```lua
 qmlls = {
@@ -82,10 +78,9 @@ qmlls = {
 }
 ```
 
-When `qs` is running it also drops a `.qmlls.ini` symlink here pointing at its
-per-launch VFS `buildDir`, which gives qmlls type info for _your own_ components
-and singletons on top of the installed modules. That file is git-ignored (the
-path is ephemeral); the stable, editor-agnostic setup is the `-I` flag above.
+While `qs` is running it drops a `.qmlls.ini` symlink here pointing at its
+per-launch VFS `buildDir`, giving qmlls type info for the local components on
+top of the installed modules. That file is git-ignored (the path is ephemeral).
 
 ## Layout
 
@@ -100,15 +95,15 @@ scripts/             shell glue for non-QML consumers
 assets/              seeds, images, fonts
 ```
 
-Convention: **state lives in a `services/` singleton, views live in `modules/`.**
-Add a new feature = new `modules/<name>/` + (if it owns global state) a
-singleton in `services/`, then drop the root widget into `shell.qml`.
+Convention: state lives in a `services/` singleton, views in `modules/`. A new
+feature is a new `modules/<name>/` plus, if it owns global state, a singleton
+in `services/`, then the root widget drops into `shell.qml`.
 
 ## Shared state — the Store bridge
 
-State shared with the Hyprland Lua config goes through a `Store`: a JSON file in
-`$XDG_STATE_HOME/<name>.json` that is the single source of truth, mirrored
-reactively on both sides.
+State shared with the Hyprland Lua config goes through a `Store`: a JSON file
+in `$XDG_STATE_HOME/<name>.json` that is the single source of truth, mirrored
+on both sides.
 
 ```
 $XDG_STATE_HOME/<name>.json          ← single source of truth
@@ -116,18 +111,21 @@ $XDG_STATE_HOME/<name>.json          ← single source of truth
   services/Store.qml (QML)        hypr/lib/store.lua (Lua)
 ```
 
-- **QML:** `Store { name: "dofus/team" }` → `.data`, `.get(...keys)`, `.set(patch)`, `.put(obj)`. `watchChanges` reloads on any external write.
-- **Lua:** `Store.define("dofus/team")` → `:get(...)`, `:set(patch)`, `:update(fn)`. Decoded copy kept in RAM, refreshed only when the file's mtime changes (via vendored `hypr/lib/json.lua`, no `jq`).
-- Writes are atomic (tmp + rename) and pretty-printed 2-space on both sides, so either runtime can edit and the other converges.
+- **QML:** `Store { name: "dofus/team" }` → `.data`, `.get(...keys)`,
+  `.set(patch)`, `.put(obj)`. `watchChanges` reloads on any external write.
+- **Lua:** `Store.define("dofus/team")` → `:get(...)`, `:set(patch)`,
+  `:update(fn)`. Decoded copy kept in RAM, refreshed when the file's mtime
+  changes (vendored `hypr/lib/json.lua`, no `jq`).
+- Writes are atomic (tmp + rename) and pretty-printed on both sides, so either
+  runtime can edit and the other converges.
 
-Rule of thumb: **state → a Store (shared) or a singleton (QML-only); commands → IPC.**
-A new shared feature = pick a `name`, `Store.define` it in Lua, `Store {}` it in
-QML. `DofusState` is the reference example.
+Rule of thumb: state → a Store (shared) or a singleton (QML-only); commands →
+IPC. `DofusState` is the reference example.
 
-## Dofus team = single source of truth
+## Dofus team
 
-Ordered team list drives turn order, F1–F8 activate, launch order, swap args.
-The order lives in **one** JSON file; everything else reads it.
+Ordered team list drives turn order, F1–F8 activation, launch order, swap args.
+The order lives in **one** JSON file; everything else reads it:
 
 ```
 ~/.local/state/dofus/team.json   (XDG_STATE_HOME) — the truth
@@ -137,7 +135,7 @@ The order lives in **one** JSON file; everything else reads it.
 
 ### How scripts interact
 
-1. **File directly** (always works, even if the shell isn't running):
+1. **File directly** (works even if the shell isn't running):
 
    ```sh
    scripts/dofus-team names     # ordered names, one per line
@@ -161,13 +159,14 @@ qs -c quantumfate ipc show           # raw signatures of every target
 qs -c quantumfate ipc call help all  # annotated overview with examples
 ```
 
-Targets: `help`, `theme`, `dofus`, `dofusPanel`, `cheatsheet`. When you add an
-`IpcHandler`, document it in `modules/common/IpcHelp.qml`.
+Targets: `help`, `theme`, `dofus`, `dofusPanel`, `cheatsheet`, `obsidian`,
+`obsidianCreate`. When you add an `IpcHandler`, document it in
+`modules/common/IpcHelp.qml`.
 
 ### `qfs` wrapper
 
 `qfs` (in the [scripts](https://github.com/quantumfate/scripts) repo) wraps the
-IPC surface so you rarely type the long form:
+IPC surface:
 
 ```sh
 qfs                       # annotated overview  (ipc call help all)
@@ -181,9 +180,9 @@ Config name via `$QFS_CONFIG` (default `quantumfate`).
 
 ### zsh completion
 
-`completions/_qs` (for raw `qs`) and `completions/_qfs` (for `qfs`) both read
-`qs ipc show` live, so every target and function completes and never goes stale.
-Install by putting them on your `$fpath`:
+`completions/_qs` (raw `qs`) and `completions/_qfs` both read `qs ipc show`
+live, so targets and functions complete and never go stale. Install by putting
+them on your `$fpath`:
 
 ```sh
 mkdir -p ~/.local/share/zsh/site-functions
@@ -193,11 +192,5 @@ ln -s "$PWD/completions/_qfs" ~/.local/share/zsh/site-functions/_qfs
 #   fpath=(~/.local/share/zsh/site-functions $fpath)
 ```
 
-Writers (UI, scripts) edit the JSON; `DofusState` watches the file and reloads,
-so all consumers converge. Editing in the UI writes the file back.
-
-### Wiring the Hyprland Lua config
-
-`hypr/services/dofus/common.lua` currently hard-codes the team. Point it at the
-JSON instead so the Lua and the UI share one truth — read the file in
-`common.lua` and drop the hard-coded `M.characters`.
+Writers (UI, scripts) edit the JSON; `DofusState` watches the file and
+reloads, so all consumers converge. Editing in the UI writes the file back.

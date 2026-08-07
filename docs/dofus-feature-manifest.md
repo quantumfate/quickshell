@@ -9,8 +9,8 @@ the input, and the side effect.
 
 | Repo       | Path                                                                                      | Role                                              |
 | ---------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| quickshell | `~/Projects/github/quantumfate/quickshell` (symlinked `~/.config/quickshell/quantumfate`) | UI: bar, taskbar, state services, IPC surface     |
-| hypr       | `~/.config/hypr` (github `quantumfate/hypr`)                                              | Compositor config: keybinds, submaps, launch flow |
+| quickshell | `~/Projects/codeberg/quantumfate/quickshell` (symlinked `~/.config/quickshell/quantumfate`) | UI: bar, taskbar, state services, IPC surface     |
+| hypr       | `~/.config/hypr` (codeberg `quantumfate/hypr`)                                              | Compositor config: keybinds, submaps, launch flow |
 | scripts    | `~/Projects/github/quantumfate/scripts/bin` (on `$PATH`)                                  | `dofus_swap.py` OCR turn detector                 |
 
 ## State (single source of truth = files)

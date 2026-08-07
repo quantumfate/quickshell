@@ -7,8 +7,8 @@ the bridges between the Quickshell UI and the Hyprland config.
 
 | Repo                                                               | Role                                                                             |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| [**quickshell**](https://github.com/quantumfate/quickshell) (this) | The desktop shell / UI: widgets, theming, shared-state singletons.               |
-| [**hypr**](https://github.com/quantumfate/hypr)                    | The Hyprland compositor config (Lua): keybinds, submaps, window rules, services. |
+| [**quickshell**](https://codeberg.org/quantumfate/quickshell) (this) | The desktop shell / UI: widgets, theming, shared-state singletons.               |
+| [**hypr**](https://codeberg.org/quantumfate/hypr)                    | The Hyprland compositor config (Lua): keybinds, submaps, window rules, services. |
 | [**scripts**](https://github.com/quantumfate/scripts)              | Standalone CLI helpers on `$PATH` (e.g. `dofus_swap.py`, `dofus-team`).          |
 
 They are separate processes that cooperate over two well-defined bridges. There
@@ -45,7 +45,7 @@ thin reactive wrapper over that file, and they converge automatically:
 | either writes                       | atomic tmp + rename bumps mtime → the other side notices                      |
 
 - QML side: [`services/Store.qml`](services/Store.qml) — `Store { name: "dofus/team" }`.
-- Lua side: [`hypr/lib/store.lua`](https://github.com/quantumfate/hypr/blob/main/hypr/lib/store.lua) + vendored `hypr/lib/json.lua` (no `jq`).
+- Lua side: [`hypr/lib/store.lua`](https://codeberg.org/quantumfate/hypr/src/branch/main/hypr/lib/store.lua) + vendored `hypr/lib/json.lua` (no `jq`).
 - Standalone scripts read the same file directly (see `scripts/dofus-team`, `dofus_swap.py`).
 
 Because the file is the truth, adding a third reader (a script, a cron job) needs
@@ -63,13 +63,13 @@ qs -c quantumfate ipc call help all # annotated overview (modules/common/IpcHelp
 ```
 
 The Hyprland side calls these from keybinds (see
-[`hypr/services/dofus/ipc.lua`](https://github.com/quantumfate/hypr/blob/main/hypr/services/dofus/ipc.lua)
+[`hypr/services/dofus/ipc.lua`](https://codeberg.org/quantumfate/hypr/src/branch/main/hypr/services/dofus/ipc.lua)
 and the cheatsheet bind in `hypr/binds.lua`).
 
 ### Submap callbacks (the glue for which-key UI)
 
 Hyprland submap trees
-([`hypr/lib/submap.lua`](https://github.com/quantumfate/hypr/blob/main/hypr/lib/submap.lua))
+([`hypr/lib/submap.lua`](https://codeberg.org/quantumfate/hypr/src/branch/main/hypr/lib/submap.lua))
 support `on_enter` / `on_leave` callbacks per node. These fire IPC so the UI
 follows compositor state: entering the Dofus submap shows the team panel,
 entering a team submap selects that team, leaving hides the panel.
