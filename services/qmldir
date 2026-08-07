@@ -6,6 +6,7 @@ singleton DofusWindows DofusWindows.qml
 singleton DofusSwap DofusSwap.qml
 singleton Hypr Hypr.qml
 singleton Notify Notify.qml
+singleton ObsidianVault ObsidianVault.qml
 singleton SysStats SysStats.qml
 singleton SysMon SysMon.qml
 singleton BarInput BarInput.qml

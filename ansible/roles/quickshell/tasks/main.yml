@@ -42,9 +42,7 @@
 # via Store defaults, so we only need the directory to exist.
 - name: Ensure the XDG state directory exists
   ansible.builtin.file:
-    path: >-
-      {{ (ansible_facts.env.XDG_STATE_HOME | default(ansible_facts.user_dir + '/.local/state'))
-         + '/dofus' }}
+    path: "{{ quickshell_state_home }}/dofus"
     state: directory
     mode: "0755"
 

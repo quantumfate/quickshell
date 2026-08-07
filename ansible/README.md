@@ -32,3 +32,7 @@ analogue of the flake's home-manager module. Add this repo to your controller
 See `roles/quickshell/defaults/main.yml`. Key ones: `quickshell_config_name`,
 `quickshell_repo_path`, `quickshell_install_packages`, `quickshell_packages`,
 `quickshell_install_extra_packages`.
+
+The Obsidian tag store (`$XDG_STATE_HOME/obsidian/tags.json`) is maintained
+exclusively by `obsidian_vault.py sync` (scripts repo) — it is a projection of
+the already-synced vault, so it is not deployed by this role.

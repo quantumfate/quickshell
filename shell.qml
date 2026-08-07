@@ -6,6 +6,7 @@ import "modules/common"
 import "modules/cheatsheet"
 import "modules/bar"
 import "modules/dofus"
+import "modules/obsidian"
 
 ShellRoot {
     // `qs -c quantumfate ipc call help all` — annotated IPC overview.
@@ -34,6 +35,10 @@ ShellRoot {
     // Dofus class assigner: bind each character to a class (standalone from the
     // team panel). Opened via the Dofus submap or IPC.
     ClassAssigner {}
+
+    // Obsidian new-note form: type/title/topic + index-chain preview over the
+    // ObsidianVault store. Opened via the Obsidian submap or IPC.
+    ObsidianCreate {}
 
     // Themed which-key keybind cheatsheet. Toggled via IPC.
     CheatSheet {}

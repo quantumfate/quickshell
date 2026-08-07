@@ -6,6 +6,11 @@ quickshell_config_name: quantumfate
 # in; override when importing from a controller that clones it elsewhere.
 quickshell_repo_path: "{{ playbook_dir }}/.."
 
+# XDG state root the shell's Store files live under.
+quickshell_state_home: >-
+  {{ ansible_facts.env.XDG_STATE_HOME
+     | default(ansible_facts.user_dir + '/.local/state') }}
+
 # Runtime packages (Arch). Set false to manage them yourself.
 quickshell_install_packages: true
 quickshell_packages:
