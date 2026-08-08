@@ -2,7 +2,7 @@
 
 Desktop shell built on [Quickshell](https://quickshell.outfoxxed.me/). Part of
 the quantumfate desktop, alongside the [hypr](https://codeberg.org/quantumfate/hypr)
-compositor config and the [scripts](https://github.com/quantumfate/scripts) CLI
+compositor config and the [scripts](https://codeberg.org/quantumfate/scripts) CLI
 helpers.
 
 **See [ARCHITECTURE.md](ARCHITECTURE.md)** for how the UI and the Hyprland
@@ -57,7 +57,7 @@ Two provisioning paths, each importable as an "output" of a larger config:
 
 Both handle the full manual setup — runtime packages (incl. `xdotool` for
 window rename), the config symlink, the `_qs`/`_qfs` completions + `fpath`
-wiring — without copying data files. (`qfs` ships in the [scripts](https://github.com/quantumfate/scripts)
+wiring — without copying data files. (`qfs` ships in the [scripts](https://codeberg.org/quantumfate/scripts)
 repo; autostart lives in the [hypr](https://codeberg.org/quantumfate/hypr) config.)
 
 ## Editor setup (QML completion)
@@ -165,7 +165,7 @@ Targets: `help`, `theme`, `dofus`, `dofusPanel`, `cheatsheet`, `obsidian`,
 
 ### `qfs` wrapper
 
-`qfs` (in the [scripts](https://github.com/quantumfate/scripts) repo) wraps the
+`qfs` (in the [scripts](https://codeberg.org/quantumfate/scripts) repo) wraps the
 IPC surface:
 
 ```sh

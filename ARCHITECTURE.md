@@ -1,6 +1,6 @@
 # Architecture
 
-How the [quantumfate desktop](https://github.com/quantumfate) fits together, and
+How the [quantumfate desktop](https://codeberg.org/quantumfate) fits together, and
 the bridges between the Quickshell UI and the Hyprland config.
 
 ## The three repositories
@@ -9,7 +9,7 @@ the bridges between the Quickshell UI and the Hyprland config.
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | [**quickshell**](https://codeberg.org/quantumfate/quickshell) (this) | The desktop shell / UI: widgets, theming, shared-state singletons.               |
 | [**hypr**](https://codeberg.org/quantumfate/hypr)                    | The Hyprland compositor config (Lua): keybinds, submaps, window rules, services. |
-| [**scripts**](https://github.com/quantumfate/scripts)              | Standalone CLI helpers on `$PATH` (e.g. `dofus_swap.py`, `dofus-team`).          |
+| [**scripts**](https://codeberg.org/quantumfate/scripts)              | Standalone CLI helpers on `$PATH` (e.g. `dofus_swap.py`, `dofus-team`).          |
 
 They are separate processes that cooperate over two well-defined bridges. There
 is no daemon and no bespoke socket protocol.

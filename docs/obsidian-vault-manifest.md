@@ -9,7 +9,7 @@ the Dofus feature, where the JSON file is truth and several editors write it.
 
 | Repo       | Path                                                                                      | Role                                                            |
 | ---------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| scripts    | `~/Projects/github/quantumfate/scripts/bin` (on `$PATH`)                                  | `obsidian_vault.py` bootstrap + `,obsidian-cli-wrapper.sh`      |
+| scripts    | `~/Projects/codeberg/quantumfate/scripts/bin` (on `$PATH`)                                  | `obsidian_vault.py` bootstrap + `,obsidian-cli-wrapper.sh`      |
 | quickshell | `~/Projects/codeberg/quantumfate/quickshell` (symlinked `~/.config/quickshell/quantumfate`) | store view + new-note form (`ObsidianVault` / `ObsidianCreate`) |
 | hypr       | `~/.config/hypr` (codeberg `quantumfate/hypr`)                                              | `services/obsidian` submap: MOD+o → new note / status / tree    |
 
