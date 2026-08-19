@@ -14,7 +14,6 @@ WindowStrip {
 
     onFocus: (s) => DofusWindows.focus(s.selector)
     onRename: (s, text) => DofusWindows.rename(s.index, s.pid, text)
-    onReorder: (s, dir) => DofusState.reorder(s.index, s.index + dir)
     onClose: (s) => DofusWindows.close(s.selector)
     onCapture: (s) => DofusSwap.learn(s.name)
 }
