@@ -78,6 +78,7 @@ Singleton {
     }
 
     // Indented rendering of the store tree (reactive; used by IPC `tree`).
+    // TODO: implement a small window with info
     function treeText() {
         const lines = [];
         const walk = (node, depth) => {
