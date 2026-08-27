@@ -1,9 +1,5 @@
 ---
-# Config name: installed at ~/.config/quickshell/<name>, run with `qs -c <name>`.
 quickshell_config_name: quantumfate
-
-# Path to this repo checkout on the target. Defaults to the repo this role ships
-# in; override when importing from a controller that clones it elsewhere.
 quickshell_repo_path: "{{ playbook_dir }}/.."
 
 # XDG state root the shell's Store files live under.
@@ -11,7 +7,6 @@ quickshell_state_home: >-
   {{ ansible_facts.env.XDG_STATE_HOME
      | default(ansible_facts.user_dir + '/.local/state') }}
 
-# Runtime packages (Arch). Set false to manage them yourself.
 quickshell_install_packages: true
 quickshell_packages:
   # --- core shell ---
@@ -34,34 +29,17 @@ quickshell_packages:
   # util-linux (setsid, DofusSwap) + coreutils (df/tr, SysStats) are in `base`.
   # --- bar module backends (invoked directly by bar widgets) ---
   - networkmanager        # SysStats wifi probe (nmcli)
-  # GPU stats (SysMonitor/SysPanel) call `nvidia-smi` when present; it ships with
-  # nvidia-utils (proprietary driver) — install per-host, not declared here.
-  # Volume is now event-driven via Pipewire (Quickshell.Services.Pipewire), so
-  # no pamixer. Notifications are served by the shell itself (Notify.qml IS the
-  # org.freedesktop.Notifications daemon), so mako must NOT run — disable it:
-  #   systemctl --user disable --now mako.service   (or drop it from autostart)
-  # A second notification daemon would fight for the DBus name.
-  # The brightness / language / volume / power modules also shell out to the
-  # user's own waybar scripts (~/.config/waybar/scripts/*, `,brightness.sh`,
-  # `,volume.sh`), which in turn expect their own tools (brightnessctl, wlogout,
-  # etc.) — those stay the user's responsibility, not declared here.
 
-# Stop + disable mako's user service (the shell is the notification daemon now).
-# Set false if you manage mako yourself or use a different session manager.
 quickshell_disable_mako: true
 
-# Install the _qs/_qfs zsh completions and add the dir to fpath.
 quickshell_install_zsh_completions: true
 quickshell_completion_dir: "{{ ansible_facts.user_dir }}/.local/share/zsh/site-functions"
 quickshell_completions:
   - _qs
   - _qfs
-# Add the completion dir to fpath in .zshrc (before compinit). Set false to wire
-# fpath yourself.
 quickshell_manage_zshrc: true
 quickshell_zshrc: "{{ ansible_facts.user_dir }}/.zshrc"
 
-# Extra tooling used by the Dofus turn-swap script (optional).
 quickshell_install_extra_packages: false
 quickshell_extra_packages:
   - python-pillow
