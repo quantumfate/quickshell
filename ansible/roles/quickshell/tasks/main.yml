@@ -49,15 +49,3 @@
     force: true
   loop: "{{ quickshell_completions }}"
   when: quickshell_install_zsh_completions | bool
-
-- name: Add the completion dir to fpath (before compinit)
-  ansible.builtin.blockinfile:
-    path: "{{ quickshell_zshrc }}"
-    marker: "# {mark} ANSIBLE quantumfate quickshell completions"
-    insertbefore: BOF
-    create: false
-    block: |
-      fpath=({{ quickshell_completion_dir }} $fpath)
-  when:
-    - quickshell_install_zsh_completions | bool
-    - quickshell_manage_zshrc | bool

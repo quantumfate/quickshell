@@ -10,25 +10,25 @@ quickshell_state_home: >-
 quickshell_install_packages: true
 quickshell_packages:
   # --- core shell ---
-  - quickshell               # the shell itself
-  - qt6-declarative          # qmlls6 + QtQuick modules
-  - qt6-svg                  # tray/icon rendering (Quickshell.Services.SystemTray)
-  - qt6-5compat              # Qt5Compat.GraphicalEffects (blur/shadow in QML) — not a quickshell hard dep
-  - upower                   # Quickshell.Services.UPower (battery/power) — service backend
-  - ttf-jetbrains-mono-nerd  # bar font + nerd-font glyphs
+  - quickshell # the shell itself
+  - qt6-declarative # qmlls6 + QtQuick modules
+  - qt6-svg # tray/icon rendering (Quickshell.Services.SystemTray)
+  - qt6-5compat # Qt5Compat.GraphicalEffects (blur/shadow in QML) — not a quickshell hard dep
+  - upower # Quickshell.Services.UPower (battery/power) — service backend
+  - ttf-jetbrains-mono-nerd # bar font + nerd-font glyphs
   # --- shell-side helpers invoked from QML / bindings ---
-  - jq                # store queries + Hypr/SysStats/DofusWindows probes
-  - libnotify         # notify-send → the Notify daemon (below)
-  - xdotool           # window rename IPC + launch renaming
-  - uwsm              # session-scoped autostart
-  - iproute2          # SysStats default-iface probe (ip route)
-  - gawk              # SysStats probe field parsing (awk)
-  - procps-ng         # DofusSwap detector state (pgrep/pkill)
-  - curl              # Weather widget (wttr.in)
-  - xdg-utils         # Weather click (xdg-open)
+  - jq # store queries + Hypr/SysStats/DofusWindows probes
+  - libnotify # notify-send → the Notify daemon (below)
+  - xdotool # window rename IPC + launch renaming
+  - uwsm # session-scoped autostart
+  - iproute2 # SysStats default-iface probe (ip route)
+  - gawk # SysStats probe field parsing (awk)
+  - procps-ng # DofusSwap detector state (pgrep/pkill)
+  - curl # Weather widget (wttr.in)
+  - xdg-utils # Weather click (xdg-open)
   # util-linux (setsid, DofusSwap) + coreutils (df/tr, SysStats) are in `base`.
   # --- bar module backends (invoked directly by bar widgets) ---
-  - networkmanager        # SysStats wifi probe (nmcli)
+  - networkmanager # SysStats wifi probe (nmcli)
 
 quickshell_disable_mako: true
 
@@ -37,8 +37,6 @@ quickshell_completion_dir: "{{ ansible_facts.user_dir }}/.local/share/zsh/site-f
 quickshell_completions:
   - _qs
   - _qfs
-quickshell_manage_zshrc: true
-quickshell_zshrc: "{{ ansible_facts.user_dir }}/.zshrc"
 
 quickshell_install_extra_packages: false
 quickshell_extra_packages:
