@@ -24,7 +24,9 @@ Rectangle {
         "study": "",   //  book
         "proton": "",  //  envelope
         "media": "",   //  music
-        "gaming": ""   //  gamepad
+        "gaming": "",   //  gamepad
+        "logs": "",   //
+        "misc": ""   //
     })
     function _icon(wsName, wsId) {
         return root._iconByName[wsName] ?? (wsId > 0 && wsId < 10 ? String(wsId) : ""); //  dot
