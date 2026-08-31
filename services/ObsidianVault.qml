@@ -5,7 +5,7 @@ pragma Singleton
 // this is a projection for the UI (the DofusState pattern, read-only).
 //
 // The store file carries: notes, tags (kind leaf/idx/meta_idx), topics and the
-// derived `tree`. See quickshell/docs/obsidian-vault-manifest.md for the schema.
+// derived `tree`.
 //
 //   qs -c quantumfate ipc call obsidian status | tree | create | ensure | reload
 import Quickshell

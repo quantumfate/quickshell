@@ -1,11 +1,11 @@
 // Store.qml — reactive mirror of a shared JSON state file, the QML counterpart
 // of hypr/lib/store.lua. Instantiate one per state file:
 //
-//   Store { id: team; name: "dofus/team" }
-//   team.data                       // parsed object, reactive
-//   team.get("teams", "pioneer")    // drill into keys
-//   team.set({ selected: "duo" })   // shallow-merge patch + persist
-//   team.put(obj)                   // replace whole document + persist
+//   Store { id: store; name: "theme" }
+//   store.data                       // parsed object, reactive
+//   store.get("palette")             // drill into keys
+//   store.set({ selected: "duo" })   // shallow-merge patch + persist
+//   store.put(obj)                   // replace whole document + persist
 //
 // The file (in $XDG_STATE_HOME/<name>.json) is the single source of truth.
 // watchChanges makes external writes (Lua config, scripts) reload reactively;

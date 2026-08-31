@@ -2,7 +2,7 @@ pragma Singleton
 // Hypr — window actions over Hyprland's Lua dispatch layer.
 //
 // This compositor evaluates `dispatch <x>` as `hl.dispatch(<x>)` (see
-// docs/dofus-feature-manifest.md), so every action sends a Lua expression, and
+// ARCHITECTURE.md), so every action sends a Lua expression, and
 // windows are addressed by a SELECTOR string ("address:0x…" or "title:…").
 // Generic enough for any taskbar; DofusWindows builds title selectors on top.
 import Quickshell
