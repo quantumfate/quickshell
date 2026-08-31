@@ -12,11 +12,10 @@ This repository bridges everything on my desktop with the concept of a `store`.
 
 My obsidian is managed too but not listed here.
 
-## Bridge 1 — State (the Store)
+## the Store
 
-A `Store` is a reactive wrapper over `$XDG_STATE_HOME/<name>.json`, the single
-source of truth shared by both runtimes. Each side edits the same file and
-they converge automatically:
+The `Store` is a reactive wrapper over `$XDG_STATE_HOME/<name>.json`, the single
+source of truth shared by both runtimes.
 
 | direction                           | mechanism                                                         |
 | ----------------------------------- | ----------------------------------------------------------------- |
@@ -36,19 +35,15 @@ Every singleton that owns shared state is a Store: `Theme` (`theme.json`),
 `DofusState` (`dofus/team.json`), `ObsidianVault` (`obsidian/tags.json`),
 `Notify` (`notifications.json`).
 
-## Bridge 2 — Command (IPC)
+## Command (IPC)
 
-Actions that aren't state — "toggle the panel", "show the cheatsheet",
-"switch palette" — go over Quickshell's IPC:
+IPC takes care of actions that do not require a state:
 
 ```
 qs -c quantumfate ipc call <target> <function> [args]
 qs -c quantumfate ipc show          # raw signatures
 qs -c quantumfate ipc call help all # annotated overview
 ```
-
-Hyprland calls these from keybinds and submap `on_enter`/`on_leave` callbacks,
-so the UI follows compositor state (entering a submap shows the matching panel).
 
 ## Delivery & dependencies
 
