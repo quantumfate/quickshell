@@ -6,7 +6,6 @@
 //   urgent   → red
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import Quickshell.Hyprland
 import "../../services"   // Theme
 
@@ -21,12 +20,12 @@ Rectangle {
     // generic dot. Add a workspace = add a line here.
     readonly property var _iconByName: ({
         "code": "",    //  terminal
-        "study": "",   //  book
-        "proton": "",  //  envelope
-        "media": "",   //  music
-        "gaming": "",   //  gamepad
-        "logs": "",   //
-        "misc": ""   //
+        "creative": "",   //  book
+        "proton": "",  //  envelope
+        "media": "",   //  music
+        "gaming": "",   //  gamepad
+        "logs": "",   //
+        "misc": ""   //
     })
     function _icon(wsName, wsId) {
         return root._iconByName[wsName] ?? (wsId > 0 && wsId < 10 ? String(wsId) : ""); //  dot
