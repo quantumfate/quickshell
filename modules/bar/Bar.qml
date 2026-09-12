@@ -70,7 +70,8 @@ Scope {
             screen: modelData
 
             anchors { top: true; left: true; right: true }
-            implicitHeight: 30
+            // Room for the module pills to sit in rather than fill.
+            implicitHeight: 38
             color: "transparent"
 
             // The team "is here" only when this monitor's active workspace holds
@@ -104,11 +105,14 @@ Scope {
 
             Rectangle {
                 anchors.fill: parent
-                color: Theme.background
+                // No ground of its own: the modules float over the wallpaper.
+                // Legibility comes from the wallpaper being flattened at
+                // theme-apply time, not from a panel behind the text.
+                color: "transparent"
 
                 // left region, pinned to the start: workspaces pill + a stats/media cluster.
                 RowLayout {
-                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: Theme.gap }
+                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: Theme.pad }
                     spacing: Theme.gap
                     Workspaces { screen: bar.screen }
                     Separator {}
@@ -153,7 +157,7 @@ Scope {
                 // right region, pinned to the end: a system-controls cluster,
                 // then the clock pill and the standalone power button.
                 RowLayout {
-                    anchors { right: parent.right; top: parent.top; bottom: parent.bottom; rightMargin: Theme.gap }
+                    anchors { right: parent.right; top: parent.top; bottom: parent.bottom; rightMargin: Theme.pad }
                     spacing: Theme.gap
                     Cluster {
                         Tray {}

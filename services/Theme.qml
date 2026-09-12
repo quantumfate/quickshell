@@ -18,7 +18,7 @@ Singleton {
     Store {
         id: store
         name: "theme"
-        defaults: ({ palette: "macchiato", cheatsheet_peek_ms: 6000 })
+        defaults: ({ palette: "macchiato", cheatsheet_linger_ms: 400 })
     }
 
     readonly property string name: store.get("palette") ?? "macchiato"

@@ -86,6 +86,7 @@
           yamllint
           prettier
           nixpkgs-fmt
+          qt6.qtdeclarative # qmllint — the QML gate in `just check`
           ansible
           ansible-lint
         ];

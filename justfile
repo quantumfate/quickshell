@@ -16,13 +16,30 @@ fmt-check:
 	prettier --check '**/*.md'
 	nixpkgs-fmt --check .
 
+# QML static analysis. Must be Qt6's qmllint: on Arch the unprefixed binary on
+# PATH is Qt5's and exits 255 on every file here, so the recipe resolves a
+# version-6 one rather than trusting PATH. Categories are tuned in
+# .qmllint.ini — the Quickshell plugin's types are unresolvable to qmllint and
+# are off, and the existing findings are grandfathered at `info` so the gate
+# gives a floor today instead of waiting on a 174-item cleanup.
+qmllint:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	for c in qmllint6 /usr/lib/qt6/bin/qmllint "$(command -v qmllint || true)"; do
+		if [ -x "$c" ] && "$c" --version 2>/dev/null | grep -q ' 6\.'; then
+			exec "$c" -I . $(git ls-files '*.qml')
+		fi
+	done
+	echo "no Qt6 qmllint found (tried qmllint6, /usr/lib/qt6/bin/qmllint, PATH)" >&2
+	exit 1
+
 # Static analysis
-lint:
+lint: qmllint
 	git ls-files '*.sh' '*.bash' | xargs -r shellcheck
 	yamllint .
 
-# CI/pre-commit gate: formatting + tests (lint is advisory)
-check: fmt-check
+# CI/pre-commit gate: formatting + QML linting (shellcheck/yamllint stay advisory)
+check: fmt-check qmllint
 
 # Ansible playbook syntax check (cheap; part of the CI gate)
 ansible-syntax:
