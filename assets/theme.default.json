@@ -1,5 +1,10 @@
 {
   "palette": "macchiato",
+  "mode": "auto",
+  "day": "latte",
+  "night": "macchiato",
   "scale": 1.25,
+  "opacity": 1.0,
+  "wallpaper": "",
   "cheatsheet_linger_ms": 400
 }

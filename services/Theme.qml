@@ -18,10 +18,36 @@ Singleton {
     Store {
         id: store
         name: "theme"
-        defaults: ({ palette: "macchiato", scale: 1.25, cheatsheet_linger_ms: 400 })
+        // The full contract. Everything that decides how the desk looks lives
+        // here, so "one button" is one `store.set` and any surface that cannot
+        // watch a JSON file is reached by `,theme.sh apply` reading the same
+        // fields.
+        defaults: ({
+            palette: "macchiato",   // the active palette
+            mode: "auto",           // "auto" follows the sun, "manual" pins `palette`
+            day: "latte",
+            night: "macchiato",
+            scale: 1.25,            // UI scale; see `fs` and `space` below
+            opacity: 1.0,           // global window-opacity dial (1 = opaque)
+            wallpaper: "",          // "" = the palette's default, resolved by ,theme.sh
+            cheatsheet_linger_ms: 400
+        })
     }
 
     readonly property string name: store.get("palette") ?? "macchiato"
+
+    // How the palette is chosen. "auto" hands the decision to the sun timer;
+    // "manual" means a deliberate pick that outlasts the next sunrise.
+    readonly property string mode: store.get("mode") ?? "auto"
+    readonly property string dayPalette: store.get("day") ?? "latte"
+    readonly property string nightPalette: store.get("night") ?? "macchiato"
+
+    // Read by the Hyprland opacity rules rather than by the shell itself: one
+    // dial over the whole role table, and 1.0 is a hard "everything opaque".
+    readonly property real opacity: store.get("opacity") ?? 1.0
+
+    // "" means the palette decides; `,theme.sh` resolves and applies it.
+    readonly property string wallpaper: store.get("wallpaper") ?? ""
 
     // Raw palettes. Add more here; switching is just a name change. `cycle`
     // walks them in insertion order.
@@ -133,11 +159,14 @@ Singleton {
         return Qt.rgba(color.r, color.g, color.b, a);
     }
 
-    // ipc: qs -c quantumfate ipc call theme set <palette> | get | cycle
+    // ipc: qs -c quantumfate ipc call theme set <palette> | get | cycle | auto
+    //      | scale <n> | opacity <n>
     IpcHandler {
         target: "theme"
+        // Setting a palette by hand is a deliberate choice: it pins the mode so
+        // the next sunrise does not undo it. `auto` hands the decision back.
         function set(palette: string): void {
-            if (root.palettes[palette]) store.set({ palette: palette });
+            if (root.palettes[palette]) store.set({ palette: palette, mode: "manual" });
         }
         function get(): string { return root.name; }
         // Live size tuning: `theme scale 1.4`, then write the value you settle on
@@ -147,12 +176,25 @@ Singleton {
             store.set({ scale: v });
             return v;
         }
-        // Advance to the next palette in insertion order (wraps).
+        // Advance to the next palette in insertion order (wraps). An explicit
+        // step is a deliberate choice, so it also pins the mode.
         function cycle(): string {
             const names = Object.keys(root.palettes);
             const next = names[(names.indexOf(root.name) + 1) % names.length];
-            store.set({ palette: next });
+            store.set({ palette: next, mode: "manual" });
             return next;
+        }
+        // Hand the choice back to the sun timer.
+        function auto(): string {
+            store.set({ mode: "auto" });
+            return "auto";
+        }
+        // The global window-opacity dial. 1 = everything opaque, which is also
+        // presentation mode.
+        function opacity(value: real): real {
+            const v = Math.max(0.5, Math.min(1.0, value));
+            store.set({ opacity: v });
+            return v;
         }
     }
 }
