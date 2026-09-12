@@ -50,7 +50,7 @@ Rectangle {
     RowLayout {
         id: row
         anchors.centerIn: parent
-        spacing: 10
+        spacing: Theme.space.lg
 
         Repeater {
             model: root._sorted

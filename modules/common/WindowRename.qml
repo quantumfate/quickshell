@@ -102,7 +102,7 @@ Scope {
                 Text {
                     text: "Rename window"
                     color: Theme.accent
-                    font { pixelSize: 15; bold: true }
+                    font { pixelSize: Theme.fs.lg; bold: true }
                 }
 
                 Rectangle {
@@ -114,9 +114,9 @@ Scope {
 
                     TextInput {
                         id: input
-                        anchors { fill: parent; margins: 6 }
+                        anchors { fill: parent; margins: Theme.space.md }
                         color: Theme.text
-                        font.pixelSize: 14
+                        font.pixelSize: Theme.fs.md
                         verticalAlignment: TextInput.AlignVCenter
                         clip: true
                         selectByMouse: true
@@ -129,7 +129,7 @@ Scope {
                 Text {
                     text: "Enter to apply · Esc to cancel"
                     color: Theme.subtext
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs.xs
                 }
             }
         }

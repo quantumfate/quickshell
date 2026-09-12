@@ -79,23 +79,23 @@ Scope {
         property string hint
         property string count
         Layout.fillWidth: true
-        spacing: 8
+        spacing: Theme.space.md
         Text {
             text: label
             color: Theme.subtext
-            font { pixelSize: 11; bold: true; letterSpacing: 1.5; family: Theme.fontFamily }
+            font { pixelSize: Theme.fs.xs; bold: true; letterSpacing: 1.5; family: Theme.fontFamily }
         }
         Text {
             text: hint
             color: Theme.overlay
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs.xs
             Layout.fillWidth: true
             elide: Text.ElideRight
         }
         Text {
             text: count
             color: Theme.overlay
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs.xs
         }
     }
 
@@ -114,9 +114,9 @@ Scope {
         RowLayout {
             id: tbRow
             anchors.centerIn: parent
-            spacing: 3
-            Text { visible: tb.glyph.length > 0; text: tb.glyph; color: tb.tone; font { pixelSize: 12; bold: true } }
-            Text { text: tb.label; color: tbHover.hovered ? tb.tone : Theme.text; font.pixelSize: 11 }
+            spacing: Theme.space.sm
+            Text { visible: tb.glyph.length > 0; text: tb.glyph; color: tb.tone; font { pixelSize: Theme.fs.sm; bold: true } }
+            Text { text: tb.label; color: tbHover.hovered ? tb.tone : Theme.text; font.pixelSize: Theme.fs.xs }
         }
         HoverHandler { id: tbHover }
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: tb.clicked() }
@@ -137,9 +137,9 @@ Scope {
         function _commit() { ii.committed(field.text); }
         TextInput {
             id: field
-            anchors { fill: parent; leftMargin: 7; rightMargin: 7 }
+            anchors { fill: parent; leftMargin: Theme.space.md; rightMargin: Theme.space.md }
             color: Theme.text
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs.xs
             verticalAlignment: TextInput.AlignVCenter
             clip: true
             selectByMouse: true
@@ -151,7 +151,7 @@ Scope {
                 visible: field.text.length === 0 && !field.activeFocus
                 text: ii.placeholder
                 color: Theme.overlay
-                font.pixelSize: 11
+                font.pixelSize: Theme.fs.xs
             }
         }
     }
@@ -216,20 +216,20 @@ Scope {
                     // ── Header: title + read-only prefix ────────────────────
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 10
+                        spacing: Theme.space.lg
                         Rectangle { width: 10; height: 10; radius: 5; color: Theme.accent }
                         Text {
                             text: "Dofus Team Manager"
                             color: Theme.text
-                            font { pixelSize: 16; bold: true; family: Theme.fontFamily }
+                            font { pixelSize: Theme.fs.lg; bold: true; family: Theme.fontFamily }
                         }
                         Text {
                             text: "edits team.json only · never renames windows"
                             color: Theme.overlay
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs.xs
                             Layout.fillWidth: true
                         }
-                        Text { text: "prefix"; color: Theme.subtext; font.pixelSize: 11 }
+                        Text { text: "prefix"; color: Theme.subtext; font.pixelSize: Theme.fs.xs }
                         Rectangle {
                             implicitWidth: prefixText.implicitWidth + 18
                             implicitHeight: 26
@@ -241,7 +241,7 @@ Scope {
                                 anchors.centerIn: parent
                                 text: DofusState.titlePrefix.trim()
                                 color: Theme.text
-                                font { pixelSize: 12; family: "monospace" }
+                                font { pixelSize: Theme.fs.sm; family: "monospace" }
                             }
                         }
                     }
@@ -249,16 +249,16 @@ Scope {
                     // ── Header: team pills ──────────────────────────────────
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 8
+                        spacing: Theme.space.md
                         Text {
                             text: "TEAM"
                             color: Theme.subtext
-                            font { pixelSize: 11; bold: true; letterSpacing: 1.5 }
+                            font { pixelSize: Theme.fs.xs; bold: true; letterSpacing: 1.5 }
                         }
 
                         Flow {
                             Layout.fillWidth: true
-                            spacing: 6
+                            spacing: Theme.space.md
 
                             Repeater {
                                 model: Object.keys(DofusState.teams)
@@ -286,21 +286,21 @@ Scope {
                                         RowLayout {
                                             id: pillRow
                                             anchors.centerIn: parent
-                                            spacing: 5
+                                            spacing: Theme.space.sm
                                             Text {
                                                 text: pill.isActive ? "★" : "☆"
                                                 color: pill.isActive ? Theme.accent : Theme.overlay
-                                                font.pixelSize: 11
+                                                font.pixelSize: Theme.fs.xs
                                             }
                                             Text {
                                                 text: pill.modelData
                                                 color: pill.isActive ? Theme.accent : Theme.text
-                                                font { pixelSize: 12; bold: pill.isActive }
+                                                font { pixelSize: Theme.fs.sm; bold: pill.isActive }
                                             }
                                             Text {
                                                 text: pill.count
                                                 color: pill.isActive ? Theme.accent : Theme.subtext
-                                                font { pixelSize: 11; family: "monospace" }
+                                                font { pixelSize: Theme.fs.xs; family: "monospace" }
                                             }
                                         }
 
@@ -346,7 +346,7 @@ Scope {
                                         anchors.centerIn: parent
                                         text: "+ team"
                                         color: Theme.subtext
-                                        font.pixelSize: 12
+                                        font.pixelSize: Theme.fs.sm
                                     }
                                     HoverHandler { id: createHover }
                                     MouseArea {
@@ -385,8 +385,8 @@ Scope {
 
                         ColumnLayout {
                             id: poolCol
-                            anchors { fill: parent; margins: 16 }
-                            spacing: 10
+                            anchors { fill: parent; margins: Theme.space.xl }
+                            spacing: Theme.space.lg
 
                             SectionHeader {
                                 label: "CHARACTER POOL"
@@ -396,7 +396,7 @@ Scope {
 
                             Flow {
                                 Layout.fillWidth: true
-                                spacing: 6
+                                spacing: Theme.space.md
 
                                 Repeater {
                                     model: DofusState.pool
@@ -435,8 +435,8 @@ Scope {
 
                                             RowLayout {
                                                 id: chipRow
-                                                anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: 8 }
-                                                spacing: 5
+                                                anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: Theme.space.md }
+                                                spacing: Theme.space.sm
                                                 Rectangle { visible: chip.online; width: 5; height: 5; radius: 3; color: Theme.success }
                                                 // Class emblem, auto-hides when no class assigned.
                                                 ClassIcon {
@@ -448,7 +448,7 @@ Scope {
                                                 Text {
                                                     text: chip.modelData
                                                     color: chip.inTeam ? Theme.accent : Theme.text
-                                                    font { pixelSize: 12; bold: chip.inTeam }
+                                                    font { pixelSize: Theme.fs.sm; bold: chip.inTeam }
                                                 }
                                                 // ✓ already a team member; + to add it.
                                                 Rectangle {
@@ -459,7 +459,7 @@ Scope {
                                                         anchors.centerIn: parent
                                                         text: chip.inTeam ? "✓" : "+"
                                                         color: chip.inTeam ? Theme.success : Theme.accent
-                                                        font { pixelSize: 11; bold: true }
+                                                        font { pixelSize: Theme.fs.xs; bold: true }
                                                     }
                                                     HoverHandler { id: addHover }
                                                     MouseArea {
@@ -473,7 +473,7 @@ Scope {
                                                 Rectangle {
                                                     width: 16; height: 16; radius: 8
                                                     color: rmHover.hovered ? Theme.withAlpha(Theme.error, 0.22) : "transparent"
-                                                    Text { anchors.centerIn: parent; text: "×"; color: rmHover.hovered ? Theme.error : Theme.overlay; font.pixelSize: 12 }
+                                                    Text { anchors.centerIn: parent; text: "×"; color: rmHover.hovered ? Theme.error : Theme.overlay; font.pixelSize: Theme.fs.sm }
                                                     HoverHandler { id: rmHover }
                                                     MouseArea {
                                                         anchors.fill: parent
@@ -507,7 +507,7 @@ Scope {
                                         radius: Theme.radiusSmall
                                         color: addCharHover.hovered ? Theme.surfaceAlt : "transparent"
                                         border { width: 1; color: Theme.border }
-                                        Text { id: addCharLabel; anchors.centerIn: parent; text: "+ add character"; color: Theme.subtext; font.pixelSize: 12 }
+                                        Text { id: addCharLabel; anchors.centerIn: parent; text: "+ add character"; color: Theme.subtext; font.pixelSize: Theme.fs.sm }
                                         HoverHandler { id: addCharHover }
                                         MouseArea {
                                             anchors.fill: parent
@@ -538,8 +538,8 @@ Scope {
 
                         ColumnLayout {
                             id: teamCol
-                            anchors { fill: parent; margins: 16 }
-                            spacing: 8
+                            anchors { fill: parent; margins: Theme.space.xl }
+                            spacing: Theme.space.md
 
                             SectionHeader {
                                 label: "TEAM · " + (DofusState.selected || "—").toUpperCase()
@@ -552,7 +552,7 @@ Scope {
                             // fighting it.
                             Column {
                                 Layout.fillWidth: true
-                                spacing: 6
+                                spacing: Theme.space.md
 
                                 Repeater {
                                     model: DofusState.team
@@ -568,15 +568,15 @@ Scope {
                                         border { width: 1; color: Theme.border }
 
                                         RowLayout {
-                                            anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
-                                            spacing: 8
+                                            anchors { fill: parent; leftMargin: Theme.space.md; rightMargin: Theme.space.md }
+                                            spacing: Theme.space.md
 
                                             // F-key badge.
                                             Rectangle {
                                                 Layout.preferredWidth: 30; Layout.preferredHeight: 22
                                                 radius: Theme.radiusSmall
                                                 color: Theme.withAlpha(Theme.accent, 0.2)
-                                                Text { anchors.centerIn: parent; text: "F" + (row.index + 1); color: Theme.accent; font { pixelSize: 11; bold: true; family: "monospace" } }
+                                                Text { anchors.centerIn: parent; text: "F" + (row.index + 1); color: Theme.accent; font { pixelSize: Theme.fs.xs; bold: true; family: "monospace" } }
                                             }
 
                                             // Class emblem, assigned in the pool / Class Assigner.
@@ -590,7 +590,7 @@ Scope {
                                             Text {
                                                 text: row.modelData
                                                 color: Theme.text
-                                                font.pixelSize: 13
+                                                font.pixelSize: Theme.fs.md
                                                 elide: Text.ElideRight
                                                 Layout.fillWidth: true
                                             }
@@ -608,7 +608,7 @@ Scope {
                                 visible: (DofusState.team || []).length === 0
                                 text: "No members — add characters from the pool above."
                                 color: Theme.overlay
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs.xs
                             }
                         }
                     }
@@ -623,8 +623,8 @@ Scope {
 
                         ColumnLayout {
                             id: winCol
-                            anchors { fill: parent; margins: 16 }
-                            spacing: 8
+                            anchors { fill: parent; margins: Theme.space.xl }
+                            spacing: Theme.space.md
 
                             SectionHeader {
                                 label: "ACTIVE WINDOWS"
@@ -655,8 +655,8 @@ Scope {
                                     }
 
                                     RowLayout {
-                                        anchors { fill: parent; leftMargin: 12; rightMargin: 10 }
-                                        spacing: 10
+                                        anchors { fill: parent; leftMargin: Theme.space.lg; rightMargin: Theme.space.lg }
+                                        spacing: Theme.space.lg
 
                                         Rectangle {
                                             width: 8; height: 8; radius: 4
@@ -674,7 +674,7 @@ Scope {
                                         // Name assignment dropdown + raw title beneath.
                                         ColumnLayout {
                                             Layout.preferredWidth: 170
-                                            spacing: 2
+                                            spacing: Theme.space.xs
                                             QC.ComboBox {
                                                 id: nameBox
                                                 Layout.fillWidth: true
@@ -682,18 +682,18 @@ Scope {
                                                 readonly property var opts: ["— unnamed —"].concat(DofusState.pool)
                                                 model: opts
                                                 currentIndex: Math.max(0, opts.indexOf(wrow.w.name))
-                                                font.pixelSize: 12
+                                                font.pixelSize: Theme.fs.sm
                                                 onActivated: (i) => {
                                                     if (i === 0) DofusWindows.clearName(wrow.w.pid);
                                                     else DofusWindows.setName(wrow.w.pid, opts[i]);
                                                 }
                                                 contentItem: RowLayout {
-                                                    spacing: 6
+                                                    spacing: Theme.space.md
                                                     // Class emblem of the selected character (hides for "— unnamed —").
                                                     ClassIcon {
                                                         cls: wrow.named ? DofusState.classOf(wrow.w.name) : ""
                                                         size: 18
-                                                        Layout.leftMargin: 8
+                                                        Layout.leftMargin: Theme.space.md
                                                         Layout.preferredWidth: visible ? size : 0
                                                         Layout.preferredHeight: size
                                                     }
@@ -702,7 +702,7 @@ Scope {
                                                         rightPadding: 20
                                                         text: nameBox.displayText
                                                         color: wrow.named ? Theme.text : Theme.overlay
-                                                        font.pixelSize: 12
+                                                        font.pixelSize: Theme.fs.sm
                                                         verticalAlignment: Text.AlignVCenter
                                                         elide: Text.ElideRight
                                                         Layout.fillWidth: true
@@ -711,7 +711,7 @@ Scope {
                                                 indicator: Text {
                                                     x: nameBox.width - width - 8
                                                     y: (nameBox.height - height) / 2
-                                                    text: "▾"; color: Theme.subtext; font.pixelSize: 10
+                                                    text: "▾"; color: Theme.subtext; font.pixelSize: Theme.fs.xs
                                                 }
                                                 background: Rectangle {
                                                     radius: Theme.radiusSmall
@@ -723,7 +723,7 @@ Scope {
                                                     required property int index
                                                     width: nameBox.width
                                                     contentItem: RowLayout {
-                                                        spacing: 6
+                                                        spacing: Theme.space.md
                                                         // Class emblem per option (index 0 is "— unnamed —" -> none).
                                                         ClassIcon {
                                                             cls: index === 0 ? "" : DofusState.classOf(modelData)
@@ -734,7 +734,7 @@ Scope {
                                                         Text {
                                                             text: modelData
                                                             color: index === nameBox.currentIndex ? Theme.accent : Theme.text
-                                                            font.pixelSize: 12
+                                                            font.pixelSize: Theme.fs.sm
                                                             verticalAlignment: Text.AlignVCenter
                                                             Layout.fillWidth: true
                                                         }
@@ -768,7 +768,7 @@ Scope {
                                             Text {
                                                 text: wrow.w.title || "—"
                                                 color: Theme.overlay
-                                                font { pixelSize: 10; family: "monospace" }
+                                                font { pixelSize: Theme.fs.xs; family: "monospace" }
                                                 elide: Text.ElideRight
                                                 Layout.fillWidth: true
                                             }
@@ -776,12 +776,12 @@ Scope {
 
                                         // addr / pid metadata.
                                         RowLayout {
-                                            spacing: 6
+                                            spacing: Theme.space.md
                                             Layout.fillWidth: true
-                                            Text { text: "addr"; color: Theme.overlay; font.pixelSize: 10 }
-                                            Text { text: wrow.w.address || "—"; color: Theme.subtext; font { pixelSize: 11; family: "monospace" } }
-                                            Text { text: "pid"; color: Theme.overlay; font.pixelSize: 10; Layout.leftMargin: 6 }
-                                            Text { text: (wrow.w.pid ?? -1) > 0 ? "" + wrow.w.pid : "—"; color: Theme.subtext; font { pixelSize: 11; family: "monospace" } }
+                                            Text { text: "addr"; color: Theme.overlay; font.pixelSize: Theme.fs.xs }
+                                            Text { text: wrow.w.address || "—"; color: Theme.subtext; font { pixelSize: Theme.fs.xs; family: "monospace" } }
+                                            Text { text: "pid"; color: Theme.overlay; font.pixelSize: Theme.fs.xs; Layout.leftMargin: Theme.space.md }
+                                            Text { text: (wrow.w.pid ?? -1) > 0 ? "" + wrow.w.pid : "—"; color: Theme.subtext; font { pixelSize: Theme.fs.xs; family: "monospace" } }
                                             Item { Layout.fillWidth: true }
                                         }
 
@@ -799,7 +799,7 @@ Scope {
                                 visible: scope._liveWindows.length === 0
                                 text: "No Dofus windows open."
                                 color: Theme.overlay
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs.xs
                             }
                         }
                     }

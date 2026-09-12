@@ -8,7 +8,7 @@ import "../../services"   // DofusSwap, Theme
 // collapses to zero width, making the buttons unclickable.
 Row {
     id: root
-    spacing: 4
+    spacing: Theme.space.sm
 
     // Screen this control is on — routes its tooltips to the right TipLayer.
     property string screenName: ""
@@ -42,7 +42,7 @@ Row {
         signal activated
         implicitWidth: 20; implicitHeight: 20; radius: Theme.radiusSmall
         color: hover.containsMouse ? Theme.surfaceAlt : Theme.surface
-        Text { anchors.centerIn: parent; text: parent.symbol; color: parent.tint; font.pixelSize: 12 }
+        Text { anchors.centerIn: parent; text: parent.symbol; color: parent.tint; font.pixelSize: Theme.fs.sm }
         MouseArea { id: hover; anchors.fill: parent; hoverEnabled: true; onClicked: parent.activated() }
         HoverTip { shown: hover.containsMouse && parent.tip !== ""; text: parent.tip; screenName: root.screenName }
     }

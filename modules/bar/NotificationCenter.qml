@@ -58,23 +58,23 @@ Scope {
             MouseArea { anchors.fill: parent }
 
             ColumnLayout {
-                anchors { fill: parent; margins: 16 }
-                spacing: 12
+                anchors { fill: parent; margins: Theme.space.xl }
+                spacing: Theme.space.lg
 
                 // Header: title · DND · clear.
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: Theme.space.lg
                     Text {
                         text: "Notifications"
                         color: Theme.text
-                        font { family: Theme.fontFamily; pixelSize: 16; weight: Font.Bold }
+                        font { family: Theme.fontFamily; pixelSize: Theme.fs.lg; weight: Font.Bold }
                     }
                     Text {
                         visible: Notify.history.length > 0
                         text: Notify.history.length
                         color: Theme.subtext
-                        font { family: Theme.fontFamily; pixelSize: 12 }
+                        font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
                     }
                     Item { Layout.fillWidth: true }
 
@@ -94,11 +94,11 @@ Scope {
                 Text {
                     visible: Notify.history.length === 0
                     Layout.fillWidth: true
-                    Layout.topMargin: 24
+                    Layout.topMargin: Theme.space.xl + Theme.space.md
                     horizontalAlignment: Text.AlignHCenter
                     text: "No notifications"
                     color: Theme.overlay
-                    font { family: Theme.fontFamily; pixelSize: 13 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fs.md }
                 }
 
                 // History list, newest first.
@@ -107,7 +107,7 @@ Scope {
                     Layout.fillHeight: true
                     visible: Notify.history.length > 0
                     clip: true
-                    spacing: 8
+                    spacing: Theme.space.md
                     model: Notify.history
 
                     delegate: Rectangle {
@@ -123,30 +123,30 @@ Scope {
 
                         ColumnLayout {
                             id: entry
-                            anchors { fill: parent; margins: 8 }
-                            spacing: 2
+                            anchors { fill: parent; margins: Theme.space.md }
+                            spacing: Theme.space.xs
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: 6
+                                spacing: Theme.space.md
                                 Rectangle { width: 6; height: 6; radius: 3; color: histCard.accent; Layout.alignment: Qt.AlignVCenter }
                                 Text {
                                     text: histCard.modelData.appName || "notification"
                                     color: histCard.accent
-                                    font { family: Theme.fontFamily; pixelSize: 10; weight: Font.Bold; capitalization: Font.AllUppercase }
+                                    font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Font.Bold; capitalization: Font.AllUppercase }
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
                                 }
                                 Text {
                                     text: scope._ago(modelData.time)
                                     color: Theme.overlay
-                                    font { family: Theme.fontFamily; pixelSize: 10 }
+                                    font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                                 }
                             }
                             Text {
                                 visible: !!modelData.summary
                                 text: modelData.summary
                                 color: Theme.text
-                                font { family: Theme.fontFamily; pixelSize: 13; weight: Theme.barFontWeight }
+                                font { family: Theme.fontFamily; pixelSize: Theme.fs.md; weight: Theme.barFontWeight }
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
                             }
@@ -155,7 +155,7 @@ Scope {
                                 text: modelData.body
                                 textFormat: Text.StyledText
                                 color: Theme.subtext
-                                font { family: Theme.fontFamily; pixelSize: 12 }
+                                font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
                                 maximumLineCount: 3
@@ -184,7 +184,7 @@ Scope {
         Text {
             id: t; anchors.centerIn: parent; text: parent.label
             color: parent.active ? Theme.accent : Theme.text
-            font { family: Theme.fontFamily; pixelSize: 12; weight: Theme.barFontWeight }
+            font { family: Theme.fontFamily; pixelSize: Theme.fs.sm; weight: Theme.barFontWeight }
         }
         HoverHandler { id: h; enabled: parent.enabled }
         TapHandler { enabled: parent.enabled; onTapped: parent.activated() }

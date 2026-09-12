@@ -18,7 +18,7 @@ Singleton {
     Store {
         id: store
         name: "theme"
-        defaults: ({ palette: "macchiato", cheatsheet_linger_ms: 400 })
+        defaults: ({ palette: "macchiato", scale: 1.25, cheatsheet_linger_ms: 400 })
     }
 
     readonly property string name: store.get("palette") ?? "macchiato"
@@ -86,16 +86,46 @@ Singleton {
     readonly property color warning:       c.yellow
     readonly property color error:         c.red
 
-    // Shape/spacing tokens, so widgets stay visually consistent too.
-    readonly property int radius: 2
-    readonly property int radiusSmall: 2
-    readonly property int radiusPill: 10   // rounded module pills (workspaces, clock)
-    readonly property int gap: 12
-    readonly property int pad: 16
+    // One knob for how big the shell is. Store-backed, so a panel swap or a
+    // change of mind is `ipc call theme scale 1.4` rather than an edit tour of
+    // forty files. Every size below derives from it; widgets name steps, never
+    // pixels.
+    readonly property real scale: store.get("scale") ?? 1.25
 
-    // Bar typography, matching the retired waybar (JetBrainsMono Nerd Font 600).
+    // Type scale — five steps on a ~1.15 ratio. Base values are what the shell
+    // used before it had a scale, so `scale: 1` reproduces the old sizes.
+    readonly property var fs: ({
+        xs: Math.round(11 * scale),   // dense labels: tooltips, secondary counts
+        sm: Math.round(12 * scale),   // small chips and captions
+        md: Math.round(14 * scale),   // the bar's own size, and body text
+        lg: Math.round(16 * scale),   // section headings inside panels
+        xl: Math.round(20 * scale)    // panel titles
+    })
+
+    // Space scale — the same five steps for padding and layout gaps.
+    readonly property var space: ({
+        xs: Math.round(2 * scale),
+        sm: Math.round(4 * scale),
+        md: Math.round(8 * scale),
+        lg: Math.round(12 * scale),
+        xl: Math.round(16 * scale)
+    })
+
+    // Shape tokens. Radii deliberately do NOT scale: a corner that grows with
+    // the font stops reading as the same shape, and the whole look depends on
+    // staying short of the lozenge.
+    readonly property int radius: 6
+    readonly property int radiusSmall: 4
+    readonly property int radiusPill: 10   // rounded module pills (workspaces, clock)
+
+    // Spacing aliases kept so existing call sites keep working; both are just
+    // steps on `space`.
+    readonly property int gap: space.lg
+    readonly property int pad: space.xl
+
+    // Bar typography (JetBrainsMono Nerd Font 600).
     readonly property string fontFamily: "JetBrainsMono Nerd Font"
-    readonly property int barFontSize: 14
+    readonly property int barFontSize: fs.md
     readonly property int barFontWeight: Font.DemiBold
 
     // color + alpha (0..1) -> rgba, for translucent panels/backdrops.
@@ -110,6 +140,13 @@ Singleton {
             if (root.palettes[palette]) store.set({ palette: palette });
         }
         function get(): string { return root.name; }
+        // Live size tuning: `theme scale 1.4`, then write the value you settle on
+        // into the defaults. Clamped so a typo cannot make the shell unusable.
+        function scale(value: real): real {
+            const v = Math.max(0.8, Math.min(2.5, value));
+            store.set({ scale: v });
+            return v;
+        }
         // Advance to the next palette in insertion order (wraps).
         function cycle(): string {
             const names = Object.keys(root.palettes);

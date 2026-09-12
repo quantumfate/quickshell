@@ -16,6 +16,23 @@ fmt-check:
 	prettier --check '**/*.md'
 	nixpkgs-fmt --check .
 
+# Guards the scale sweep: sizes and layout spacing name a step on Theme.fs /
+# Theme.space, never a pixel count. A literal here is how the shell drifted back
+# to being unresizable last time, and it is one grep to catch.
+tokens:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	if git ls-files '*.qml' | xargs grep -nE '(pixelSize|spacing|margins|[a-zA-Z]Margin):[[:space:]]*[0-9]'; then
+		echo "^ literal size/spacing — use Theme.fs.* / Theme.space.* instead" >&2
+		exit 1
+	fi
+
+# Unit tests. Node's built-in runner, no dependency to install. The specs load
+# the real QML sources rather than copies, so a change to a palette or to the
+# cheatsheet parser is covered the moment it lands.
+test:
+	node --test tests/
+
 # QML static analysis. Must be Qt6's qmllint: on Arch the unprefixed binary on
 # PATH is Qt5's and exits 255 on every file here, so the recipe resolves a
 # version-6 one rather than trusting PATH. Categories are tuned in
@@ -34,12 +51,13 @@ qmllint:
 	exit 1
 
 # Static analysis
-lint: qmllint
+lint: qmllint tokens
 	git ls-files '*.sh' '*.bash' | xargs -r shellcheck
 	yamllint .
 
-# CI/pre-commit gate: formatting + QML linting (shellcheck/yamllint stay advisory)
-check: fmt-check qmllint
+# CI/pre-commit gate: formatting + QML linting + the token rule + tests
+# (shellcheck/yamllint stay advisory)
+check: fmt-check qmllint tokens test
 
 # Ansible playbook syntax check (cheap; part of the CI gate)
 ansible-syntax:

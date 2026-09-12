@@ -14,7 +14,7 @@ import "../../services"
 
 Row {
     id: strip
-    spacing: 4
+    spacing: Theme.space.sm
 
     // Resolved, ordered windows: [{ name, present, focused, selector, pid }, …].
     property var slots: []

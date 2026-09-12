@@ -27,7 +27,7 @@ PanelWindow {
         id: col
         anchors.horizontalCenter: parent.horizontalCenter
         width: 380
-        spacing: 6
+        spacing: Theme.space.md
 
         Repeater {
             model: Notify.items
@@ -48,27 +48,27 @@ PanelWindow {
 
                 RowLayout {
                     id: body
-                    anchors { fill: parent; leftMargin: 12; rightMargin: 10; topMargin: 8; bottomMargin: 8 }
-                    spacing: 10
+                    anchors { fill: parent; leftMargin: Theme.space.lg; rightMargin: Theme.space.lg; topMargin: Theme.space.md; bottomMargin: Theme.space.md }
+                    spacing: Theme.space.lg
 
                     // Urgency dot.
                     Rectangle {
                         width: 8; height: 8; radius: 4; color: card.accent
-                        Layout.alignment: Qt.AlignTop; Layout.topMargin: 4
+                        Layout.alignment: Qt.AlignTop; Layout.topMargin: Theme.space.sm
                     }
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 2
+                        spacing: Theme.space.xs
 
                         // app · summary
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 6
+                            spacing: Theme.space.md
                             Text {
                                 text: card.modelData.appName || "notification"
                                 color: card.accent
-                                font { family: Theme.fontFamily; pixelSize: 10; weight: Font.Bold; capitalization: Font.AllUppercase }
+                                font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Font.Bold; capitalization: Font.AllUppercase }
                                 elide: Text.ElideRight
                             }
                             Item { Layout.fillWidth: true }
@@ -77,7 +77,7 @@ PanelWindow {
                             visible: !!card.modelData.summary
                             text: card.modelData.summary
                             color: Theme.text
-                            font { family: Theme.fontFamily; pixelSize: 13; weight: Theme.barFontWeight }
+                            font { family: Theme.fontFamily; pixelSize: Theme.fs.md; weight: Theme.barFontWeight }
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
                         }
@@ -86,7 +86,7 @@ PanelWindow {
                             text: card.modelData.body
                             textFormat: Text.StyledText   // notifications may use markup
                             color: Theme.subtext
-                            font { family: Theme.fontFamily; pixelSize: 12 }
+                            font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
                             maximumLineCount: 4
@@ -96,8 +96,8 @@ PanelWindow {
                         // Action buttons (real notifications only).
                         Flow {
                             Layout.fillWidth: true
-                            Layout.topMargin: 2
-                            spacing: 6
+                            Layout.topMargin: Theme.space.xs
+                            spacing: Theme.space.md
                             visible: (card.modelData.actions || []).length > 0
                             Repeater {
                                 model: card.modelData.actions || []
@@ -113,7 +113,7 @@ PanelWindow {
                                         anchors.centerIn: parent
                                         text: modelData.text || modelData.id
                                         color: Theme.text
-                                        font { family: Theme.fontFamily; pixelSize: 11; weight: Theme.barFontWeight }
+                                        font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Theme.barFontWeight }
                                     }
                                     HoverHandler { id: aHover }
                                     TapHandler { onTapped: Notify.invokeAction(card.modelData.id, modelData.id) }
@@ -127,7 +127,7 @@ PanelWindow {
                         visible: cardHover.hovered || card.modelData.urgency === "critical"
                         text: "✕"
                         color: closeHover.hovered ? Theme.error : Theme.overlay
-                        font { family: Theme.fontFamily; pixelSize: 12 }
+                        font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
                         Layout.alignment: Qt.AlignTop
                         HoverHandler { id: closeHover }
                         TapHandler { onTapped: Notify.dismiss(card.modelData.id) }

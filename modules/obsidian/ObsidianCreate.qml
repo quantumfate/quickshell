@@ -128,22 +128,22 @@ Scope {
 
             ColumnLayout {
                 id: col
-                anchors { fill: parent; margins: 28 }
-                spacing: 18
+                anchors { fill: parent; margins: Theme.space.xl * 2 }
+                spacing: Theme.space.xl
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: Theme.space.lg
                     Rectangle { width: 12; height: 12; radius: 6; color: Theme.accent }
                     Text {
                         text: "New Obsidian note"
                         color: Theme.text
-                        font { pixelSize: 17; bold: true; family: Theme.fontFamily }
+                        font { pixelSize: Theme.fs.lg; bold: true; family: Theme.fontFamily }
                     }
                     Text {
                         text: "Zettelkasten bootstrap"
                         color: Theme.overlay
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fs.sm
                         Layout.fillWidth: true
                         elide: Text.ElideRight
                     }
@@ -151,12 +151,12 @@ Scope {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
-                    spacing: 8
+                    Layout.topMargin: Theme.space.sm
+                    spacing: Theme.space.md
                     Text {
                         text: "TYPE"
                         color: Theme.subtext
-                        font { pixelSize: 12; bold: true; letterSpacing: 1.5 }
+                        font { pixelSize: Theme.fs.sm; bold: true; letterSpacing: 1.5 }
                     }
                     Repeater {
                         model: scope.types
@@ -174,7 +174,7 @@ Scope {
                                 anchors.centerIn: parent
                                 text: modelData.label
                                 color: active ? Theme.accent : Theme.text
-                                font { pixelSize: 12; bold: active }
+                                font { pixelSize: Theme.fs.sm; bold: active }
                             }
                             HoverHandler { id: typeHover }
                             MouseArea {
@@ -190,7 +190,7 @@ Scope {
                 Text {
                     text: "TITLE"
                     color: Theme.subtext
-                    font { pixelSize: 12; bold: true; letterSpacing: 1.5 }
+                    font { pixelSize: Theme.fs.sm; bold: true; letterSpacing: 1.5 }
                 }
                 Rectangle {
                     Layout.fillWidth: true
@@ -200,9 +200,9 @@ Scope {
                     border { width: 1; color: titleInput.activeFocus ? Theme.accent : Theme.border }
                     TextInput {
                         id: titleInput
-                        anchors { fill: parent; margins: 8 }
+                        anchors { fill: parent; margins: Theme.space.md }
                         color: Theme.text
-                        font.pixelSize: 14
+                        font.pixelSize: Theme.fs.md
                         verticalAlignment: TextInput.AlignVCenter
                         clip: true
                         selectByMouse: true
@@ -215,7 +215,7 @@ Scope {
                 Text {
                     text: "TOPIC — tag path (chain below is what will be created)"
                     color: Theme.subtext
-                    font { pixelSize: 12; bold: true; letterSpacing: 1.5 }
+                    font { pixelSize: Theme.fs.sm; bold: true; letterSpacing: 1.5 }
                 }
                 Rectangle {
                     Layout.fillWidth: true
@@ -225,9 +225,9 @@ Scope {
                     border { width: 1; color: topicInput.activeFocus ? Theme.accent : Theme.border }
                     TextInput {
                         id: topicInput
-                        anchors { fill: parent; margins: 8 }
+                        anchors { fill: parent; margins: Theme.space.md }
                         color: Theme.text
-                        font.pixelSize: 14
+                        font.pixelSize: Theme.fs.md
                         verticalAlignment: TextInput.AlignVCenter
                         clip: true
                         selectByMouse: true
@@ -266,7 +266,7 @@ Scope {
                                 elide: Text.ElideRight
                                 text: modelData
                                 color: highlight ? Theme.accent : Theme.text
-                                font { pixelSize: 12; family: "monospace" }
+                                font { pixelSize: Theme.fs.sm; family: "monospace" }
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -284,12 +284,12 @@ Scope {
                 Column {
                     visible: topicInput.text.trim().length > 0
                     Layout.fillWidth: true
-                    spacing: 4
+                    spacing: Theme.space.sm
                     Repeater {
                         model: scope.chain
                         Row {
                             required property var modelData
-                            spacing: 8
+                            spacing: Theme.space.md
                             Rectangle {
                                 width: 10; height: 10; radius: 5
                                 anchors.verticalCenter: parent.verticalCenter
@@ -299,7 +299,7 @@ Scope {
                             Text {
                                 text: modelData.path + "  [" + (modelData.kind === "idx" ? "idx" : "meta_idx") + "]"
                                 color: Theme.subtext
-                                font { pixelSize: 11; family: "monospace" }
+                                font { pixelSize: Theme.fs.xs; family: "monospace" }
                             }
                             Text {
                                 text: modelData.state === "exists" ? modelData.note
@@ -307,7 +307,7 @@ Scope {
                                      : "will create"
                                 color: modelData.state === "exists" ? Theme.success
                                      : modelData.state === "stub" ? Theme.warning : Theme.overlay
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs.xs
                             }
                         }
                     }
@@ -315,8 +315,8 @@ Scope {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.topMargin: 2
-                    spacing: 12
+                    Layout.topMargin: Theme.space.xs
+                    spacing: Theme.space.lg
                     Rectangle {
                         id: openToggle
                         implicitWidth: openState.implicitWidth + 22
@@ -329,7 +329,7 @@ Scope {
                             anchors.centerIn: parent
                             text: ObsidianVault.openOnCreate ? "Open on" : "Open off"
                             color: ObsidianVault.openOnCreate ? Theme.accent : Theme.text
-                            font { pixelSize: 12; bold: ObsidianVault.openOnCreate }
+                            font { pixelSize: Theme.fs.sm; bold: ObsidianVault.openOnCreate }
                         }
                         HoverHandler { id: openHover }
                         MouseArea {
@@ -341,7 +341,7 @@ Scope {
                     Text {
                         text: "Open the created note in Obsidian"
                         color: Theme.subtext
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fs.sm
                         Layout.fillWidth: true
                         elide: Text.ElideRight
                     }
@@ -349,13 +349,13 @@ Scope {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: Theme.space.lg
                     Text {
                         text: scope._error.length > 0 ? scope._error
                              : ObsidianVault.busy ? "Creating… (close to abort)"
                              : "Enter to create · Esc to cancel"
                         color: scope._error.length > 0 ? Theme.error : Theme.subtext
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fs.sm
                         Layout.fillWidth: true
                     }
                     Rectangle {
@@ -369,7 +369,7 @@ Scope {
                             anchors.centerIn: parent
                             text: "Create note"
                             color: Theme.accent
-                            font { pixelSize: 12; bold: true }
+                            font { pixelSize: Theme.fs.sm; bold: true }
                         }
                         HoverHandler { id: submitHover }
                         MouseArea {

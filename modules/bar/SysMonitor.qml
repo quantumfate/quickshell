@@ -9,14 +9,14 @@ import "../../services"   // SysStats, SysMon, Theme
 RowLayout {
     id: root
     required property string screenName
-    spacing: 10
+    spacing: Theme.space.lg
 
     // A glyph + value pair. Colored per stat; the whole cluster shares hover.
     component Stat: RowLayout {
         property string glyph: ""
         property string value: ""
         property color tint: Theme.text
-        spacing: 4
+        spacing: Theme.space.sm
         Text {
             text: parent.glyph; color: parent.tint
             font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }

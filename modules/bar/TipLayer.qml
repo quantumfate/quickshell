@@ -38,7 +38,7 @@ PanelWindow {
             anchors.centerIn: parent
             text: win.tip ? win.tip.text : ""
             color: Theme.text
-            font { family: Theme.fontFamily; pixelSize: 12 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
         }
     }
 }

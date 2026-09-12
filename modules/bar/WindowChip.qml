@@ -73,8 +73,8 @@ Rectangle {
 
     RowLayout {
         id: rowContent
-        anchors { fill: parent; leftMargin: 8; rightMargin: 4 }
-        spacing: 4
+        anchors { fill: parent; leftMargin: Theme.space.md; rightMargin: Theme.space.sm }
+        spacing: Theme.space.sm
 
         // Class emblem (mauve) — auto-hides when this character has no class set.
         ClassIcon {
@@ -107,7 +107,7 @@ Rectangle {
             visible: !editor.visible
             text: chip.slot.name
             color: chip.focused ? Theme.accent : Theme.text
-            font { family: Theme.fontFamily; pixelSize: 12; bold: chip.focused }
+            font { family: Theme.fontFamily; pixelSize: Theme.fs.sm; bold: chip.focused }
             elide: Text.ElideRight
             Layout.maximumWidth: 220
             verticalAlignment: Text.AlignVCenter
@@ -128,7 +128,7 @@ Rectangle {
             id: editor
             visible: false
             color: Theme.text
-            font { family: Theme.fontFamily; pixelSize: 12 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
             Layout.preferredWidth: Math.max(60, label.implicitWidth)
             verticalAlignment: TextInput.AlignVCenter
             clip: true; selectByMouse: true
@@ -210,7 +210,7 @@ Rectangle {
         Text {
             anchors.centerIn: parent; text: parent.symbol
             color: parent.enabled ? Theme.subtext : Theme.withAlpha(Theme.subtext, 0.3)
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs.xs
         }
         MouseArea {
             id: btnHover; anchors.fill: parent; hoverEnabled: true

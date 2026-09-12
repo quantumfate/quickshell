@@ -48,7 +48,7 @@ Scope {
     component ClassOption: RowLayout {
         property string key
         property bool current
-        spacing: 8
+        spacing: Theme.space.md
         ClassIcon {
             cls: key
             size: 22
@@ -58,7 +58,7 @@ Scope {
         Text {
             text: key === "" ? "no class" : DofusClasses.nameFor(key)
             color: current ? Theme.accent : (key === "" ? Theme.overlay : Theme.text)
-            font.pixelSize: 12
+            font.pixelSize: Theme.fs.sm
             verticalAlignment: Text.AlignVCenter
             Layout.fillWidth: true
             elide: Text.ElideRight
@@ -76,10 +76,10 @@ Scope {
         implicitHeight: 28
         implicitWidth: 150
         onActivated: (i) => cp.picked(cp.keys[i])
-        contentItem: ClassOption { key: cp.value; current: false; anchors { left: parent.left; leftMargin: 8; right: parent.right; rightMargin: 18 } }
+        contentItem: ClassOption { key: cp.value; current: false; anchors { left: parent.left; leftMargin: Theme.space.md; right: parent.right; rightMargin: Theme.space.xl } }
         indicator: Text {
             x: cp.width - width - 8; y: (cp.height - height) / 2
-            text: "▾"; color: Theme.subtext; font.pixelSize: 11
+            text: "▾"; color: Theme.subtext; font.pixelSize: Theme.fs.xs
         }
         background: Rectangle {
             radius: Theme.radiusSmall
@@ -90,7 +90,7 @@ Scope {
             required property var modelData
             required property int index
             width: cp.width
-            contentItem: ClassOption { key: modelData; current: index === cp.currentIndex; anchors { left: parent.left; leftMargin: 6; right: parent.right; rightMargin: 6 } }
+            contentItem: ClassOption { key: modelData; current: index === cp.currentIndex; anchors { left: parent.left; leftMargin: Theme.space.md; right: parent.right; rightMargin: Theme.space.md } }
             background: Rectangle { color: highlighted ? Theme.surfaceAlt : Theme.background }
             highlighted: cp.highlightedIndex === index
         }
@@ -171,23 +171,23 @@ Scope {
                     // ── Header ──────────────────────────────────────────────
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 10
+                        spacing: Theme.space.lg
                         Rectangle { width: 10; height: 10; radius: 5; color: Theme.accent }
                         Text {
                             text: "Character Classes"
                             color: Theme.text
-                            font { pixelSize: 16; bold: true; family: Theme.fontFamily }
+                            font { pixelSize: Theme.fs.lg; bold: true; family: Theme.fontFamily }
                         }
                         Text {
                             text: "assign a class to each character"
                             color: Theme.overlay
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs.xs
                             Layout.fillWidth: true
                         }
                         Text {
                             text: DofusState.pool.length + " chars"
                             color: Theme.overlay
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs.xs
                         }
                     }
 
@@ -207,8 +207,8 @@ Scope {
                             border { width: 1; color: Theme.border }
 
                             RowLayout {
-                                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
-                                spacing: 10
+                                anchors { fill: parent; leftMargin: Theme.space.lg; rightMargin: Theme.space.lg }
+                                spacing: Theme.space.lg
 
                                 // Current class emblem (mauve); a same-size slot keeps
                                 // names aligned whether or not a class is set.
@@ -224,23 +224,23 @@ Scope {
                                 // Name + team-membership badges beneath.
                                 ColumnLayout {
                                     Layout.fillWidth: true
-                                    spacing: 2
+                                    spacing: Theme.space.xs
                                     Text {
                                         text: row.modelData
                                         color: Theme.text
-                                        font { pixelSize: 14; bold: true }
+                                        font { pixelSize: Theme.fs.md; bold: true }
                                         elide: Text.ElideRight
                                         Layout.fillWidth: true
                                     }
                                     Flow {
                                         Layout.fillWidth: true
-                                        spacing: 4
+                                        spacing: Theme.space.sm
                                         // "Unassigned" hint when the character is on no team.
                                         Text {
                                             visible: row.inTeams.length === 0
                                             text: "on no team"
                                             color: Theme.overlay
-                                            font.pixelSize: 10
+                                            font.pixelSize: Theme.fs.xs
                                         }
                                         Repeater {
                                             model: row.inTeams
@@ -257,7 +257,7 @@ Scope {
                                                     anchors.centerIn: parent
                                                     text: parent.modelData
                                                     color: parent.active ? Theme.accent : Theme.subtext
-                                                    font.pixelSize: 10
+                                                    font.pixelSize: Theme.fs.xs
                                                 }
                                             }
                                         }
@@ -277,7 +277,7 @@ Scope {
                         visible: DofusState.pool.length === 0
                         text: "No characters in the pool — add some in the Team Manager first."
                         color: Theme.overlay
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs.xs
                     }
                 }
             }

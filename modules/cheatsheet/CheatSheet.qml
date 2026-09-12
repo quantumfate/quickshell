@@ -90,7 +90,7 @@ Scope {
                 Text {
                     text: scope.submap === "" ? "Keybinds" : "Keybinds · " + scope.submap
                     color: Theme.accent
-                    font { pixelSize: 16; bold: true }
+                    font { pixelSize: Theme.fs.lg; bold: true }
                 }
 
                 Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
@@ -121,13 +121,13 @@ Scope {
                                     delegate: ColumnLayout {
                                         required property var modelData
                                         Layout.fillWidth: true
-                                        spacing: 2
+                                        spacing: Theme.space.xs
 
                                         Text {
                                             text: modelData.name.toUpperCase()
                                             color: Theme.accentAlt
-                                            font { pixelSize: 11; bold: true; letterSpacing: 1 }
-                                            Layout.bottomMargin: 2
+                                            font { pixelSize: Theme.fs.xs; bold: true; letterSpacing: 1 }
+                                            Layout.bottomMargin: Theme.space.xs
                                         }
 
                                         Repeater {
@@ -146,14 +146,14 @@ Scope {
                                                         anchors.centerIn: parent
                                                         text: modelData.combo
                                                         color: Theme.accent
-                                                        font { pixelSize: 12; family: "monospace" }
+                                                        font { pixelSize: Theme.fs.sm; family: "monospace" }
                                                     }
                                                 }
                                                 Text {
                                                     Layout.fillWidth: true
                                                     text: modelData.desc
                                                     color: Theme.text
-                                                    font.pixelSize: 13
+                                                    font.pixelSize: Theme.fs.md
                                                     elide: Text.ElideRight
                                                 }
                                             }
@@ -169,7 +169,7 @@ Scope {
                     visible: scope.cats.length === 0
                     text: "No described binds in this context."
                     color: Theme.subtext
-                    font.pixelSize: 13
+                    font.pixelSize: Theme.fs.md
                 }
             }
         }

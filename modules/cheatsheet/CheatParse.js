@@ -22,8 +22,11 @@ function categorize(desc) {
     if (desc.endsWith("…") || desc.endsWith("...")) return { cat: "Menus", label: desc };
     var d = desc.toLowerCase();
     if (/volume|mute|media|player|track|brightness/.test(d)) return { cat: "Media", label: desc };
-    if (/window|focus|swap|close|minimize|float|fullscreen|maximize/.test(d)) return { cat: "Window", label: desc };
+    // Workspace before window: "focus workspace 5" matches both, and it is a
+    // workspace bind. Most real binds carry a "Workspace:" prefix and never
+    // reach here, which is why the precedence went unnoticed.
     if (/workspace/.test(d)) return { cat: "Workspace", label: desc };
+    if (/window|focus|swap|close|minimize|float|fullscreen|maximize/.test(d)) return { cat: "Window", label: desc };
     if (/keyboard layout|screen|capture|hyprpicker|hex|picker/.test(d)) return { cat: "Utilities", label: desc };
     return { cat: "General", label: desc };
 }

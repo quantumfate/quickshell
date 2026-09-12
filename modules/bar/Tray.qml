@@ -8,7 +8,7 @@ import Quickshell.Services.SystemTray
 import "../../services"   // Theme
 
 RowLayout {
-    spacing: 6
+    spacing: Theme.space.md
 
     Repeater {
         model: SystemTray.items

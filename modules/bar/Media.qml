@@ -18,7 +18,7 @@ RowLayout {
         return players.length > 0 ? players[0] : null;
     }
     visible: player !== null
-    spacing: 4
+    spacing: Theme.space.sm
 
     // A control glyph button; disabled state dims and swallows the click.
     component Ctl: Text {
@@ -64,7 +64,7 @@ RowLayout {
             return artist && title ? artist + " – " + title : title || artist || p.identity;
         }
         color: Theme.subtext
-        font { family: Theme.fontFamily; pixelSize: 12; weight: Theme.barFontWeight }
+        font { family: Theme.fontFamily; pixelSize: Theme.fs.sm; weight: Theme.barFontWeight }
         verticalAlignment: Text.AlignVCenter
 
         HoverHandler { id: hover }

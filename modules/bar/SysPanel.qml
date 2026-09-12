@@ -38,8 +38,8 @@ Scope {
 
             ColumnLayout {
                 id: content
-                anchors { fill: parent; margins: 12 }
-                spacing: 12
+                anchors { fill: parent; margins: Theme.space.lg }
+                spacing: Theme.space.lg
 
                 // ---- CPU ----
                 Section {
@@ -90,7 +90,7 @@ Scope {
                     horizontalAlignment: Text.AlignRight
                     text: "up " + SysStats.uptime + (SysMon.pinned ? "  · pinned" : "")
                     color: Theme.overlay
-                    font { family: Theme.fontFamily; pixelSize: 10 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                 }
             }
         }
@@ -107,18 +107,18 @@ Scope {
         property var history: null             // optional sparkline samples
         property real historyMax: 100
         Layout.fillWidth: true
-        spacing: 4
+        spacing: Theme.space.sm
 
         RowLayout {
             Layout.fillWidth: true
             Text {
                 text: sec.label; color: sec.tint
-                font { family: Theme.fontFamily; pixelSize: 11; weight: Font.Bold; capitalization: Font.AllUppercase }
+                font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Font.Bold; capitalization: Font.AllUppercase }
             }
             Item { Layout.fillWidth: true }
             Text {
                 text: sec.value; color: Theme.text
-                font { family: Theme.fontFamily; pixelSize: 13; weight: Theme.barFontWeight }
+                font { family: Theme.fontFamily; pixelSize: Theme.fs.md; weight: Theme.barFontWeight }
             }
         }
 
@@ -137,7 +137,7 @@ Scope {
         Text {
             visible: !!sec.sub
             text: sec.sub; color: Theme.subtext
-            font { family: Theme.fontFamily; pixelSize: 11 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
         }
 
         // Sparkline (optional).

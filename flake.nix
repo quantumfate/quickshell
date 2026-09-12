@@ -87,6 +87,7 @@
           prettier
           nixpkgs-fmt
           qt6.qtdeclarative # qmllint — the QML gate in `just check`
+          nodejs # `just test` — node's built-in test runner
           ansible
           ansible-lint
         ];

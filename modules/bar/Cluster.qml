@@ -16,6 +16,6 @@ Item {
     RowLayout {
         id: row
         anchors { verticalCenter: parent.verticalCenter; left: parent.left }
-        spacing: 8
+        spacing: Theme.space.md
     }
 }
