@@ -5,7 +5,7 @@
 //   left    workspaces · sysmonitor (cpu/ram/disk/net, hover-peek) · weather · media
 //   center  Dofus taskbar · window title · submap · layout · language
 //   right   tray · brightness · volume · battery · power-profile ·
-//           notifications · clock · wlogout
+//           idle-inhibit · notifications · clock · wlogout
 //
 // The center taskbar is ALWAYS present (Dofus strip on the multibox workspace,
 // the generic workspace taskbar everywhere else). Only the on-demand Dofus swap
@@ -161,6 +161,7 @@ Scope {
                         Pulseaudio { screenName: bar.screen.name }
                         Battery { screenName: bar.screen.name }
                         PowerProfile { screenName: bar.screen.name }
+                        IdleInhibit { screenName: bar.screen.name }
                         NotifIndicator { screenName: bar.screen.name }
                     }
                     Separator {}
