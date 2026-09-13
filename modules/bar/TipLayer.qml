@@ -15,11 +15,13 @@ PanelWindow {
     color: "transparent"
 
     anchors { top: true; left: true; right: true }
-    margins { top: Theme.barHeight + Theme.space.xs }
+    margins { top: Theme.barReserved + Theme.space.xs }
     implicitHeight: 30
 
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    // Named so the compositor can frost it like the bar it hangs from.
+    WlrLayershell.namespace: "quickshell-tip"
     exclusiveZone: 0
 
     Rectangle {

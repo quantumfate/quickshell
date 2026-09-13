@@ -17,7 +17,7 @@ Scope {
         color: "transparent"
 
         anchors { top: true; left: true; right: true }
-        margins { top: Theme.barHeight + Theme.space.xs }
+        margins { top: Theme.barReserved + Theme.space.xs }
         implicitHeight: card.implicitHeight
 
         WlrLayershell.layer: WlrLayer.Overlay

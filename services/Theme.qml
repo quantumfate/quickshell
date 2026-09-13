@@ -143,6 +143,7 @@ Singleton {
     readonly property int radius: 6
     readonly property int radiusSmall: 4
     readonly property int radiusPill: 10   // rounded module pills (workspaces, clock)
+    readonly property int radiusIsland: 12 // the bar's floating cards — a surface, not a button
 
     // Spacing aliases kept so existing call sites keep working; both are just
     // steps on `space`.
@@ -154,6 +155,11 @@ Singleton {
     // copy, and all three silently overlapped the bar the first time its height
     // changed.
     readonly property int barHeight: Math.round(30 * scale)
+
+    // How far the islands float clear of the screen edge, and therefore how much
+    // room anything anchored below the bar has to leave.
+    readonly property int barInset: space.md
+    readonly property int barReserved: barHeight + barInset * 2
 
     // Bar typography (JetBrainsMono Nerd Font 600).
     readonly property string fontFamily: "JetBrainsMono Nerd Font"

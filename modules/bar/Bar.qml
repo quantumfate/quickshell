@@ -1,10 +1,12 @@
 // Bar — the top bar, one instance per monitor, replacing waybar.
 //
 // A Variants spawns one PanelWindow per eligible screen (the small vertical
-// HDMI panel is excluded). Each bar has three regions mirroring the old waybar:
-//   left    workspaces · sysmonitor (cpu/ram/disk/net, hover-peek) · weather · media
-//   center  Dofus taskbar · window title · submap · layout · language
-//   right   tray · brightness · volume · battery · power-profile ·
+// HDMI panel is excluded). The bar is not a strip: it is three translucent
+// islands resting on the wallpaper, with the panel itself painting nothing, so
+// the space between them is real wallpaper rather than chrome.
+//   left    where am I  — workspaces · system · weather · media
+//   centre  what is here — taskbar · submap · layout · language
+//   right   system state — tray · brightness · volume · battery · power ·
 //           idle-inhibit · notifications · clock · wlogout
 //
 // The center taskbar is ALWAYS present (Dofus strip on the multibox workspace,
@@ -17,7 +19,6 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import QtQuick
-import QtQuick.Layouts
 import "../../services"   // Theme, DofusWindows
 
 Scope {
@@ -71,8 +72,8 @@ Scope {
             screen: modelData
 
             anchors { top: true; left: true; right: true }
-            // Room for the module pills to sit in rather than fill.
-            implicitHeight: Theme.barHeight
+            // The islands' height plus the space they float clear of the edge.
+            implicitHeight: Theme.barReserved
             color: "transparent"
 
             // The team "is here" only when this monitor's active workspace holds
@@ -104,31 +105,28 @@ Scope {
             // keybind/IPC toggle (when no hover has set an anchor yet).
             Component.onCompleted: if (!SysMon.homeScreen) SysMon.homeScreen = bar.screen.name;
 
-            Rectangle {
+            Item {
                 anchors.fill: parent
-                // No ground of its own: the modules float over the wallpaper.
-                // Legibility comes from the wallpaper being flattened at
-                // theme-apply time, not from a panel behind the text.
-                color: "transparent"
 
-                // left region, pinned to the start: workspaces pill + a stats/media cluster.
-                RowLayout {
-                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; leftMargin: Theme.pad }
-                    spacing: Theme.gap
+                // left island: where am I, and what is the machine doing.
+                Island {
+                    anchors {
+                        left: parent.left
+                        verticalCenter: parent.verticalCenter
+                        leftMargin: Theme.barInset * 2
+                    }
                     Workspaces { screen: bar.screen }
                     Separator {}
-                    Cluster {
-                        SysMonitor { screenName: bar.screen.name }
-                        Weather {}
-                        Media { screenName: bar.screen.name }
-                    }
+                    SysMonitor { screenName: bar.screen.name }
+                    Weather {}
+                    Media { screenName: bar.screen.name }
                 }
 
-                // center region, fixed-center like the old waybar.
-                RowLayout {
-                    anchors.centerIn: parent
-                    spacing: Theme.gap
-                    // The taskbar strip for this monitor, per the setting above.
+                // centre island: what is on this workspace, and what mode am I in.
+                Island {
+                    id: centreIsland
+                    anchors { horizontalCenter: parent.horizontalCenter; verticalCenter: parent.verticalCenter }
+
                     readonly property string mode: scope.taskbarMode(bar.screen.name)
 
                     // The Dofus strip is active on the dofus monitor while this
@@ -137,17 +135,17 @@ Scope {
                     // The taskbar is ALWAYS shown; only the swap controls toggle.
                     readonly property bool dofusActive: mode === "dofus" && bar.dofusOnActiveWs
 
-                    DofusTaskbar { visible: parent.dofusActive; screenName: bar.screen.name; activeWs: bar.activeWs }
+                    DofusTaskbar { visible: centreIsland.dofusActive; screenName: bar.screen.name; activeWs: bar.activeWs }
                     // Swap-detector controls (recalibrate + run/stop) — visible
                     // whenever the Dofus strip is, so they're always at hand.
-                    SwapControl { visible: parent.dofusActive; screenName: bar.screen.name }
+                    SwapControl { visible: centreIsland.dofusActive; screenName: bar.screen.name }
 
                     // Default taskbar: every screen, every workspace where the Dofus
                     // strip isn't showing — so ordinary workspaces (Obsidian, etc.)
                     // get their windows too. Always present.
                     WorkspaceTaskbar {
                         screen: bar.screen
-                        visible: !parent.dofusActive
+                        visible: !centreIsland.dofusActive
                     }
                     Separator {}
                     Submap {}
@@ -155,32 +153,26 @@ Scope {
                     Language {}
                 }
 
-                // right region, pinned to the end: a system-controls cluster,
-                // then the clock pill and the standalone power button.
-                RowLayout {
-                    anchors { right: parent.right; top: parent.top; bottom: parent.bottom; rightMargin: Theme.pad }
-                    spacing: Theme.gap
-                    Cluster {
-                        Tray {}
-                        Brightness {}
-                        Pulseaudio { screenName: bar.screen.name }
-                        Battery { screenName: bar.screen.name }
-                        PowerProfile { screenName: bar.screen.name }
-                        IdleInhibit { screenName: bar.screen.name }
-                        NotifIndicator { screenName: bar.screen.name }
+                // right island: system state, the clock, and the way out.
+                Island {
+                    anchors {
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                        rightMargin: Theme.barInset * 2
                     }
+                    Tray {}
+                    Brightness {}
+                    Pulseaudio { screenName: bar.screen.name }
+                    Battery { screenName: bar.screen.name }
+                    PowerProfile { screenName: bar.screen.name }
+                    IdleInhibit { screenName: bar.screen.name }
+                    NotifIndicator { screenName: bar.screen.name }
                     Separator {}
                     Clock {}
                     Separator {}
                     Wlogout {}
                 }
 
-                // Hairline along the bottom edge for definition against wallpaper.
-                Rectangle {
-                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                    height: 1
-                    color: Theme.withAlpha(Theme.border, 0.6)
-                }
             }
         }
     }

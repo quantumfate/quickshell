@@ -15,7 +15,7 @@ PanelWindow {
     visible: Notify.items.length > 0
 
     anchors { top: true; left: true; right: true }
-    margins { top: Theme.barHeight + Theme.space.md }   // clear of the bar
+    margins { top: Theme.barReserved + Theme.space.xs }   // clear of the bar
     implicitHeight: Math.max(1, col.implicitHeight)
 
     WlrLayershell.layer: WlrLayer.Overlay
