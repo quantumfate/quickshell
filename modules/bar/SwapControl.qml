@@ -1,6 +1,7 @@
 // Auto-swap detector control: calibrate the name-pill region, and start/stop the
 // `dofus_swap.py` turn detector. Per-character hash capture lives on each chip
 // (the ◎ button); this is the global rig.
+pragma ComponentBehavior: Bound
 import QtQuick
 import "../../services"   // DofusSwap, Theme
 

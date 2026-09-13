@@ -4,6 +4,7 @@
 //   occupied → lavender (has windows)
 //   idle     → overlay0
 //   urgent   → red
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Hyprland
@@ -58,6 +59,7 @@ Rectangle {
             // Icon only — the active workspace is signalled purely by icon colour
             // (mauve), never a background.
             delegate: Text {
+                id: wsDelegate
                 required property var modelData
                 readonly property bool active: modelData.active
                 readonly property bool occupied: (modelData.toplevels?.values?.length ?? 0) > 0
@@ -72,7 +74,7 @@ Rectangle {
                 font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
 
                 HoverHandler { id: ws }
-                TapHandler { onTapped: modelData.activate() }
+                TapHandler { onTapped: wsDelegate.modelData.activate() }
             }
         }
     }

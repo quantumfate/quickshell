@@ -9,6 +9,7 @@
 //   onReorder(slot, dir)       dir = -1 left / +1 right
 //   onClose(slot)              close the window
 //   onCapture(slot)            Dofus-only: learn this turn's hash
+pragma ComponentBehavior: Bound
 import QtQuick
 import "../../services"
 

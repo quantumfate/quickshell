@@ -1,4 +1,5 @@
 pragma Singleton
+pragma ComponentBehavior: Bound
 // Notify — the shell's single notification hub. It IS the freedesktop.org
 // notification daemon (org.freedesktop.Notifications), replacing mako: every
 // `notify-send`, app notification, and `hyprctl notify`-style shell message

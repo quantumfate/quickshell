@@ -149,6 +149,12 @@ Singleton {
     readonly property int gap: space.lg
     readonly property int pad: space.xl
 
+    // How tall the bar stands. Anything that has to sit clear of it reads this
+    // rather than repeating a number: three surfaces used to carry their own
+    // copy, and all three silently overlapped the bar the first time its height
+    // changed.
+    readonly property int barHeight: Math.round(30 * scale)
+
     // Bar typography (JetBrainsMono Nerd Font 600).
     readonly property string fontFamily: "JetBrainsMono Nerd Font"
     readonly property int barFontSize: fs.md

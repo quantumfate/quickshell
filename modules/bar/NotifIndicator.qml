@@ -26,7 +26,7 @@ Text {
     HoverHandler { id: hover }
     HoverTip {
         shown: hover.hovered; screenName: root.screenName
-        text: (Notify.dnd ? "Do-not-disturb ON" : count + " notification" + (count === 1 ? "" : "s"))
+        text: (Notify.dnd ? "Do-not-disturb ON" : root.count + " notification" + (root.count === 1 ? "" : "s"))
             + " · click: history · right-click: DND"
     }
 }

@@ -11,6 +11,7 @@
 //
 //   qs -c quantumfate ipc call -- obsidianCreate show | hide | toggle
 //   (the `--` matters: `show` otherwise collides with the `ipc show` verb)
+pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -134,7 +135,7 @@ Scope {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Theme.space.lg
-                    Rectangle { width: 12; height: 12; radius: 6; color: Theme.accent }
+                    Rectangle { implicitWidth: 12; implicitHeight: 12; radius: 6; color: Theme.accent }
                     Text {
                         text: "New Obsidian note"
                         color: Theme.text
@@ -161,26 +162,27 @@ Scope {
                     Repeater {
                         model: scope.types
                         Rectangle {
+                            id: typeItem
                             required property var modelData
-                            readonly property bool active: scope.noteType === modelData.key
+                            readonly property bool active: scope.noteType === typeItem.modelData.key
                             implicitWidth: typeLabel.implicitWidth + 22
                             implicitHeight: 30
                             radius: Theme.radiusPill
-                            color: active ? Theme.withAlpha(Theme.accent, 0.22)
+                            color: typeItem.active ? Theme.withAlpha(Theme.accent, 0.22)
                                          : typeHover.hovered ? Theme.surfaceAlt : Theme.surface
-                            border { width: 1; color: active ? Theme.accent : Theme.border }
+                            border { width: 1; color: typeItem.active ? Theme.accent : Theme.border }
                             Text {
                                 id: typeLabel
                                 anchors.centerIn: parent
-                                text: modelData.label
-                                color: active ? Theme.accent : Theme.text
-                                font { pixelSize: Theme.fs.sm; bold: active }
+                                text: typeItem.modelData.label
+                                color: typeItem.active ? Theme.accent : Theme.text
+                                font { pixelSize: Theme.fs.sm; bold: typeItem.active }
                             }
                             HoverHandler { id: typeHover }
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: scope.noteType = modelData.key
+                                onClicked: scope.noteType = typeItem.modelData.key
                             }
                         }
                     }
@@ -233,7 +235,7 @@ Scope {
                         selectByMouse: true
                         Keys.onDownPressed: scope._completionStep(1)
                         Keys.onUpPressed: scope._completionStep(-1)
-                        Keys.onTabPressed: { scope._pickCompletion(); event.accepted = true; }
+                        Keys.onTabPressed: (event) => { scope._pickCompletion(); event.accepted = true; }
                         Keys.onReturnPressed: scope._submit()
                         Keys.onEnterPressed: scope._submit()
                         Keys.onEscapePressed: scope.hide()
@@ -254,25 +256,26 @@ Scope {
                         model: scope.completions
                         currentIndex: scope._completionIndex
                         delegate: Rectangle {
+                            id: completionItem
                             required property int index
                             required property string modelData
-                            readonly property bool highlight: completionList.currentIndex === index
+                            readonly property bool highlight: completionList.currentIndex === completionItem.index
                             width: completionList.width
                             implicitHeight: 28
-                            color: highlight ? Theme.surfaceAlt : "transparent"
+                            color: completionItem.highlight ? Theme.surfaceAlt : "transparent"
                             Text {
                                 anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
                                 leftPadding: 10
                                 elide: Text.ElideRight
-                                text: modelData
-                                color: highlight ? Theme.accent : Theme.text
+                                text: completionItem.modelData
+                                color: completionItem.highlight ? Theme.accent : Theme.text
                                 font { pixelSize: Theme.fs.sm; family: "monospace" }
                             }
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    topicInput.text = modelData;
+                                    topicInput.text = completionItem.modelData;
                                     topicInput.cursorPosition = topicInput.text.length;
                                     scope._completionIndex = -1;
                                 }
@@ -288,25 +291,26 @@ Scope {
                     Repeater {
                         model: scope.chain
                         Row {
+                            id: chainRow
                             required property var modelData
                             spacing: Theme.space.md
                             Rectangle {
                                 width: 10; height: 10; radius: 5
                                 anchors.verticalCenter: parent.verticalCenter
-                                color: modelData.state === "exists" ? Theme.success
-                                     : modelData.state === "stub" ? Theme.warning : Theme.overlay
+                                color: chainRow.modelData.state === "exists" ? Theme.success
+                                     : chainRow.modelData.state === "stub" ? Theme.warning : Theme.overlay
                             }
                             Text {
-                                text: modelData.path + "  [" + (modelData.kind === "idx" ? "idx" : "meta_idx") + "]"
+                                text: chainRow.modelData.path + "  [" + (chainRow.modelData.kind === "idx" ? "idx" : "meta_idx") + "]"
                                 color: Theme.subtext
                                 font { pixelSize: Theme.fs.xs; family: "monospace" }
                             }
                             Text {
-                                text: modelData.state === "exists" ? modelData.note
-                                     : modelData.state === "stub" ? modelData.note + " (stub)"
+                                text: chainRow.modelData.state === "exists" ? chainRow.modelData.note
+                                     : chainRow.modelData.state === "stub" ? chainRow.modelData.note + " (stub)"
                                      : "will create"
-                                color: modelData.state === "exists" ? Theme.success
-                                     : modelData.state === "stub" ? Theme.warning : Theme.overlay
+                                color: chainRow.modelData.state === "exists" ? Theme.success
+                                     : chainRow.modelData.state === "stub" ? Theme.warning : Theme.overlay
                                 font.pixelSize: Theme.fs.xs
                             }
                         }

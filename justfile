@@ -19,10 +19,14 @@ fmt-check:
 # Guards the scale sweep: sizes and layout spacing name a step on Theme.fs /
 # Theme.space, never a pixel count. A literal here is how the shell drifted back
 # to being unresizable last time, and it is one grep to catch.
+#
+# The edge margins inside a `margins { top: N }` group are included because the
+# first version of this rule missed them, and three surfaces carrying their own
+# copy of the bar's height silently overlapped it the moment the bar grew.
 tokens:
 	#!/usr/bin/env bash
 	set -euo pipefail
-	if git ls-files '*.qml' | xargs grep -nE '(pixelSize|spacing|margins|[a-zA-Z]Margin):[[:space:]]*[0-9]'; then
+	if git ls-files '*.qml' | xargs grep -nE '(pixelSize|spacing|margins|[a-zA-Z]Margin):[[:space:]]*[0-9]|\b(top|bottom|left|right):[[:space:]]*[0-9]'; then
 		echo "^ literal size/spacing — use Theme.fs.* / Theme.space.* instead" >&2
 		exit 1
 	fi

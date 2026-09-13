@@ -15,7 +15,7 @@ PanelWindow {
     color: "transparent"
 
     anchors { top: true; left: true; right: true }
-    margins { top: 32 }
+    margins { top: Theme.barHeight + Theme.space.xs }
     implicitHeight: 30
 
     WlrLayershell.layer: WlrLayer.Overlay

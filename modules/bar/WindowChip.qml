@@ -4,6 +4,7 @@
 // rename (when allowed). Width wraps its content — buttons hug the text.
 //
 // Capture feedback (busy / ✓ / ✗) is Dofus-only and appears when `showCapture`.
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Theme, DofusSwap, BarInput
@@ -89,7 +90,7 @@ Rectangle {
         // an unmatched/un-named window has no roster identity to learn).
         Rectangle {
             visible: chip.showCapture && chip.slot.team
-            width: 6; height: 6; radius: 3
+            implicitWidth: 6; implicitHeight: 6; radius: 3
             color: DofusSwap.learned(chip.slot.name) ? Theme.success : Theme.overlay
             Layout.alignment: Qt.AlignVCenter
             HoverHandler { id: dotHover }

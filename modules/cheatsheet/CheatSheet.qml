@@ -8,6 +8,7 @@
 // (derived from their descriptions) and sorted for tidiness.
 //
 // Toggle from Hyprland:  qs -c quantumfate ipc call cheatsheet toggle
+pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -93,7 +94,7 @@ Scope {
                     font { pixelSize: Theme.fs.lg; bold: true }
                 }
 
-                Rectangle { Layout.fillWidth: true; height: 1; color: Theme.border }
+                Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.border }
 
                 Flickable {
                     Layout.fillWidth: true
@@ -110,6 +111,7 @@ Scope {
                         Repeater {
                             model: 2
                             delegate: ColumnLayout {
+                                id: colDelegate
                                 required property int index
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 1   // equal columns
@@ -117,22 +119,24 @@ Scope {
                                 spacing: Theme.gap
 
                                 Repeater {
-                                    model: scope.columns[index]
+                                    model: scope.columns[colDelegate.index]
                                     delegate: ColumnLayout {
+                                        id: categoryDelegate
                                         required property var modelData
                                         Layout.fillWidth: true
                                         spacing: Theme.space.xs
 
                                         Text {
-                                            text: modelData.name.toUpperCase()
+                                            text: categoryDelegate.modelData.name.toUpperCase()
                                             color: Theme.accentAlt
                                             font { pixelSize: Theme.fs.xs; bold: true; letterSpacing: 1 }
                                             Layout.bottomMargin: Theme.space.xs
                                         }
 
                                         Repeater {
-                                            model: modelData.rows
+                                            model: categoryDelegate.modelData.rows
                                             delegate: RowLayout {
+                                                id: rowDelegate
                                                 required property var modelData
                                                 Layout.fillWidth: true
                                                 spacing: Theme.gap
@@ -144,14 +148,14 @@ Scope {
                                                     Text {
                                                         id: keyText
                                                         anchors.centerIn: parent
-                                                        text: modelData.combo
+                                                        text: rowDelegate.modelData.combo
                                                         color: Theme.accent
                                                         font { pixelSize: Theme.fs.sm; family: "monospace" }
                                                     }
                                                 }
                                                 Text {
                                                     Layout.fillWidth: true
-                                                    text: modelData.desc
+                                                    text: rowDelegate.modelData.desc
                                                     color: Theme.text
                                                     font.pixelSize: Theme.fs.md
                                                     elide: Text.ElideRight

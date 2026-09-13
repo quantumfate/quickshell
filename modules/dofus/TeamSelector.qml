@@ -8,6 +8,7 @@
 //   windows — live Dofus clients: assign/clear a name, add to pool, copy addr/pid
 //
 //   qs -c quantumfate ipc call teamSelector toggle | show | hide
+pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -75,25 +76,26 @@ Scope {
 
     // Uppercase section label + inline hint + right-aligned count.
     component SectionHeader: RowLayout {
+        id: header
         property string label
         property string hint
         property string count
         Layout.fillWidth: true
         spacing: Theme.space.md
         Text {
-            text: label
+            text: header.label
             color: Theme.subtext
             font { pixelSize: Theme.fs.xs; bold: true; letterSpacing: 1.5; family: Theme.fontFamily }
         }
         Text {
-            text: hint
+            text: header.hint
             color: Theme.overlay
             font.pixelSize: Theme.fs.xs
             Layout.fillWidth: true
             elide: Text.ElideRight
         }
         Text {
-            text: count
+            text: header.count
             color: Theme.overlay
             font.pixelSize: Theme.fs.xs
         }
@@ -217,7 +219,7 @@ Scope {
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: Theme.space.lg
-                        Rectangle { width: 10; height: 10; radius: 5; color: Theme.accent }
+                        Rectangle { implicitWidth: 10; implicitHeight: 10; radius: 5; color: Theme.accent }
                         Text {
                             text: "Dofus Team Manager"
                             color: Theme.text
@@ -266,9 +268,9 @@ Scope {
                                 Item {
                                     id: pill
                                     required property string modelData
-                                    readonly property bool isActive: modelData === DofusState.selected
-                                    readonly property bool editing: scope._renamingTeam === modelData
-                                    readonly property int count: (DofusState.teams[modelData] || []).length
+                                    readonly property bool isActive: pill.modelData === DofusState.selected
+                                    readonly property bool editing: scope._renamingTeam === pill.modelData
+                                    readonly property int count: (DofusState.teams[pill.modelData] || []).length
                                     implicitWidth: editing ? teamEdit.implicitWidth : pillBox.implicitWidth
                                     implicitHeight: 28
 
@@ -404,9 +406,9 @@ Scope {
                                     Item {
                                         id: chip
                                         required property string modelData
-                                        readonly property bool online: !!scope._windowByName[modelData]
-                                        readonly property bool editing: scope._renamingChar === modelData
-                                        readonly property bool inTeam: (DofusState.team || []).indexOf(modelData) >= 0
+                                        readonly property bool online: !!scope._windowByName[chip.modelData]
+                                        readonly property bool editing: scope._renamingChar === chip.modelData
+                                        readonly property bool inTeam: (DofusState.team || []).indexOf(chip.modelData) >= 0
                                         implicitWidth: editing ? chipEdit.implicitWidth : chipBox.implicitWidth
                                         implicitHeight: 28
 
@@ -437,7 +439,7 @@ Scope {
                                                 id: chipRow
                                                 anchors { verticalCenter: parent.verticalCenter; left: parent.left; leftMargin: Theme.space.md }
                                                 spacing: Theme.space.sm
-                                                Rectangle { visible: chip.online; width: 5; height: 5; radius: 3; color: Theme.success }
+                                                Rectangle { visible: chip.online; implicitWidth: 5; implicitHeight: 5; radius: 3; color: Theme.success }
                                                 // Class emblem, auto-hides when no class assigned.
                                                 ClassIcon {
                                                     cls: DofusState.classOf(chip.modelData)   // DofusState singleton
@@ -452,7 +454,7 @@ Scope {
                                                 }
                                                 // ✓ already a team member; + to add it.
                                                 Rectangle {
-                                                    width: 18; height: 18; radius: Theme.radiusSmall
+                                                    implicitWidth: 18; implicitHeight: 18; radius: Theme.radiusSmall
                                                     color: chip.inTeam ? "transparent"
                                                          : addHover.hovered ? Theme.withAlpha(Theme.success, 0.2) : Theme.withAlpha(Theme.accent, 0.18)
                                                     Text {
@@ -471,7 +473,7 @@ Scope {
                                                 }
                                                 // Remove from the pool.
                                                 Rectangle {
-                                                    width: 16; height: 16; radius: 8
+                                                    implicitWidth: 16; implicitHeight: 16; radius: 8
                                                     color: rmHover.hovered ? Theme.withAlpha(Theme.error, 0.22) : "transparent"
                                                     Text { anchors.centerIn: parent; text: "×"; color: rmHover.hovered ? Theme.error : Theme.overlay; font.pixelSize: Theme.fs.sm }
                                                     HoverHandler { id: rmHover }
@@ -659,7 +661,7 @@ Scope {
                                         spacing: Theme.space.lg
 
                                         Rectangle {
-                                            width: 8; height: 8; radius: 4
+                                            implicitWidth: 8; implicitHeight: 8; radius: 4
                                             color: (wrow.w.focused ?? false) ? Theme.accent : wrow.named ? Theme.success : Theme.overlay
                                         }
 
@@ -719,6 +721,7 @@ Scope {
                                                     border { width: 1; color: nameBox.activeFocus ? Theme.accent : Theme.border }
                                                 }
                                                 delegate: QC.ItemDelegate {
+                                                    id: nameDelegate
                                                     required property var modelData
                                                     required property int index
                                                     width: nameBox.width
@@ -726,23 +729,23 @@ Scope {
                                                         spacing: Theme.space.md
                                                         // Class emblem per option (index 0 is "— unnamed —" -> none).
                                                         ClassIcon {
-                                                            cls: index === 0 ? "" : DofusState.classOf(modelData)
+                                                            cls: nameDelegate.index === 0 ? "" : DofusState.classOf(nameDelegate.modelData)
                                                             size: 18
                                                             Layout.preferredWidth: visible ? size : 0
                                                             Layout.preferredHeight: size
                                                         }
                                                         Text {
-                                                            text: modelData
-                                                            color: index === nameBox.currentIndex ? Theme.accent : Theme.text
+                                                            text: nameDelegate.modelData
+                                                            color: nameDelegate.index === nameBox.currentIndex ? Theme.accent : Theme.text
                                                             font.pixelSize: Theme.fs.sm
                                                             verticalAlignment: Text.AlignVCenter
                                                             Layout.fillWidth: true
                                                         }
                                                     }
                                                     background: Rectangle {
-                                                        color: highlighted ? Theme.surfaceAlt : Theme.background
+                                                        color: nameDelegate.highlighted ? Theme.surfaceAlt : Theme.background
                                                     }
-                                                    highlighted: nameBox.highlightedIndex === index
+                                                    highlighted: nameBox.highlightedIndex === nameDelegate.index
                                                 }
                                                 popup: QC.Popup {
                                                     y: nameBox.height

@@ -2,6 +2,7 @@
 // centered on the wide screen. Each card shows app · summary · body, urgency
 // accent, action buttons, and a close affordance. Only the cards capture input
 // (the rest of the surface stays click-through via the mask).
+pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
@@ -14,7 +15,7 @@ PanelWindow {
     visible: Notify.items.length > 0
 
     anchors { top: true; left: true; right: true }
-    margins { top: 38 }                       // just below the 30px bar
+    margins { top: Theme.barHeight + Theme.space.md }   // clear of the bar
     implicitHeight: Math.max(1, col.implicitHeight)
 
     WlrLayershell.layer: WlrLayer.Overlay
@@ -53,7 +54,7 @@ PanelWindow {
 
                     // Urgency dot.
                     Rectangle {
-                        width: 8; height: 8; radius: 4; color: card.accent
+                        implicitWidth: 8; implicitHeight: 8; radius: 4; color: card.accent
                         Layout.alignment: Qt.AlignTop; Layout.topMargin: Theme.space.sm
                     }
 
@@ -102,6 +103,7 @@ PanelWindow {
                             Repeater {
                                 model: card.modelData.actions || []
                                 delegate: Rectangle {
+                                    id: actionDelegate
                                     required property var modelData
                                     implicitWidth: aLabel.implicitWidth + 16
                                     implicitHeight: 22
@@ -111,12 +113,12 @@ PanelWindow {
                                     Text {
                                         id: aLabel
                                         anchors.centerIn: parent
-                                        text: modelData.text || modelData.id
+                                        text: actionDelegate.modelData.text || actionDelegate.modelData.id
                                         color: Theme.text
                                         font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Theme.barFontWeight }
                                     }
                                     HoverHandler { id: aHover }
-                                    TapHandler { onTapped: Notify.invokeAction(card.modelData.id, modelData.id) }
+                                    TapHandler { onTapped: Notify.invokeAction(card.modelData.id, actionDelegate.modelData.id) }
                                 }
                             }
                         }

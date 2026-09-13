@@ -11,6 +11,7 @@
 // the generic workspace taskbar everywhere else). Only the on-demand Dofus swap
 // controls toggle, from the Hyprland Dofus submap:
 //   qs -c quantumfate ipc call dofusPanel toggle
+pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -71,7 +72,7 @@ Scope {
 
             anchors { top: true; left: true; right: true }
             // Room for the module pills to sit in rather than fill.
-            implicitHeight: 38
+            implicitHeight: Theme.barHeight
             color: "transparent"
 
             // The team "is here" only when this monitor's active workspace holds

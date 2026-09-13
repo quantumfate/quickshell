@@ -5,6 +5,7 @@
 // the Team Manager (TeamSelector) stays the place for roster editing.
 //
 //   qs -c quantumfate ipc call classAssigner toggle | show | hide
+pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -46,18 +47,19 @@ Scope {
     // One class option row: icon (blank for "") + class name / "no class".
     // Hoisted to scope level because inline components can't nest.
     component ClassOption: RowLayout {
+        id: opt
         property string key
         property bool current
         spacing: Theme.space.md
         ClassIcon {
-            cls: key
+            cls: opt.key
             size: 22
             Layout.preferredWidth: visible ? size : 0
             Layout.preferredHeight: size
         }
         Text {
-            text: key === "" ? "no class" : DofusClasses.nameFor(key)
-            color: current ? Theme.accent : (key === "" ? Theme.overlay : Theme.text)
+            text: opt.key === "" ? "no class" : DofusClasses.nameFor(opt.key)
+            color: opt.current ? Theme.accent : (opt.key === "" ? Theme.overlay : Theme.text)
             font.pixelSize: Theme.fs.sm
             verticalAlignment: Text.AlignVCenter
             Layout.fillWidth: true
@@ -87,12 +89,13 @@ Scope {
             border { width: 1; color: cp.activeFocus ? Theme.accent : Theme.border }
         }
         delegate: QC.ItemDelegate {
+            id: optDelegate
             required property var modelData
             required property int index
             width: cp.width
-            contentItem: ClassOption { key: modelData; current: index === cp.currentIndex; anchors { left: parent.left; leftMargin: Theme.space.md; right: parent.right; rightMargin: Theme.space.md } }
-            background: Rectangle { color: highlighted ? Theme.surfaceAlt : Theme.background }
-            highlighted: cp.highlightedIndex === index
+            contentItem: ClassOption { key: optDelegate.modelData; current: optDelegate.index === cp.currentIndex; anchors { left: parent.left; leftMargin: Theme.space.md; right: parent.right; rightMargin: Theme.space.md } }
+            background: Rectangle { color: optDelegate.highlighted ? Theme.surfaceAlt : Theme.background }
+            highlighted: cp.highlightedIndex === optDelegate.index
         }
         popup: QC.Popup {
             y: cp.height
@@ -172,7 +175,7 @@ Scope {
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: Theme.space.lg
-                        Rectangle { width: 10; height: 10; radius: 5; color: Theme.accent }
+                        Rectangle { implicitWidth: 10; implicitHeight: 10; radius: 5; color: Theme.accent }
                         Text {
                             text: "Character Classes"
                             color: Theme.text
@@ -199,7 +202,7 @@ Scope {
                             id: row
                             required property string modelData
                             readonly property string cls: DofusState.classOf(modelData)
-                            readonly property var inTeams: scope._teamsOf(modelData)
+                            readonly property var inTeams: scope._teamsOf(row.modelData)
                             Layout.fillWidth: true
                             implicitHeight: 56
                             radius: Theme.radiusSmall

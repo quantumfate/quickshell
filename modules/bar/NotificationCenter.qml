@@ -5,6 +5,7 @@
 //
 // Reads Notify.history (metadata log) and exposes DND + clear controls. A focus
 // popup with a dim, click-to-dismiss backdrop (same pattern as the cheatsheet).
+pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -128,7 +129,7 @@ Scope {
                             RowLayout {
                                 Layout.fillWidth: true
                                 spacing: Theme.space.md
-                                Rectangle { width: 6; height: 6; radius: 3; color: histCard.accent; Layout.alignment: Qt.AlignVCenter }
+                                Rectangle { implicitWidth: 6; implicitHeight: 6; radius: 3; color: histCard.accent; Layout.alignment: Qt.AlignVCenter }
                                 Text {
                                     text: histCard.modelData.appName || "notification"
                                     color: histCard.accent
@@ -137,22 +138,22 @@ Scope {
                                     Layout.fillWidth: true
                                 }
                                 Text {
-                                    text: scope._ago(modelData.time)
+                                    text: scope._ago(histCard.modelData.time)
                                     color: Theme.overlay
                                     font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                                 }
                             }
                             Text {
-                                visible: !!modelData.summary
-                                text: modelData.summary
+                                visible: !!histCard.modelData.summary
+                                text: histCard.modelData.summary
                                 color: Theme.text
                                 font { family: Theme.fontFamily; pixelSize: Theme.fs.md; weight: Theme.barFontWeight }
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
                             }
                             Text {
-                                visible: !!modelData.body
-                                text: modelData.body
+                                visible: !!histCard.modelData.body
+                                text: histCard.modelData.body
                                 textFormat: Text.StyledText
                                 color: Theme.subtext
                                 font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
