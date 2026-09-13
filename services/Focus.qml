@@ -44,6 +44,12 @@ import "."
 Singleton {
     id: root
 
+    // Deliberately NOT read-exclusive during hydration: the first store read
+    // below must not be gated, but the scene-apply trigger only fires once the
+    // stores settled (a first-run seed must not touch systemd).
+    property bool _hydrated: false
+    Component.onCompleted: root._hydrated = true
+
     Store {
         id: stateStore
         name: "focus"
@@ -100,7 +106,7 @@ Singleton {
                 name: "Gaming", accent_role: "green", surface_alpha: 0.96,
                 density: "compact", motion_energy: "instant", bar_autohide: false,
                 notifications: { policy: "none", position: "top-right", timeout: 0, queue: true, digest_on_exit: false },
-                launches: { aggression: "firm", block: ["media"], override: true },
+                launches: { aggression: "firm", block: [], override: true },
                 background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
                 scenes: { gaming: "reachable" }
             },
@@ -173,6 +179,31 @@ Singleton {
         return root.current.name + " is on" + until + " — this is blocked while it runs";
     }
 
+    // Scene reachability for the active mood: absent is reachable; an
+    // inactive mood restricts nothing. Only explicit "blocked" in the
+    // policy takes away access; the active mood never locks itself out.
+    function sceneState(scene) {
+        if (!root.active) return "reachable";
+        return root.current.scenes ? (root.current.scenes[scene] || "reachable") : "reachable";
+    }
+
+    // A background task's effective level for the active mood — the
+    // single definitional resolver (MoodPanel and ,scene-apply.sh agree
+    // by both reading this). Absent = allow; wildcard covers everything
+    // not individually listed; a "deny" gate blocks unlisted tasks.
+    function backgroundTaskLevel(task) {
+        if (!root.active) return "allow";
+        const bg = root.current.background || {};
+        const allow = bg.allow || [];
+        const defer = bg.defer || [];
+        const prevent = bg.prevent || [];
+        if (prevent.indexOf(task) >= 0) return "prevent";
+        if (defer.indexOf(task) >= 0) return "defer";
+        if (allow.indexOf("*") >= 0 || allow.indexOf(task) >= 0)
+            return bg.policy === "deny" ? "blocked" : "allow";
+        return bg.policy === "deny" ? "blocked" : "unset";
+    }
+
     // Enter a mood. `minutes` <= 0 (or omitted) means open-ended (only
     // `stop()`, or another `set()`, ends it).
     function set(mode, minutes) {
@@ -199,6 +230,31 @@ Singleton {
         store.set({ moods: Object.assign({}, root.policyData, { [mode]: merged }) });
     }
 
+    // Whenever the ACTIVE mood changes, ask the scene manager to bring
+    // user-unit background work in line with the new policy (start what the
+    // new mood allows, stop what it refuses). Fire-and-forget and detached:
+    // the script reads focus.json itself and does the systemd work, so a
+    // missing/failed script never blocks the shell. Runs at rest (neutral)
+    // too, so leaving a mood hands the stopped units back.
+    Connections {
+        target: root
+        function onModeChanged() { root._applyScene(); }
+    }
+    function _applyScene() {
+        if (!root._hydrated) return;
+        const mode = root.active ? root.mode : "neutral";
+        root.runSceneApply(mode);
+    }
+
+    // The enforced seam itself lives in the scripts repo (bin/,scene-apply.sh)
+    // — this is only the trigger, and the process runs async so Focus never
+    // waits on it. Absent a script on PATH the run just fails silently.
+    Process { id: sceneApply; command: [",scene-apply.sh", "neutral"] }
+    function runSceneApply(mode) {
+        sceneApply.command = [",scene-apply.sh", mode];
+        sceneApply.running = true;
+    }
+
     // ipc: qs -c quantumfate ipc call focus <fn>
     IpcHandler {
         target: "focus"
@@ -213,6 +269,12 @@ Singleton {
         function canLaunch(kind: string): string {
             return root.canLaunch(kind) ? "yes" : ("no: " + root.blockReason(kind));
         }
+        // "reachable" / "blocked" — a dispatcher (workspace gates, focus-guard)
+        // greps the verdict when deciding whether to enter a scene.
+        function scene(name: string): string { return root.sceneState(name); }
+        // "allow" / "defer" / "prevent" / "unset" / "blocked" — the task-level
+        // verdict the DBus/CLI background gates read at dispatch time.
+        function bg(task: string): string { return root.backgroundTaskLevel(task); }
         function reload(): void { stateStore.reload(); store.reload(); }
     }
 }

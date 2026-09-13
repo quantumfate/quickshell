@@ -17,7 +17,8 @@
 //      values and non-duplicated block lists.
 //   4. Launch semantics reproduce Focus.canLaunch exactly: a mood never
 //      refuses itself, neutral never blocks, every other mood is firm on the
-//      same `blockedKinds` minus itself.
+//      same `blockedKinds` minus itself — game excepted, which since this
+//      revision lets a media browser through (Zen media while gaming).
 //   5. The background defaults change nothing until configured — policy
 //      allow, `["*"]`, nothing deferred or prevented.
 //   6. Scene reachability is per-mood and minimal: absent is reachable, so
@@ -96,13 +97,15 @@ test("launch policy reproduces Focus.canLaunch exactly", () => {
     // Focus.canLaunch: a mood never blocks launching into itself; neutral
     // never blocks; every other mood refuses blockedKinds minus itself (soft
     // moods warn and let through — but none of the defaults are soft except
-    // neutral, which blocks nothing).
+    // neutral, which blocks nothing). Gaming does NOT refuse media: a
+    // media browser (Zen) stays launchable while gaming.
     const blockedKinds = ["media", "game"];
     for (const mode of moodEnum) {
         for (const kind of blockedKinds) {
             const blocksKind = moods[mode].launches.block.includes(kind);
             const focusAllows = mode === "neutral" || mode === kind;
-            assert.equal(blocksKind, !focusAllows,
+            const expectsBlocks = !focusAllows && !(mode === "game" && kind === "media");
+            assert.equal(blocksKind, expectsBlocks,
                 `${mode} ${blocksKind ? "blocks" : "allows"} "${kind}", Focus.allows=${focusAllows}`);
         }
     }
@@ -137,4 +140,41 @@ test("scene reachability is per-mood and only lists what a mood takes away", () 
     }
     assert.equal(moods.game.scenes.gaming, "reachable", "gaming must not lock itself out");
     assert.equal(moods.media.scenes.media, "reachable", "media must not lock itself out");
+});
+
+// Extracts a named function's body from Focus.qml, stopping at its closing
+// brace (a plain `[\s\S]*?\}` non-greedy capture would stop at the first inline
+// `{}` object literal, e.g. `const bg = ... || {};`).
+function fnBody(name) {
+    const m = focusSrc.match(new RegExp("function " + name + "\\([^)]*\\) \\{([\\s\\S]*?)\\n    \\}\\n"));
+    return m?.[1] ?? "";
+}
+
+test("sceneState resolves absent = reachable and only 'blocked' takes a scene away", () => {
+    // The oracle the workspace gates read (`focus scene <name>`). The policy
+    // literal is the entire table: every mood x every scene must be a known
+    // state, and the active mood never locks its own scene out.
+    const fn = fnBody("sceneState");
+    assert.match(fn, /!root\.active/, "an inactive mood must leave every scene reachable");
+    assert.match(fn, /root\.current\.scenes/, "sceneState must read the active mood's scenes");
+    for (const mode of moodEnum) {
+        for (const scene of ["gaming", "media"]) {
+            const state = moods[mode].scenes[scene] || "reachable";
+            assert.ok(["reachable", "blocked"].includes(state),
+                `${mode} names unknown scene state "${state}" for "${scene}"`);
+        }
+    }
+});
+
+test("backgroundTaskLevel is one resolver: prevent beats defer beats allow, wildcard covers the rest", () => {
+    const fn = fnBody("backgroundTaskLevel");
+    assert.match(fn, /if \(!root\.active\) return "allow";/, "the resting mood must allow all background work");
+    assert.match(fn, /prevent\.indexOf\(task\) >= 0/, "prevent must be checked before defer");
+    assert.match(fn, /defer\.indexOf\(task\) >= 0/, "defer must be checked before allow");
+    assert.match(fn, /allow\.indexOf\("\*"\) >= 0/, "a wildcard allow must cover unlisted tasks");
+    // The default policy gates nothing and restricts nothing per mood.
+    for (const mode of moodEnum) {
+        assert.deepEqual(moods[mode].background.defer, [], `${mode} defers something by default`);
+        assert.deepEqual(moods[mode].background.prevent, [], `${mode} prevents something by default`);
+    }
 });

@@ -130,7 +130,7 @@
       },
       "launches": {
         "aggression": "firm",
-        "block": ["media"],
+        "block": [],
         "override": true
       },
       "background": {

@@ -1,13 +1,15 @@
-// Toasts — the live notification queue as themed cards under the bar, top-
-// centered on the wide screen. Each card shows app · summary · body, urgency
-// accent, action buttons, and a close affordance. Only the cards capture input
-// (the rest of the surface stays click-through via the mask).
+// Toasts — the live notification queue as themed cards, anchored by the active
+// mood's policy (Focus.notifications.position): top-right under the bar by
+// default, bottom-right when the media mood is on. Each card shows
+// app · summary · body, urgency accent, action buttons, and a close affordance.
+// Only the cards capture input (the rest of the surface stays click-through
+// via the mask).
 pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Notify, Theme
+import "../../services"   // Notify, Theme, Focus
 import "../common"        // Surface
 
 PanelWindow {
@@ -15,8 +17,12 @@ PanelWindow {
     color: "transparent"
     visible: Notify.items.length > 0
 
-    anchors { top: true; left: true; right: true }
-    margins { top: Theme.barReserved + Theme.space.xs }   // clear of the bar
+    readonly property bool stickyBottom: Focus.notifications.position === "bottom-right"
+    anchors { top: !win.stickyBottom; bottom: win.stickyBottom; left: true; right: true }
+    margins {
+        top: win.stickyBottom ? 0 : Theme.barReserved + Theme.space.xs   // clear of the bar
+        bottom: win.stickyBottom ? Theme.space.xs : 0
+    }
     implicitHeight: Math.max(1, col.implicitHeight)
 
     WlrLayershell.layer: WlrLayer.Overlay
@@ -31,7 +37,9 @@ PanelWindow {
 
     ColumnLayout {
         id: col
-        anchors.horizontalCenter: parent.horizontalCenter
+        // The top-right / bottom-right corner the policy names — never centered.
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.space.md
         width: 380
         spacing: Theme.space.md
 

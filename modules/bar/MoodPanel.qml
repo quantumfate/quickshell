@@ -48,19 +48,12 @@ Scope {
         return " · " + (m >= 60 ? Math.floor(m / 60) + "h " + (m % 60) + "m" : m + "m") + " left";
     }
 
-    // A task's effective background level. `prevent` beats `defer` beats
-    // `allow`; a wildcard allow covers everything not listed.
-    function taskLevel(task) {
-        const allow = scope.bg.allow || [];
-        const defer = scope.bg.defer || [];
-        const prevent = scope.bg.prevent || [];
-        if (prevent.indexOf(task) >= 0) return "prevent";
-        if (defer.indexOf(task) >= 0) return "defer";
-        if (allow.indexOf("*") >= 0 || allow.indexOf(task) >= 0) {
-            return scope.bg.policy === "deny" ? "blocked" : "allow";
-        }
-        return scope.bg.policy === "deny" ? "blocked" : "unset";
-    }
+    // A task's effective background level. The single definitional resolver
+    // lives on Focus (backgroundTaskLevel) — the panel displays it, and
+    // ,scene-apply.sh reads the same verdict at apply time, so the UI and the
+    // systemd seam can never disagree. `prevent` beats `defer` beats `allow`;
+    // a wildcard allow covers everything not listed.
+    function taskLevel(task) { return Focus.backgroundTaskLevel(task); }
 
     // Cycle a task through unset -> allow -> defer -> prevent -> unset. The
     // wildcard is left untouched so customising one task never flips the rest.

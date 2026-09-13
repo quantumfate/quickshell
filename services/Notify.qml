@@ -6,9 +6,16 @@ pragma ComponentBehavior: Bound
 // flows through here. It renders nothing itself — Toasts draws the live queue,
 // NotificationCenter draws the persisted history — but it owns:
 //
-//   items    live on-screen toasts (auto-expiring, or sticky when critical)
-//   history  capped, persisted metadata log (survives restarts, via Store)
-//   dnd      do-not-disturb: suppress toasts (still logged to history)
+//   items    live on-screen toasts (auto-expiring per policy, sticky when
+//            critical or the active mood's timeout is 0)
+//   history  capped, persisted metadata log (survives restarts, via Store);
+//            every entry records its `route`: "shown" | "dnd" | "mood:<mode>"
+//   dnd      manual do-not-disturb: suppress toasts (still logged to history)
+//   moods    the active focus mood's notification policy also gates the screen
+//            ("critical-only"/"none" silence toasts; history still records),
+//            re-positions the queue (Toasts anchors per policy), and — when a
+//            mood queues + digests — folds the buffered, suppressed work into
+//            one digest toast when the mood ends
 //
 // Internal shell feedback still calls `Notify.send(...)`; it joins the same
 // pipeline as real notifications, so history and DND cover it too.
@@ -16,7 +23,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 import QtQuick
-import "."   // Store, Config
+import "."   // Store, Focus, Config
 
 Singleton {
     id: root
@@ -36,6 +43,10 @@ Singleton {
     readonly property int _ttlMs: 4500
     readonly property int _maxHistory: 100
     property int _seq: 0
+    // Suppressed notifications buffered for the digest toast a queuing mood
+    // asks for on exit (metadata only: the logs already hold the details).
+    property var _queued: []
+    property string _queueMood: ""
 
     // Persisted DND + history, shared file so it survives config reloads/restarts.
     Store {
@@ -101,22 +112,78 @@ Singleton {
         });
     }
 
-    // Route a record to the toast queue (unless DND; critical always shows and
-    // never auto-expires) and to history — except transient records, which are
-    // feedback-only and deliberately left out of the log.
+    // Route a record to history (every entry remembers why it did/didn't toast)
+    // and, when it is not suppressed, to the live toast queue. Transient
+    // records stay feedback-only and never land in the log.
     function _ingest(rec) {
+        const route = root._route(rec);
         if (!rec.transient) {
             const meta = Object.assign({}, rec); delete meta._n;
+            meta.route = route || "shown";
+            // A mood that queues suppressed work buffers it for a digest toast
+            // on exit (queue + digest_on_exit are the mood's own flags — see
+            // Focus.notifications). The buffer is runtime-only, deliberately:
+            // history already logged the suppressed records in full.
+            if (route && Focus.notifications.queue) {
+                root._queued = root._queued.concat([meta]);
+                root._queueMood = Focus.mode;
+            }
             root.history = [meta].concat(root.history).slice(0, root._maxHistory);
             root._persist();
         }
 
-        if (root.dnd && rec.urgency !== "critical") return;
+        if (route) return;
         root.items = root.items.concat([rec]);
-        // Sticky only for real critical notifications; transient feedback (even
-        // error-level) is always ephemeral and auto-expires.
-        if (rec.urgency !== "critical" || rec.transient)
-            _expire.createObject(root, { rid: rec.id });
+        // Sticky for critical notifications and for moods whose policy timeout
+        // is 0 (persist until dismissed); transient feedback is always
+        // ephemeral and auto-expires.
+        const ttl = root._ttl(rec);
+        if (ttl > 0)
+            _expire.createObject(root, { rid: rec.id, interval: ttl });
+    }
+
+    // Why a record is (or is not) on screen: "" (shown), "dnd" (manual DND —
+    // critical still breaks through), or "mood" (the active mood's policy —
+    // critical does NOT break a strict mood). The reason is recorded as each
+    // history entry's `route`; only "shown" ever toasted.
+    function _route(rec) {
+        if (root.dnd && rec.urgency !== "critical") return "dnd";
+        const policy = Focus.notifications.policy;
+        if (policy === "critical-only") return rec.urgency === "critical" ? "" : "mood";
+        return policy === "none" ? "mood" : "";
+    }
+
+    // A toast's lifetime: critical ones and moods with a 0 timeout stick until
+    // closed; transient feedback always auto-expires at the default ttl. In a
+    // mood (always the case through `Focus.notifications`), 0 means sticky.
+    function _ttl(rec) {
+        if (rec.transient) return root._ttlMs;
+        if (rec.urgency === "critical") return 0;
+        const t = Focus.notifications.timeout;
+        return (typeof t === "number" && t > 0) ? t : 0;
+    }
+
+    // Fold a finished mood's buffered work into ONE digest toast, per that
+    // mood's own queue/digest_on_exit flags. Fires when the mood ends however
+    // it ends — a switch away, an explicit stop, or a timed lapse.
+    Connections {
+        target: Focus
+        function onModeChanged() { root._moodChanged(); }
+    }
+    function _moodChanged() {
+        if (!root._queued.length || !root._queueMood) return;
+        const over = !Focus.active || Focus.mode !== root._queueMood;
+        if (!over) return;
+        const m = Focus.policyData[root._queueMood] || {};
+        const n = m.notifications || {};
+        if (n.digest_on_exit) {
+            const names = [...new Set(root._queued.map(q => q.appName || "notification"))];
+            const label = names.slice(0, 3).join(", ") + (names.length > 3 ? ", \u2026" : "");
+            const count = root._queued.length + " notification" + (root._queued.length === 1 ? "" : "s");
+            root.send(count + " while " + (m.name || root._queueMood) + " was on", label, "info");
+        }
+        root._queued = [];
+        root._queueMood = "";
     }
 
     function _persist() { store.set({ dnd: root.dnd, history: root.history }); }
@@ -155,7 +222,8 @@ Singleton {
     function showHistory() { root.historyOpen = true; }
     function hideHistory() { root.historyOpen = false; }
 
-    // One self-destructing timer per non-critical toast (independent lifetimes).
+    // One self-destructing timer per auto-expiring toast (independent lifetimes).
+    // `interval` is injected at creation from the policy ttl (see _ttl).
     Component {
         id: _expire
         Timer {

@@ -126,3 +126,12 @@ test("game and media moods leave the other four untouched by definition", () => 
     assert.notEqual(moods.game, moods.media);
     assert.notEqual(moods.game.accent_role, moods.media.accent_role);
 });
+
+test("the focus IPC exposes scene reachability and background verdicts for dispatchers", () => {
+    // The gates (workspace binds, ,scene-apply.sh, ,mood-bg.sh) read the SAME
+    // oracles the UI reads — no second interpretation of the policy.
+    assert.match(focusSrc, /function scene\(name: string\): string \{ return root\.sceneState\(name\); \}/,
+        "IpcHandler lacks the `scene` verdict");
+    assert.match(focusSrc, /function bg\(task: string\): string \{ return root\.backgroundTaskLevel\(task\); \}/,
+        "IpcHandler lacks the `bg` verdict");
+});

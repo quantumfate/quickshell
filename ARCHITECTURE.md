@@ -45,6 +45,27 @@ manager and the launcher scripts read. `focus.json` stays the active-state
 pointer (`{ mode, until }`); the lockstep tests pin the policy seeds to the
 QML literals so the file and the shell cannot drift.
 
+Since LEO-238, Enforcement is _dispatch-time oracles + one systemd seam_, never
+a second interpretation of the policy:
+
+- **Oracles.** `Focus.sceneState(scene)` → `reachable`/`blocked` and
+  `Focus.backgroundTaskLevel(task)` → `allow`/`defer`/`prevent`/`unset`/`blocked`
+  are the single resolvers; the mood panel and the scripts read the same
+  function. IPC exposes them as `focus scene <name>` and `focus bg <task>`.
+- **Notifications.** `Notify` records a `route` on every history entry
+  (`shown` | `dnd` | `mood`) and re-positions the toast queue per the active
+  mood's `position`; per-toast expiry comes from the mood's `timeout` (0 =
+  sticky). A mood that sets `queue` + `digest_on_exit` folds its buffered,
+  suppressed notifications into one digest toast when the mood ends. LEO-240
+  (routed notification centre) will consume the `route` field.
+- **Background seam.** Focus fires `,scene-apply.sh <mode>` (detached, failing
+  open) on every mood transition. The script lives in the **scripts** repo with
+  its own contract (`etc/scene-managed.json`) — the desktop's delivery rule
+  keeps each repo's data with its consumer, so quickshell never reads it. It
+  stops/restarts user units per the mood's reachable scenes + deferred/prevented
+  background tasks, honours a `protected` rail, never force-kills, and logs every
+  decision to `$XDG_STATE_HOME/scene-policy/log.jsonl` (LEO-241's feed).
+
 ## Command (IPC)
 
 IPC takes care of actions that do not require a state:
