@@ -30,6 +30,7 @@ Singleton {
             scale: 1.25,            // UI scale; see `fs` and `space` below
             transparency: 1.0,      // global window-transparency dial (0 = opaque)
             wallpaper: "",          // "" = the palette's default, resolved by ,theme.sh
+            wallpapers: ({}),       // palette -> wallpaper; `wallpaper` is the fallback
             cheatsheet_linger_ms: 400
         })
     }
@@ -51,6 +52,14 @@ Singleton {
 
     // "" means the palette decides; `,theme.sh` resolves and applies it.
     readonly property string wallpaper: store.get("wallpaper") ?? ""
+
+    // Wallpaper per palette. The image that reads well behind Latte is rarely
+    // the one that reads well behind Mocha, so the binding is per palette and
+    // `wallpaper` is only the fallback.
+    readonly property var wallpapers: store.get("wallpapers") ?? ({})
+    function wallpaperFor(palette) {
+        return wallpapers[palette] ?? wallpaper;
+    }
 
     // Raw palettes. Add more here; switching is just a name change. `cycle`
     // walks them in insertion order.

@@ -71,6 +71,13 @@
       "type": "number",
       "minimum": 0.0,
       "maximum": 1.0
+    },
+    "wallpapers": {
+      "description": "Wallpaper per palette. A palette absent here falls back to `wallpaper`, then to <palette>.jpg in the wallpaper directory.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
     }
   }
 }
