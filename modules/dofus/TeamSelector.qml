@@ -48,22 +48,16 @@ Scope {
     // name -> live window, for the pool's ✓/online indicators.
     readonly property var _windowByName: {
         var map = {};
-        var all = (DofusWindows.slots || []).concat(DofusWindows.unmatched || []);
+        var all = DofusWindows.windows || [];
         for (var i = 0; i < all.length; i++)
-            if (all[i].name && all[i].present) map[all[i].name] = all[i];
+            if (all[i].name) map[all[i].name] = all[i];
         return map;
     }
 
-    // Zone 4 mirrors the taskbar: ONLY live windows — present team slots plus
-    // unmatched clients. Absent team slots (present:false) are never shown, so
-    // reordering the team never appears to touch a window. Sorted by a stable
-    // key (address/pid) so the list doesn't reshuffle when the team reorders.
-    readonly property var _liveWindows: {
-        var present = (DofusWindows.slots || []).filter(s => s.present);
-        var all = present.concat(DofusWindows.unmatched || []);
-        all.sort((a, b) => (a.address || "").localeCompare(b.address || "") || (a.pid - b.pid));
-        return all;
-    }
+    // Zone 4 mirrors the groupbar: the live Dofus group's members, in group
+    // order (LEO-234). No team join — the group is the roster, same as the
+    // compositor's own groupbar.
+    readonly property var _liveWindows: DofusWindows.windows || ([])
 
     // Copy an arbitrary string to the Wayland clipboard.
     function _copy(value) {
