@@ -27,6 +27,13 @@ Scope {
     property var cats: []               // [{ name, rows: [{ combo, desc }] }]
     readonly property var columns: CheatParse.splitColumns(cats)  // [leftCats, rightCats]
 
+    // Raw `hyprctl binds -j` text, cached across opens/submap changes — see
+    // CheatSheet.qml, its sibling, for why (the bind table only changes on a
+    // config reload, so re-shelling out on every dwell/traversal is pure
+    // latency for no new information).
+    property string bindsJson: ""
+    property bool bindsValid: false
+
     // Preferred category ordering; unlisted categories sort alphabetically after.
     readonly property var categoryOrder: [
         "Window", "Workspace", "Menus", "Media", "Utilities", "Dofus", "Shell", "General"
@@ -42,24 +49,39 @@ Scope {
         function close(): void { scope.close(); }
     }
 
-    function open() { refresh.running = true; shown = true; }
-    function close() { shown = false; }
+    function open() {
+        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder);
+        else refresh.running = true;
+        scope.shown = true;
+    }
+    function close() { scope.shown = false; }
 
     // Track the active submap so a show renders the right context. Also drives
     // live follow-along if the submap changes while the peek is visible.
+    // `configreloaded` invalidates the cache above — the Lua side
+    // (hypr/events/peek.lua) already closes the panel on reload so it can
+    // never be orphaned; this only keeps the bind table itself fresh.
     Connections {
         target: Hyprland
         function onRawEvent(event) {
             if (event.name === "submap") scope.submap = event.data; // "" at root
+            else if (event.name === "configreloaded") scope.bindsValid = false;
         }
     }
-    onSubmapChanged: if (scope.shown) refresh.running = true;
+    onSubmapChanged: if (scope.shown) {
+        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder);
+        else refresh.running = true;
+    }
 
     Process {
         id: refresh
         command: ["hyprctl", "binds", "-j"]
         stdout: StdioCollector {
-            onStreamFinished: scope.cats = CheatParse.parse(text, scope.submap, scope.categoryOrder)
+            onStreamFinished: {
+                scope.bindsJson = text;
+                scope.bindsValid = true;
+                scope.cats = CheatParse.parse(text, scope.submap, scope.categoryOrder);
+            }
         }
     }
 

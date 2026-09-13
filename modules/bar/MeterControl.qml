@@ -63,7 +63,7 @@ Item {
             }
 
             Text {
-                anchors { bottom: track.top; horizontalCenter: track.horizontalCenter; bottomMargin: 2 }
+                anchors { bottom: track.top; horizontalCenter: track.horizontalCenter; bottomMargin: Theme.space.xs }
                 text: root.valueText
                 color: Theme.subtext
                 font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }

@@ -16,6 +16,11 @@ fmt-check:
 	prettier --check '**/*.md'
 	nixpkgs-fmt --check .
 
+# `--cached --others --exclude-standard` rather than a bare `git ls-files`: the
+# latter lists only TRACKED files, so a brand-new .qml sails through every gate
+# until the moment it is committed, and then fails. That is how a literal
+# bottomMargin reached main.
+#
 # Guards the scale sweep: sizes and layout spacing name a step on Theme.fs /
 # Theme.space, never a pixel count. A literal here is how the shell drifted back
 # to being unresizable last time, and it is one grep to catch.
@@ -26,7 +31,7 @@ fmt-check:
 tokens:
 	#!/usr/bin/env bash
 	set -euo pipefail
-	if git ls-files '*.qml' | xargs grep -nE '(pixelSize|spacing|margins|[a-zA-Z]Margin):[[:space:]]*[0-9]|\b(top|bottom|left|right):[[:space:]]*[0-9]'; then
+	if git ls-files --cached --others --exclude-standard '*.qml' | xargs grep -nE '(pixelSize|spacing|margins|[a-zA-Z]Margin):[[:space:]]*[0-9]|\b(top|bottom|left|right):[[:space:]]*[0-9]'; then
 		echo "^ literal size/spacing — use Theme.fs.* / Theme.space.* instead" >&2
 		exit 1
 	fi
@@ -37,7 +42,7 @@ tokens:
 	# draws a palette's own swatch can opt out with a trailing
 	# `// tokens-color-ok: <reason>` comment; keep that narrow — reach for a new
 	# role instead of the exemption when one is missing.
-	if git ls-files '*.qml' ':!:services/Theme.qml' \
+	if git ls-files --cached --others --exclude-standard '*.qml' ':!:services/Theme.qml' \
 		| xargs grep -nE '#[0-9a-fA-F]{3,8}' \
 		| grep -v 'tokens-color-ok:'; then
 		echo "^ literal colour — use a Theme.* role instead, or add one if it's missing" >&2

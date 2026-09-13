@@ -36,3 +36,26 @@ function fractionFromScale(scale) {
 function transparencyFromFraction(fraction) {
     return clamp(fraction, 0, 1);
 }
+
+// h/j/k/l movement over a fixed-width grid of `count` items, wrapping on every
+// edge so the keyboard picker never dead-ends at a corner. `key` is one of
+// "h", "j", "k", "l"; any other key is a no-op (returns the same index).
+function moveGridIndex(index, key, count, columns) {
+    if (count <= 0) return index;
+    var rows = Math.ceil(count / columns);
+    var row = Math.floor(index / columns);
+    var col = index % columns;
+    function at(r, c) {
+        var wrappedRow = ((r % rows) + rows) % rows;
+        var wrappedCol = ((c % columns) + columns) % columns;
+        var i = wrappedRow * columns + wrappedCol;
+        return i < count ? i : index;
+    }
+    switch (key) {
+        case "h": return at(row, col - 1);
+        case "l": return at(row, col + 1);
+        case "k": return at(row - 1, col);
+        case "j": return at(row + 1, col);
+        default: return index;
+    }
+}

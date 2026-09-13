@@ -10,6 +10,10 @@
 // their transport as plain functions on the singleton itself, so those are
 // called directly.
 //
+// The theme section renders AdapterResult (services/AdapterResult.qml), what
+// `,theme.sh apply` actually did last time, rather than assuming the fan-out
+// landed everywhere: see that file's header for why.
+//
 // Toggle from Hyprland:  qs -c quantumfate ipc call control toggle
 pragma ComponentBehavior: Bound
 import Quickshell
@@ -17,7 +21,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Theme, Sound, Focus, Store
+import "../../services"   // Theme, AdapterResult, Sound, Focus, Store
 import "../common"        // Surface
 import "ControlLogic.js" as ControlLogic
 
@@ -26,6 +30,13 @@ Scope {
 
     property bool shown: false
     property var wallpapers: []   // filenames under ~/.config/hypr/wallpapers
+
+    // The palette the keyboard/pointer is currently pointed at, distinct from
+    // Theme.name (the palette actually applied). The wallpaper picker below
+    // binds to this — per-palette, not to the desk globally — so previewing
+    // frappe shows and edits frappe's wallpaper, not whatever is live.
+    property string previewPalette: Theme.name
+    property int previewIndex: Math.max(0, Object.keys(Theme.palettes).indexOf(Theme.name))
 
     readonly property string wallpaperDir: Quickshell.env("HOME") + "/.config/hypr/wallpapers"
 
@@ -62,9 +73,28 @@ Scope {
     function setNight(name) { themeStore.set({ night: name }); }
     function setScale(value) { themeStore.set({ scale: ControlLogic.clamp(value, 0.8, 2.5) }); }
     function setTransparency(value) { themeStore.set({ transparency: ControlLogic.clamp(value, 0, 1) }); }
+
+    // Binds a wallpaper to whichever palette is previewed, not to the desk
+    // globally — Theme.wallpapers is a palette -> filename map, and this
+    // panel is the only writer of it.
     function setWallpaper(name) {
-        themeStore.set({ wallpaper: name });
-        scope.applyTheme();
+        const map = Object.assign({}, Theme.wallpapers);
+        map[scope.previewPalette] = name;
+        themeStore.set({ wallpapers: map });
+        if (scope.previewPalette === Theme.name) scope.applyTheme();
+    }
+
+    // Moves the preview cursor by name (pointer) or by grid step (keyboard);
+    // both funnel through here so previewIndex and previewPalette never drift
+    // apart.
+    readonly property var paletteNames: Object.keys(Theme.palettes)
+    function previewByName(name) {
+        const i = scope.paletteNames.indexOf(name);
+        if (i >= 0) { scope.previewIndex = i; scope.previewPalette = name; }
+    }
+    function previewMove(key) {
+        scope.previewIndex = ControlLogic.moveGridIndex(scope.previewIndex, key, scope.paletteNames.length, 4);
+        scope.previewPalette = scope.paletteNames[scope.previewIndex];
     }
 
     Process {
@@ -76,20 +106,53 @@ Scope {
     }
 
     // Small reusable click-to-pick swatch used by both the palette grid and the
-    // day/night pills.
+    // day/night pills. `previewed` (keyboard/pointer focus) and `active`
+    // (actually applied) are distinct so the picker can show both at once.
     component PalettePill: Rectangle {
         id: pill
         required property string paletteName
         property bool active: false
+        property bool previewed: false
         signal picked()
+        signal hovered()   // pointer parity for keyboard preview; day/night pills simply don't wire it
 
         readonly property var pal: Theme.palettes[pill.paletteName] ?? Theme.palettes.macchiato
 
         radius: Theme.radiusSmall
-        color: Theme.withAlpha(pill.pal.base, 0.9)
-        border { width: pill.active ? 2 : 1; color: pill.active ? Theme.accent : Theme.withAlpha(Theme.border, 0.6) }
+        color: Theme.withAlpha(pill.pal.base, 0.9)   // tokens-color-ok: this pill's own palette base, previewed on itself
+        border {
+            width: pill.active ? 2 : (pill.previewed ? 2 : 1)
+            color: pill.active ? Theme.accent : (pill.previewed ? Theme.accentSecondary : Theme.withAlpha(Theme.border, 0.6))
+        }
 
-        MouseArea { anchors.fill: parent; onClicked: pill.picked() }
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            onEntered: pill.hovered()
+            onClicked: pill.picked()
+        }
+    }
+
+    // Six swatches lifted straight from the palette's own table: this is the
+    // one legitimate place raw palette values are read for preview rather
+    // than through a semantic role, since the point is to show what the
+    // palette itself looks like.
+    component SwatchStrip: RowLayout {
+        id: strip
+        required property var pal
+        readonly property var keys: ["base", "surface0", "mauve", "teal", "peach", "red"]
+
+        spacing: Theme.space.xs
+        Repeater {
+            model: strip.keys
+            delegate: Rectangle {
+                required property string modelData
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                radius: Theme.radiusSmall
+                color: strip.pal[modelData] ?? strip.pal.mauve   // tokens-color-ok: swatch strip previews the palette's own raw colours
+            }
+        }
     }
 
     // A slider with no literal geometry: track height/handle size are steps on
@@ -174,6 +237,14 @@ Scope {
             width: card.width
             height: card.height
             Keys.onEscapePressed: scope.hide()
+            Keys.onPressed: (event) => {
+                const key = { [Qt.Key_H]: "h", [Qt.Key_J]: "j", [Qt.Key_K]: "k", [Qt.Key_L]: "l" }[event.key];
+                if (key) { scope.previewMove(key); event.accepted = true; }
+                else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    scope.setPalette(scope.previewPalette);
+                    event.accepted = true;
+                }
+            }
 
             Surface {
                 id: card
@@ -202,6 +273,17 @@ Scope {
                         // ---- Theme ----------------------------------------
                         SectionTitle { text: "THEME" }
 
+                        // What applying will actually do, before it happens —
+                        // the same nine-ish-surface fan-out regardless of which
+                        // palette is picked, so this is honest to show up front.
+                        Text {
+                            text: AdapterResult.everRan
+                                ? "Applying will reach: " + AdapterResult.tierSummary
+                                : "Never applied yet on this machine"
+                            color: Theme.subtextAlt
+                            font.pixelSize: Theme.fs.xs
+                        }
+
                         GridLayout {
                             Layout.fillWidth: true
                             columns: 4
@@ -209,38 +291,75 @@ Scope {
                             columnSpacing: Theme.space.sm
 
                             Repeater {
-                                model: Object.keys(Theme.palettes)
+                                model: scope.paletteNames
                                 delegate: PalettePill {
                                     id: swatch
                                     required property string modelData
                                     Layout.fillWidth: true
-                                    Layout.preferredHeight: Theme.fs.xl * 2.2
+                                    Layout.preferredHeight: Theme.fs.xl * 2.8
                                     paletteName: swatch.modelData
                                     active: Theme.name === swatch.modelData
+                                    previewed: scope.previewPalette === swatch.modelData
                                     onPicked: scope.setPalette(swatch.modelData)
+                                    onHovered: scope.previewByName(swatch.modelData)
 
-                                    RowLayout {
+                                    ColumnLayout {
                                         anchors { fill: parent; margins: Theme.space.xs }
                                         spacing: Theme.space.xs
-                                        Repeater {
-                                            model: ["surface0", "accent" in swatch.pal ? "accent" : "mauve", "text"]
-                                            delegate: Rectangle {
-                                                required property string modelData
-                                                Layout.fillWidth: true
-                                                Layout.fillHeight: true
-                                                radius: Theme.radiusSmall
-                                                color: swatch.pal[modelData] ?? swatch.pal.mauve
-                                            }
+                                        SwatchStrip { Layout.fillWidth: true; Layout.fillHeight: true; pal: swatch.pal }
+                                        Text {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: swatch.paletteName
+                                            color: swatch.pal.text
+                                            font { pixelSize: Theme.fs.xs; bold: swatch.active }
                                         }
-                                    }
-                                    Text {
-                                        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: Theme.space.xs }
-                                        text: swatch.paletteName
-                                        color: swatch.pal.text
-                                        font { pixelSize: Theme.fs.xs; bold: swatch.active }
                                     }
                                 }
                             }
+                        }
+
+                        // The quiet chip: only what is still outstanding, named
+                        // with its reason, so "restart Zen" is actionable.
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            visible: AdapterResult.pending.length > 0 || AdapterResult.failed.length > 0
+                            spacing: Theme.space.xs
+
+                            Repeater {
+                                model: AdapterResult.pending
+                                delegate: Text {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.Wrap
+                                    text: "restart required — " + modelData.surface + ": " + modelData.reason
+                                    color: Theme.pending
+                                    font.pixelSize: Theme.fs.xs
+                                }
+                            }
+                            Repeater {
+                                model: AdapterResult.failed
+                                delegate: Text {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.Wrap
+                                    text: "failed — " + modelData.surface + ": " + modelData.reason
+                                    color: Theme.error
+                                    font.pixelSize: Theme.fs.xs
+                                }
+                            }
+                        }
+
+                        // ,theme.sh does not touch Obsidian or Linear at all —
+                        // no entry for either ever appears in applied/pending/
+                        // failed. Saying nothing would read as "themed"; this
+                        // says what is actually true instead of inventing an
+                        // adapter entry for surfaces the adapter never reaches.
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.Wrap
+                            text: "Not wired to the theme adapter yet — restart required after a manual retheme: Obsidian, Linear"
+                            color: Theme.subtextAlt
+                            font.pixelSize: Theme.fs.xs
                         }
 
                         RowLayout {
@@ -282,7 +401,7 @@ Scope {
                                 RowLayout {
                                     spacing: Theme.space.xs
                                     Repeater {
-                                        model: Object.keys(Theme.palettes)
+                                        model: scope.paletteNames
                                         delegate: PalettePill {
                                             id: dayPill
                                             required property string modelData
@@ -301,7 +420,7 @@ Scope {
                                 RowLayout {
                                     spacing: Theme.space.xs
                                     Repeater {
-                                        model: Object.keys(Theme.palettes)
+                                        model: scope.paletteNames
                                         delegate: PalettePill {
                                             id: nightPill
                                             required property string modelData
@@ -359,7 +478,9 @@ Scope {
                         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
 
                         // ---- Wallpaper -------------------------------------
-                        SectionTitle { text: "WALLPAPER" }
+                        // Bound to the previewed palette, not the desk: picking
+                        // one here writes Theme.wallpapers[previewPalette].
+                        SectionTitle { text: "WALLPAPER — " + scope.previewPalette }
 
                         GridLayout {
                             Layout.fillWidth: true
@@ -372,7 +493,7 @@ Scope {
                                 delegate: Rectangle {
                                     id: wp
                                     required property string modelData
-                                    readonly property bool active: Theme.wallpaper === wp.modelData
+                                    readonly property bool active: Theme.wallpaperFor(scope.previewPalette) === wp.modelData
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: Theme.fs.xl * 3
                                     radius: Theme.radiusSmall
