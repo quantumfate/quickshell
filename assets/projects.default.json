@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "nvim": { "kind": "repo", "windows": ["nvim", "zsh", "run"], "study": true, "priority": 0 },
+    "quickshell": { "kind": "repo", "windows": ["nvim", "zsh", "run"], "study": false, "priority": 1 },
+    "hypr": { "kind": "repo", "windows": ["nvim", "zsh", "run"], "study": false, "priority": 1 },
+    "scripts": { "kind": "repo", "windows": ["nvim", "zsh", "run"], "study": false, "priority": 1 }
+  }
+}

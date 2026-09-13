@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import "../../services"   // Tip, Theme
+import "../common"        // Surface
 
 PanelWindow {
     id: win
@@ -24,7 +25,7 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-tip"
     exclusiveZone: 0
 
-    Rectangle {
+    Surface {
         visible: win.tip !== undefined
         // Center under the anchor, clamped to stay on-screen.
         x: win.tip ? Math.max(4, Math.min(win.tip.x - width / 2, win.width - width - 4)) : 0
@@ -32,7 +33,7 @@ PanelWindow {
         implicitWidth: label.implicitWidth + 20
         implicitHeight: label.implicitHeight + 10
         radius: Theme.radiusPill
-        color: Theme.backgroundAlt
+        elevation: "solid"
         border { width: 2; color: Theme.surface }
 
         Text {

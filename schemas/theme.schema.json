@@ -2,34 +2,59 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codeberg.org/quantumfate/quickshell/schemas/theme.schema.json",
   "title": "theme.json",
-  "description": "The desk's appearance contract. Read by the Quickshell Theme singleton, by the Hyprland opacity rules, and by ,theme.sh apply — three readers, so a shape change needs a check that is not any one of them.",
+  "description": "The desk's appearance contract. Read by the Quickshell Theme singleton, by the Hyprland opacity rules, and by ,theme.sh apply \u2014 three readers, so a shape change needs a check that is not any one of them.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["palette", "mode", "day", "night", "scale", "opacity"],
+  "required": [
+    "palette",
+    "mode",
+    "day",
+    "night",
+    "scale",
+    "transparency"
+  ],
   "properties": {
     "palette": {
       "description": "The active palette. Must name a table in Theme.qml.",
       "type": "string",
-      "enum": ["latte", "frappe", "macchiato", "mocha"]
+      "enum": [
+        "latte",
+        "frappe",
+        "macchiato",
+        "mocha"
+      ]
     },
     "mode": {
       "description": "auto follows the sun timer; manual pins `palette` until it is handed back.",
       "type": "string",
-      "enum": ["auto", "manual"]
+      "enum": [
+        "auto",
+        "manual"
+      ]
     },
-    "day": { "type": "string", "enum": ["latte", "frappe", "macchiato", "mocha"] },
-    "night": { "type": "string", "enum": ["latte", "frappe", "macchiato", "mocha"] },
+    "day": {
+      "type": "string",
+      "enum": [
+        "latte",
+        "frappe",
+        "macchiato",
+        "mocha"
+      ]
+    },
+    "night": {
+      "type": "string",
+      "enum": [
+        "latte",
+        "frappe",
+        "macchiato",
+        "mocha"
+      ]
+    },
     "scale": {
       "description": "UI scale. Bounds match the IPC clamp, so the file cannot hold a value the shell would refuse.",
       "type": "number",
       "minimum": 0.8,
       "maximum": 2.5
-    },
-    "opacity": {
-      "description": "Global window-opacity dial. 1 is fully opaque.",
-      "type": "number",
-      "minimum": 0.5,
-      "maximum": 1.0
     },
     "wallpaper": {
       "description": "Absolute path, or \"\" to let the palette decide.",
@@ -40,6 +65,12 @@
       "type": "integer",
       "minimum": 0,
       "maximum": 10000
+    },
+    "transparency": {
+      "description": "Global window-transparency dial. 0 is fully opaque (presentation mode); 1 gives each window role the transparency it was designed with.",
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
     }
   }
 }

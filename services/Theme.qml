@@ -28,7 +28,7 @@ Singleton {
             day: "latte",
             night: "macchiato",
             scale: 1.25,            // UI scale; see `fs` and `space` below
-            opacity: 1.0,           // global window-opacity dial (1 = opaque)
+            transparency: 1.0,      // global window-transparency dial (0 = opaque)
             wallpaper: "",          // "" = the palette's default, resolved by ,theme.sh
             cheatsheet_linger_ms: 400
         })
@@ -43,8 +43,11 @@ Singleton {
     readonly property string nightPalette: store.get("night") ?? "macchiato"
 
     // Read by the Hyprland opacity rules rather than by the shell itself: one
-    // dial over the whole role table, and 1.0 is a hard "everything opaque".
-    readonly property real opacity: store.get("opacity") ?? 1.0
+    // dial over the whole role table. 0 is a hard "everything opaque", which is
+    // presentation mode; 1 gives each role the transparency it was designed
+    // with. Named for what you turn up, because a dial called `opacity` that
+    // you turn DOWN to get transparency reads backwards every time.
+    readonly property real transparency: store.get("transparency") ?? 1.0
 
     // "" means the palette decides; `,theme.sh` resolves and applies it.
     readonly property string wallpaper: store.get("wallpaper") ?? ""
@@ -145,6 +148,20 @@ Singleton {
     readonly property int radiusPill: 10   // rounded module pills (workspaces, clock)
     readonly property int radiusIsland: 12 // the bar's floating cards — a surface, not a button
 
+    // Named alpha steps for the shared card material (modules/common/Surface.qml).
+    // These are NOT free to tune in isolation: the compositor only blurs a layer
+    // surface above its own `ignore_alpha` threshold, set per WlrLayershell
+    // namespace in the hypr repo (hypr/hypr/layerrules.lua). Bump a step here and
+    // check every layer rule whose surfaces use it still sits below the new
+    // value, or the card silently stops being frosted.
+    readonly property var surfaceAlpha: ({
+        island:   0.72,  // bar clusters — ignore_alpha 0.55 (quickshell-bar)
+        modal:    0.97,  // focused cards over a dim backdrop — ignore_alpha 0.6 (…cheatsheet, …window-rename), 0.1 (…team-selector)
+        backdrop: 0.5,   // the dim scrim behind a modal — must stay under its modal's ignore_alpha
+        peek:     0.85,  // lighter, non-interactive glance panels — ignore_alpha 0.1 (…cheatsheet-peek)
+        solid:    1.0    // fully opaque, no frosting needed
+    })
+
     // Spacing aliases kept so existing call sites keep working; both are just
     // steps on `space`.
     readonly property int gap: space.lg
@@ -172,7 +189,7 @@ Singleton {
     }
 
     // ipc: qs -c quantumfate ipc call theme set <palette> | get | cycle | auto
-    //      | scale <n> | opacity <n>
+    //      | scale <n> | transparency <n>
     IpcHandler {
         target: "theme"
         // Setting a palette by hand is a deliberate choice: it pins the mode so
@@ -201,11 +218,11 @@ Singleton {
             store.set({ mode: "auto" });
             return "auto";
         }
-        // The global window-opacity dial. 1 = everything opaque, which is also
-        // presentation mode.
-        function opacity(value: real): real {
-            const v = Math.max(0.5, Math.min(1.0, value));
-            store.set({ opacity: v });
+        // The global transparency dial. 0 = everything opaque (presentation
+        // mode), 1 = each role at the transparency it was designed with.
+        function transparency(value: real): real {
+            const v = Math.max(0.0, Math.min(1.0, value));
+            store.set({ transparency: v });
             return v;
         }
     }

@@ -16,6 +16,7 @@ import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"
+import "../common"        // Surface
 import "CheatParse.js" as CheatParse
 
 Scope {
@@ -70,19 +71,20 @@ Scope {
         WlrLayershell.namespace: "quickshell-cheatsheet"   // targeted by hypr layerrules
 
         // Dim backdrop; click to dismiss.
-        Rectangle {
+        Surface {
             anchors.fill: parent
-            color: Theme.withAlpha(Theme.background, 0.5)
+            elevation: "backdrop"
+            radius: 0
+            border.width: 0
             MouseArea { anchors.fill: parent; onClicked: scope.hide() }
         }
 
-        Rectangle {
+        Surface {
             anchors.centerIn: parent
             width: Math.min(parent.width * 0.62, 960)
             height: Math.min(parent.height * 0.85, cols.implicitHeight + 2 * Theme.pad + 44)
+            elevation: "modal"
             radius: Theme.radius
-            color: Theme.withAlpha(Theme.background, 0.97)
-            border { width: 1; color: Theme.border }
 
             ColumnLayout {
                 anchors { fill: parent; margins: Theme.pad }

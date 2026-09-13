@@ -12,6 +12,7 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Notify, Theme
+import "../common"        // Surface
 
 Scope {
     id: scope
@@ -43,18 +44,20 @@ Scope {
         WlrLayershell.namespace: "quickshell-notifications"
 
         // Dim backdrop; click outside the panel to dismiss.
-        Rectangle {
+        Surface {
             anchors.fill: parent
-            color: Theme.withAlpha(Theme.background, 0.5)
+            elevation: "backdrop"
+            radius: 0
+            border.width: 0
             MouseArea { anchors.fill: parent; onClicked: Notify.hideHistory() }
         }
 
-        Rectangle {
+        Surface {
             id: panel
             anchors { top: parent.top; bottom: parent.bottom; right: parent.right }
             width: Math.min(parent.width * 0.32, 460)
-            color: Theme.background
-            border { width: 1; color: Theme.border }
+            radius: 0
+            elevation: "modal"
             // Swallow clicks so they don't reach the dismiss backdrop.
             MouseArea { anchors.fill: parent }
 

@@ -2,12 +2,14 @@
 //
 // A Variants spawns one PanelWindow per eligible screen (the small vertical
 // HDMI panel is excluded). The bar is not a strip: it is three translucent
-// islands resting on the wallpaper, with the panel itself painting nothing, so
-// the space between them is real wallpaper rather than chrome.
-//   left    where am I  — workspaces · system · weather · media
-//   centre  what is here — taskbar · submap · layout · language
-//   right   system state — tray · brightness · volume · battery · power ·
-//           idle-inhibit · notifications · clock · wlogout
+// islands resting on the wallpaper (Surface, the shared card material — see
+// modules/common/Surface.qml), with the panel itself painting nothing, so the
+// space between them is real wallpaper rather than chrome.
+//   left    where am I  — workspaces · status (sysmon/weather/brightness/
+//           power/idle/language, collapsed behind hover) · media
+//   centre  what is here — taskbar · submap · layout
+//   right   system state — tray · volume · battery · notifications · clock ·
+//           wlogout
 //
 // The center taskbar is ALWAYS present (Dofus strip on the multibox workspace,
 // the generic workspace taskbar everywhere else). Only the on-demand Dofus swap
@@ -19,7 +21,9 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import QtQuick
+import QtQuick.Layouts
 import "../../services"   // Theme, DofusWindows
+import "../common"        // Surface
 
 Scope {
     id: scope
@@ -117,8 +121,9 @@ Scope {
                     }
                     Workspaces { screen: bar.screen }
                     Separator {}
-                    SysMonitor { screenName: bar.screen.name }
-                    Weather {}
+                    // Collapsed status surface: sysmon/weather/brightness/power/
+                    // idle/language now expand from here on hover (SysPanel).
+                    StatusCluster { screenName: bar.screen.name }
                     Media { screenName: bar.screen.name }
                 }
 
@@ -150,7 +155,6 @@ Scope {
                     Separator {}
                     Submap {}
                     HyprLayout {}
-                    Language {}
                 }
 
                 // right island: system state, the clock, and the way out.
@@ -161,11 +165,8 @@ Scope {
                         rightMargin: Theme.barInset * 2
                     }
                     Tray {}
-                    Brightness {}
                     Pulseaudio { screenName: bar.screen.name }
                     Battery { screenName: bar.screen.name }
-                    PowerProfile { screenName: bar.screen.name }
-                    IdleInhibit { screenName: bar.screen.name }
                     NotifIndicator { screenName: bar.screen.name }
                     Separator {}
                     Clock {}
@@ -174,6 +175,30 @@ Scope {
                 }
 
             }
+        }
+    }
+
+    // A floating card of bar modules: Surface (the shared material) plus the
+    // row layout the bar itself needs — Surface owns only ground/border/radius,
+    // never layout, so this stays private to the bar rather than living in
+    // modules/common.
+    component Island: Surface {
+        id: island
+        default property alias content: row.data
+        property alias spacing: row.spacing
+
+        elevation: "island"
+        implicitWidth: row.implicitWidth + Theme.space.lg * 2
+        implicitHeight: Theme.barHeight
+
+        RowLayout {
+            id: row
+            anchors {
+                fill: parent
+                leftMargin: Theme.space.lg
+                rightMargin: Theme.space.lg
+            }
+            spacing: Theme.space.lg
         }
     }
 }

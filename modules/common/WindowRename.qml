@@ -80,19 +80,20 @@ Scope {
 
         onVisibleChanged: if (visible) input.forceActiveFocus();
 
-        Rectangle {
+        Surface {
             anchors.fill: parent
-            color: Theme.withAlpha(Theme.background, 0.5)
+            elevation: "backdrop"
+            radius: 0
+            border.width: 0
             MouseArea { anchors.fill: parent; onClicked: scope.shown = false }
         }
 
-        Rectangle {
+        Surface {
             anchors.centerIn: parent
             width: Math.min(parent.width * 0.4, 460)
             implicitHeight: col.implicitHeight + 2 * Theme.pad
             radius: Theme.radius
-            color: Theme.withAlpha(Theme.background, 0.98)
-            border { width: 1; color: Theme.border }
+            elevation: "modal"
 
             ColumnLayout {
                 id: col

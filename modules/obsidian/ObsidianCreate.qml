@@ -18,6 +18,7 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"
+import "../common"        // Surface
 
 Scope {
     id: scope
@@ -109,23 +110,24 @@ Scope {
 
         onVisibleChanged: if (visible) titleInput.forceActiveFocus();
 
-        Rectangle {
+        Surface {
             anchors.fill: parent
-            color: Theme.withAlpha(Theme.background, 0.5)
+            elevation: "backdrop"
+            radius: 0
+            border.width: 0
             // Outside clicks must NOT close (the bind/Esc does, and closes while
             // busy aborts the create). Swallow clicks so they don't fall through
             // to the bar behind the dimmer.
             MouseArea { anchors.fill: parent }
         }
 
-        Rectangle {
+        Surface {
             id: card
             anchors.centerIn: parent
             width: Math.min(parent.width * 0.52, 600)
             implicitHeight: col.implicitHeight + 2 * 28
-            radius: 12
-            color: Theme.withAlpha(Theme.background, 0.98)
-            border { width: 1; color: Theme.border }
+            radius: Theme.radius
+            elevation: "modal"
 
             ColumnLayout {
                 id: col

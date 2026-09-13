@@ -16,6 +16,7 @@ import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"
+import "../common"        // Surface
 import "CheatParse.js" as CheatParse
 
 Scope {
@@ -78,16 +79,15 @@ Scope {
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None // never steal focus / eat input
         WlrLayershell.namespace: "quickshell-cheatsheet-peek"  // targeted by hypr layerrules
 
-        Rectangle {
+        Surface {
             id: card
             // Fixed width: the two-column layout uses fillWidth children, which
             // have no intrinsic width, so the card must define it (content-sizing
             // would collapse). Height still follows content.
             implicitWidth: 600
             implicitHeight: Math.min(header.implicitHeight + cols.implicitHeight + 3 * Theme.pad, 900)
+            elevation: "peek"
             radius: Theme.radius
-            color: Theme.withAlpha(Theme.background, 0.85)
-            border { width: 1; color: Theme.border }
 
             // Almost-instant fade in, gentler fade out. The compositor maps this
             // layer with no animation (see hypr layerrules) so the fade is owned

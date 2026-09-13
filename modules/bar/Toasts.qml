@@ -8,6 +8,7 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Notify, Theme
+import "../common"        // Surface
 
 PanelWindow {
     id: win
@@ -19,6 +20,10 @@ PanelWindow {
     implicitHeight: Math.max(1, col.implicitHeight)
 
     WlrLayershell.layer: WlrLayer.Overlay
+
+    // Named so the compositor can frost it like the rest of the shell.
+
+    WlrLayershell.namespace: "quickshell-toasts"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusiveZone: 0
     // Only the cards are interactive; clicks elsewhere pass through to windows.
@@ -33,7 +38,7 @@ PanelWindow {
         Repeater {
             model: Notify.items
 
-            delegate: Rectangle {
+            delegate: Surface {
                 id: card
                 required property var modelData
                 readonly property color accent: modelData.level === "success" ? Theme.success
@@ -42,8 +47,8 @@ PanelWindow {
                 Layout.fillWidth: true
                 implicitHeight: body.implicitHeight + 16
                 radius: Theme.radiusPill
-                color: Theme.withAlpha(Theme.backgroundAlt, 0.97)
-                border { width: 1; color: card.accent }
+                elevation: "modal"
+                border.color: card.accent
 
                 HoverHandler { id: cardHover }
 

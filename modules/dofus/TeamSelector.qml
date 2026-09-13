@@ -175,15 +175,14 @@ Scope {
         mask: scope._popupOpen ? null : cardRegion
         Region { id: cardRegion; item: card }
 
-        Rectangle {
+        Surface {
             id: card
             x: win.width - width - 20
             y: 20
             width: 1040
             height: Math.min(win.height - 40, body.implicitHeight + 2 * Theme.pad)
             radius: Theme.radius
-            color: Theme.withAlpha(Theme.background, 0.97)
-            border { width: 1; color: Theme.border }
+            elevation: "modal"
 
             // Drag the whole card by its top strip (kept clear of the header row).
             MouseArea {

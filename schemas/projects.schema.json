@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/projects.schema.json",
+  "title": "projects.json",
+  "description": "Per-project dashboard metadata, keyed by project name. Deliberately does NOT carry `path`: the project's existence and location are `,proj.sh`'s alone (scraped from the tms config), so this file cannot disagree with it about where a project lives. `,proj.sh drift` flags a name here that `,proj.sh list` no longer knows.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["projects"],
+  "properties": {
+    "projects": {
+      "type": "object",
+      "description": "Key is the project name, exactly as `,proj.sh list` prints it.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "windows", "study", "priority"],
+        "properties": {
+          "kind": {
+            "description": "What the dashboard shows this project as.",
+            "type": "string",
+            "enum": ["repo", "vault", "scratch", "docs"]
+          },
+          "windows": {
+            "description": "Tmux window template. Mirrors `,proj.sh`'s own default order unless a project overrides it here; `.proj.toml`/tms `windows =` still wins for the tmux session itself. This copy is for the dashboard to render without shelling out.",
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
+          "study": {
+            "description": "At most one project should carry this. The morning-restore routine (hypr start.lua) opens this project's nvim window on workspace 1.",
+            "type": "boolean"
+          },
+          "priority": {
+            "description": "Dashboard sort order, low first.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9
+          }
+        }
+      }
+    }
+  }
+}

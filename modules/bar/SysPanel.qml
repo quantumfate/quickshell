@@ -1,12 +1,18 @@
-// SysPanel — the system-monitor detail popout. A single window driven by the
-// SysMon bus: it appears below the bar on whichever screen is peeking or pinned,
-// anchored under the cluster. Read-only, so it stays a passive overlay (no
-// focus, click-through) even when pinned.
+// SysPanel — the bar's one status detail popout. A single window driven by the
+// SysMon bus: it appears below the bar on whichever screen is peeking or
+// pinned, anchored under the StatusCluster trigger. Read-only sections stay a
+// passive overlay (no focus, click-through) even when pinned; the quick-
+// control chips at the bottom are the exception (power profile, idle inhibit,
+// language, brightness, weather) — this panel is what six standalone always-on
+// bar modules collapsed into, so those go here instead of the bar strip.
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Io
+import Quickshell.Services.UPower
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // SysStats, SysMon, Theme
+import "../common"        // Surface
 
 Scope {
     id: scope
@@ -21,20 +27,24 @@ Scope {
         implicitHeight: card.implicitHeight
 
         WlrLayershell.layer: WlrLayer.Overlay
+
+        // Named so the compositor can frost it like the rest of the shell.
+
+        WlrLayershell.namespace: "quickshell-syspanel"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
         exclusiveZone: 0
         mask: Region { item: card }
 
-        Rectangle {
+        Surface {
             id: card
             // Centre under the cluster, clamped on-screen.
             x: Math.max(6, Math.min(SysMon.anchorX - width / 2, parent.width - width - 6))
             y: 0
-            width: 320
+            width: 340
             implicitHeight: content.implicitHeight + 24
+            elevation: "peek"
             radius: Theme.radiusPill
-            color: Theme.withAlpha(Theme.backgroundAlt, 0.98)
-            border { width: 1; color: SysMon.pinned ? Theme.accent : Theme.border }
+            border { width: 1; color: SysMon.pinned ? Theme.accent : Theme.withAlpha(Theme.border, 0.45) }
 
             ColumnLayout {
                 id: content
@@ -85,6 +95,40 @@ Scope {
                     historyMax: Math.max(1, ...SysStats.rxHistory, ...SysStats.txHistory)
                 }
 
+                Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
+
+                // ---- Quick controls: what SysMonitor/Weather/Brightness/
+                // PowerProfile/IdleInhibit/Language used to carry as five
+                // separate always-on bar entries. ----
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: Theme.space.sm
+
+                    QuickChip {
+                        glyph: "weather"; text: weather.value; tint: Theme.c.sky
+                        onTapped: weather.openForecast()
+                    }
+                    QuickChip {
+                        glyph: "brightness"; text: brightness.value; tint: Theme.c.yellow
+                        onTapped: {}
+                        onWheelUp: brightness.step(true)
+                        onWheelDown: brightness.step(false)
+                    }
+                    QuickChip {
+                        glyph: "power"; text: power.label; tint: power.tint
+                        visible: PowerProfiles.hasPerformanceProfile
+                        onTapped: power.cycle()
+                    }
+                    QuickChip {
+                        glyph: "idle"; text: idle.active ? "awake" : "auto"; tint: idle.active ? Theme.success : Theme.overlay
+                        onTapped: idle.toggle()
+                    }
+                    QuickChip {
+                        glyph: "lang"; text: language.value; tint: Theme.c.overlay1
+                        onTapped: language.cycle()
+                    }
+                }
+
                 Text {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignRight
@@ -94,6 +138,101 @@ Scope {
                 }
             }
         }
+    }
+
+    // ---- Ported state for the quick-control chips (formerly one bar module
+    // each: Weather.qml, Brightness.qml, PowerProfile.qml, IdleInhibit.qml,
+    // Language.qml). Non-visual; only polled while the panel exists, which is
+    // always (the Scope is instantiated once), matching the old modules'
+    // always-on polling. ----
+
+    Item {
+        id: weather
+        property string value: ""
+        function openForecast() { weatherOpen.running = true; }
+        Process {
+            id: weatherOpen
+            command: ["bash", "-lc", "xdg-open 'https://wttr.in' >/dev/null 2>&1"]
+        }
+        Process {
+            id: weatherFetch
+            command: ["bash", "-lc",
+                "curl -sf --max-time 10 'https://wttr.in/?format=%c+%t' 2>/dev/null | tr -d '+' | grep . || true"]
+            stdout: StdioCollector { onStreamFinished: weather.value = (this.text || "").trim() }
+        }
+        Timer {
+            interval: 900000   // 15 min — weather doesn't move faster than that
+            running: true; repeat: true; triggeredOnStart: true
+            onTriggered: if (!weatherFetch.running) weatherFetch.running = true
+        }
+    }
+
+    Item {
+        id: brightness
+        property string value: ""
+        function step(up) {
+            brightnessAction.command = ["bash", "-lc", up ? ",brightness.sh --inc" : ",brightness.sh --dec"];
+            brightnessAction.running = true;
+            refresh();
+        }
+        function refresh() { if (!brightnessFetch.running) brightnessFetch.running = true; }
+        Process { id: brightnessAction }
+        Process {
+            id: brightnessFetch
+            command: ["bash", "-lc", ",brightness.sh --get-with-icon"]
+            stdout: StdioCollector { onStreamFinished: brightness.value = (this.text || "").trim() }
+        }
+        Timer { interval: 1000; running: true; repeat: true; triggeredOnStart: true; onTriggered: brightness.refresh() }
+    }
+
+    Item {
+        id: power
+        readonly property int profile: PowerProfiles.profile
+        readonly property string label: profile === PowerProfile.Performance ? "perf"
+            : profile === PowerProfile.PowerSaver ? "saver" : "balanced"
+        readonly property color tint: profile === PowerProfile.Performance ? Theme.c.red
+            : profile === PowerProfile.PowerSaver ? Theme.c.green : Theme.c.sapphire
+        function cycle() {
+            PowerProfiles.profile = profile === PowerProfile.PowerSaver ? PowerProfile.Balanced
+                : profile === PowerProfile.Balanced && PowerProfiles.hasPerformanceProfile ? PowerProfile.Performance
+                : PowerProfile.PowerSaver;
+        }
+    }
+
+    Item {
+        id: idle
+        property bool active: false
+        function refresh() { if (!idleReader.running) idleReader.running = true; }
+        function toggle() {
+            idleAction.command = ["bash", "-lc",
+                "if systemctl --user is-active --quiet quickshell-idle-inhibit; then "
+                + "systemctl --user stop quickshell-idle-inhibit; "
+                + "else systemd-run --user --unit=quickshell-idle-inhibit --collect "
+                + "systemd-inhibit --what=idle --mode=block --who=quickshell --why='idle inhibitor toggle' sleep infinity; fi"];
+            idleAction.running = true;
+            refresh();
+        }
+        Process { id: idleAction }
+        Process {
+            id: idleReader
+            command: ["bash", "-lc", "systemctl --user is-active quickshell-idle-inhibit || true"]
+            stdout: StdioCollector { onStreamFinished: idle.active = (this.text || "").trim() === "active" }
+        }
+        Timer { interval: 3000; running: true; repeat: true; triggeredOnStart: true; onTriggered: idle.refresh() }
+    }
+
+    Item {
+        id: language
+        property string value: ""
+        function cycle() { languageAction.running = true; refresh(); }
+        function refresh() { if (!languageFetch.running) languageFetch.running = true; }
+        Process { id: languageAction; command: ["hyprctl", "switchxkblayout", "all", "next"] }
+        Process {
+            id: languageFetch
+            command: ["bash", "-lc", "$HOME/.config/waybar/scripts/language.sh"]
+            stdout: StdioCollector { onStreamFinished: language.value = (this.text || "").trim() }
+        }
+        Timer { interval: 2000; running: true; repeat: true; triggeredOnStart: true; onTriggered: language.refresh() }
     }
 
     // One labelled stat block: header row, a progress meter, optional sparkline.
@@ -165,6 +304,48 @@ Scope {
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
             }
+        }
+    }
+
+    // A small labelled control chip: glyph + value, tap and (optional) scroll.
+    component QuickChip: Rectangle {
+        id: chip
+        property string glyph: ""
+        property string text: ""
+        property color tint: Theme.text
+        signal tapped()
+        signal wheelUp()
+        signal wheelDown()
+
+        implicitWidth: chipRow.implicitWidth + Theme.space.md * 2
+        implicitHeight: chipRow.implicitHeight + Theme.space.sm * 2
+        radius: Theme.radiusSmall
+        color: chipHover.hovered ? Theme.surfaceAlt : Theme.surface
+        border { width: 1; color: Theme.border }
+
+        RowLayout {
+            id: chipRow
+            anchors.centerIn: parent
+            spacing: Theme.space.sm
+            Text {
+                text: chip.glyph.toUpperCase()
+                color: chip.tint
+                font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Font.Bold }
+            }
+            Text {
+                visible: !!chip.text
+                text: chip.text
+                color: Theme.text
+                font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
+            }
+        }
+
+        HoverHandler { id: chipHover }
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: chip.tapped()
+            onWheel: (w) => w.angleDelta.y > 0 ? chip.wheelUp() : chip.wheelDown()
         }
     }
 }

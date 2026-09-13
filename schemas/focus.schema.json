@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/focus.schema.json",
+  "title": "focus.json",
+  "description": "Firm focus mode: refuses new distractions rather than tearing down a running session. Read by the media browser and game launchers (refuse-to-start, with a reason) and by do-not-disturb; never by anything that would kill an already-running session.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "until"],
+  "properties": {
+    "mode": {
+      "description": "\"off\" is the default, unrestricted state. \"focus\" blocks the launches enforce.md lists until `until`, or forever if `until` is null.",
+      "type": "string",
+      "enum": ["off", "focus"]
+    },
+    "until": {
+      "description": "ISO-8601 timestamp focus mode lapses at, or null for an open-ended session that only an explicit stop ends.",
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  }
+}
