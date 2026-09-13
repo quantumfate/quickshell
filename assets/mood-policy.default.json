@@ -1,0 +1,176 @@
+{
+  "moods": {
+    "neutral": {
+      "name": "Neutral",
+      "accent_role": "lavender",
+      "surface_alpha": 0.84,
+      "density": "comfortable",
+      "motion_energy": "base",
+      "bar_autohide": false,
+      "notifications": {
+        "policy": "all",
+        "position": "top-right",
+        "timeout": 6000,
+        "queue": false,
+        "digest_on_exit": false
+      },
+      "launches": {
+        "aggression": "soft",
+        "block": [],
+        "override": false
+      },
+      "background": {
+        "policy": "allow",
+        "allow": ["*"],
+        "defer": [],
+        "prevent": []
+      },
+      "scenes": {}
+    },
+    "deep": {
+      "name": "Deep work",
+      "accent_role": "blue",
+      "surface_alpha": 0.94,
+      "density": "compact",
+      "motion_energy": "instant",
+      "bar_autohide": true,
+      "notifications": {
+        "policy": "critical-only",
+        "position": "top-right",
+        "timeout": 0,
+        "queue": true,
+        "digest_on_exit": true
+      },
+      "launches": {
+        "aggression": "firm",
+        "block": ["media", "game"],
+        "override": true
+      },
+      "background": {
+        "policy": "allow",
+        "allow": ["*"],
+        "defer": [],
+        "prevent": []
+      },
+      "scenes": {
+        "gaming": "blocked",
+        "media": "blocked"
+      }
+    },
+    "chores": {
+      "name": "Chores",
+      "accent_role": "peach",
+      "surface_alpha": 0.8,
+      "density": "dense",
+      "motion_energy": "fast",
+      "bar_autohide": false,
+      "notifications": {
+        "policy": "all",
+        "position": "top-right",
+        "timeout": 4000,
+        "queue": false,
+        "digest_on_exit": false
+      },
+      "launches": {
+        "aggression": "firm",
+        "block": ["media", "game"],
+        "override": true
+      },
+      "background": {
+        "policy": "allow",
+        "allow": ["*"],
+        "defer": [],
+        "prevent": []
+      },
+      "scenes": {}
+    },
+    "reflect": {
+      "name": "Reflect",
+      "accent_role": "mauve",
+      "surface_alpha": 0.7,
+      "density": "airy",
+      "motion_energy": "slow",
+      "bar_autohide": false,
+      "notifications": {
+        "policy": "none",
+        "position": "top-right",
+        "timeout": 0,
+        "queue": true,
+        "digest_on_exit": true
+      },
+      "launches": {
+        "aggression": "firm",
+        "block": ["media", "game"],
+        "override": true
+      },
+      "background": {
+        "policy": "allow",
+        "allow": ["*"],
+        "defer": [],
+        "prevent": []
+      },
+      "scenes": {
+        "gaming": "blocked",
+        "media": "blocked"
+      }
+    },
+    "game": {
+      "name": "Gaming",
+      "accent_role": "green",
+      "surface_alpha": 0.96,
+      "density": "compact",
+      "motion_energy": "instant",
+      "bar_autohide": false,
+      "notifications": {
+        "policy": "none",
+        "position": "top-right",
+        "timeout": 0,
+        "queue": true,
+        "digest_on_exit": false
+      },
+      "launches": {
+        "aggression": "firm",
+        "block": ["media"],
+        "override": true
+      },
+      "background": {
+        "policy": "allow",
+        "allow": ["*"],
+        "defer": [],
+        "prevent": []
+      },
+      "scenes": {
+        "gaming": "reachable"
+      }
+    },
+    "media": {
+      "name": "Media",
+      "accent_role": "pink",
+      "surface_alpha": 0.62,
+      "density": "airy",
+      "motion_energy": "ambient",
+      "bar_autohide": true,
+      "notifications": {
+        "policy": "critical-only",
+        "position": "bottom-right",
+        "timeout": 0,
+        "queue": false,
+        "digest_on_exit": false
+      },
+      "launches": {
+        "aggression": "firm",
+        "block": ["game"],
+        "override": true
+      },
+      "background": {
+        "policy": "allow",
+        "allow": ["*"],
+        "defer": [],
+        "prevent": []
+      },
+      "scenes": {
+        "media": "reachable"
+      }
+    }
+  }
+}

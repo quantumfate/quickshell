@@ -35,6 +35,15 @@ Every singleton that owns shared state is a Store: `Theme` (`theme.json`),
 `DofusState` (`dofus/team.json`), `ObsidianVault` (`obsidian/tags.json`),
 `Notify` (`notifications.json`).
 
+Two stores define _policy_ rather than current state. They are read by the
+event manager and the launcher scripts (and written by the scene editor and
+the mood config surface), but no singleton owns them yet:
+[`scenes.json`](schemas/scenes.schema.json) (workspace scenes, LEO-235) and
+[`mood-policy.json`](schemas/mood-policy.schema.json) (per-mood policy,
+LEO-236). Their schemas and seeds live under `schemas/` + `assets/`, and the
+tests lock the seeds to the QML that still owns the same facts (Focus.qml's
+mood table) so the two cannot drift.
+
 ## Command (IPC)
 
 IPC takes care of actions that do not require a state:
