@@ -152,10 +152,13 @@ Singleton {
     // Shape tokens. Radii deliberately do NOT scale: a corner that grows with
     // the font stops reading as the same shape, and the whole look depends on
     // staying short of the lozenge.
-    readonly property int radius: 6
-    readonly property int radiusSmall: 4
-    readonly property int radiusPill: 10   // rounded module pills (workspaces, clock)
-    readonly property int radiusIsland: 12 // the bar's floating cards — a surface, not a button
+    // Paper, not glass. A sheet has a crisp edge and barely any curve, so every
+    // radius here is a hint that a corner exists rather than a shape in itself.
+    // Nothing in the shell is a lozenge.
+    readonly property int radius: 3
+    readonly property int radiusSmall: 2
+    readonly property int radiusPill: 3
+    readonly property int radiusIsland: 4
 
     // Named alpha steps for the shared card material (modules/common/Surface.qml).
     // These are NOT free to tune in isolation: the compositor only blurs a layer
@@ -163,11 +166,14 @@ Singleton {
     // namespace in the hypr repo (hypr/hypr/layerrules.lua). Bump a step here and
     // check every layer rule whose surfaces use it still sits below the new
     // value, or the card silently stops being frosted.
+    // Paper is opaque. These sit high enough that text is read against a sheet
+    // rather than against whatever the wallpaper is doing, and just under 1 so
+    // the compositor still frosts what little shows through.
     readonly property var surfaceAlpha: ({
-        island:   0.72,  // bar clusters — ignore_alpha 0.55 (quickshell-bar)
-        modal:    0.97,  // focused cards over a dim backdrop — ignore_alpha 0.6 (…cheatsheet, …window-rename), 0.1 (…team-selector)
+        island:   0.94,  // bar clusters — ignore_alpha 0.55 (quickshell-bar)
+        modal:    0.985,  // focused cards over a dim backdrop — ignore_alpha 0.6 (…cheatsheet, …window-rename), 0.1 (…team-selector)
         backdrop: 0.5,   // the dim scrim behind a modal — must stay under its modal's ignore_alpha
-        peek:     0.85,  // lighter, non-interactive glance panels — ignore_alpha 0.1 (…cheatsheet-peek)
+        peek:     0.94,  // lighter, non-interactive glance panels — ignore_alpha 0.1 (…cheatsheet-peek)
         solid:    1.0    // fully opaque, no frosting needed
     })
 
