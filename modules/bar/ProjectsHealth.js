@@ -45,6 +45,16 @@ function summarize(repos) {
     return { total: names.length, byState, dirtyTotal, worstRole };
 }
 
+// `collected_at` is when ,proj-health last ran, ISO8601 UTC. Seconds since
+// then, or null if missing/unparsable — a stale collection must be shown, not
+// hidden, so the dashboard needs this even when every repo row is fine.
+function collectionAge(collectedAtIso) {
+    if (!collectedAtIso) return null;
+    const t = Date.parse(collectedAtIso);
+    if (Number.isNaN(t)) return null;
+    return Math.max(0, Math.floor((Date.now() - t) / 1000));
+}
+
 // Seconds -> compact "3d"/"5h"/"12m"/"now". Negative/undefined -> "".
 function fmtAge(seconds) {
     if (!(seconds >= 0)) return "";

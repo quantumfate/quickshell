@@ -14,7 +14,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { loadLibrary } from "./qml.js";
 
-const { combo, categorize, parse, splitColumns } = loadLibrary("modules/cheatsheet/CheatParse.js");
+const { combo, categorize, parse, splitColumns, contextTag, matchesContext, breadcrumb } =
+    loadLibrary("modules/cheatsheet/CheatParse.js");
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixture = readFileSync(join(here, "fixtures/binds.json"), "utf8");
@@ -119,4 +120,45 @@ test("columns are balanced by rendered height, not category count", () => {
 test("splitColumns tolerates an empty list", () => {
     assert.deepEqual(splitColumns([]), [[], []]);
     assert.deepEqual(splitColumns(undefined), [[], []]);
+});
+
+test("Dofus-category binds are tagged gaming; group mentions are tagged group", () => {
+    assert.equal(contextTag("Dofus", "activate team member 1"), "gaming");
+    assert.equal(contextTag("Window", "Close focused window"), null);
+    assert.equal(contextTag("Window", "Cycle group tab"), "group");
+    assert.equal(contextTag("Window", "Toggle grouped state"), "group");
+});
+
+test("matchesContext gates gaming/group tags on the live desk, passes everything else", () => {
+    assert.equal(matchesContext("gaming", { gaming: false }), false);
+    assert.equal(matchesContext("gaming", { gaming: true }), true);
+    assert.equal(matchesContext("group", { grouped: false }), false);
+    assert.equal(matchesContext("group", { grouped: true }), true);
+    assert.equal(matchesContext(null, {}), true);
+});
+
+test("parse hides gaming binds off the gaming workspace, without greying them", () => {
+    const off = parse(fixture, "", ORDER, { gaming: false }).flatMap(c => c.rows);
+    assert.ok(off.every(r => !r.desc.toLowerCase().includes("team member")));
+
+    const on = parse(fixture, "", ORDER, { gaming: true }).flatMap(c => c.rows);
+    assert.ok(on.some(r => r.desc.toLowerCase().includes("team member")));
+});
+
+test("parse with no ctx behaves as if nothing is gaming/grouped", () => {
+    const noCtx = parse(fixture, "", ORDER).flatMap(c => c.rows);
+    const offCtx = parse(fixture, "", ORDER, { gaming: false, grouped: false }).flatMap(c => c.rows);
+    assert.deepEqual(noCtx, offCtx);
+});
+
+test("breadcrumb renders the four-tuple, dashing out whatever is missing", () => {
+    assert.equal(breadcrumb({}), "— › — › — › —");
+    assert.equal(
+        breadcrumb({ workspace: "gaming", windowClass: "Dofus.x64", grouped: true, layout: "dwindle" }),
+        "gaming › Dofus.x64 › grouped › dwindle"
+    );
+    assert.equal(
+        breadcrumb({ workspace: "1", windowClass: "kitty", grouped: false, layout: "scrolling" }),
+        "1 › kitty › — › scrolling"
+    );
 });

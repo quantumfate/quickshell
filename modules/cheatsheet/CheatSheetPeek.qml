@@ -27,6 +27,11 @@ Scope {
     property var cats: []               // [{ name, rows: [{ combo, desc }] }]
     readonly property var columns: CheatParse.splitColumns(cats)  // [leftCats, rightCats]
 
+    // Same live context as CheatSheet.qml, its sibling — see there for why the
+    // probe is event-driven rather than timer- or show()-driven.
+    property var ctx: ({ workspace: "", windowClass: "", grouped: false, gaming: false, layout: "" })
+    readonly property string breadcrumb: CheatParse.breadcrumb(ctx)
+
     // Raw `hyprctl binds -j` text, cached across opens/submap changes — see
     // CheatSheet.qml, its sibling, for why (the bind table only changes on a
     // config reload, so re-shelling out on every dwell/traversal is pure
@@ -50,7 +55,7 @@ Scope {
     }
 
     function open() {
-        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder);
+        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder, scope.ctx);
         else refresh.running = true;
         scope.shown = true;
     }
@@ -66,12 +71,20 @@ Scope {
         function onRawEvent(event) {
             if (event.name === "submap") scope.submap = event.data; // "" at root
             else if (event.name === "configreloaded") scope.bindsValid = false;
+            // Same event set as CheatSheet.qml's ctxProbe trigger — see there.
+            else if (event.name === "activewindow" || event.name === "activewindowv2"
+                || event.name === "workspace" || event.name === "workspacev2"
+                || event.name === "changefloatingmode" || event.name === "fullscreen")
+                ctxProbe.running = true;
         }
     }
+    Component.onCompleted: ctxProbe.running = true
     onSubmapChanged: if (scope.shown) {
-        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder);
+        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder, scope.ctx);
         else refresh.running = true;
     }
+    onCtxChanged: if (scope.shown && scope.bindsValid)
+        scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder, scope.ctx);
 
     Process {
         id: refresh
@@ -80,7 +93,44 @@ Scope {
             onStreamFinished: {
                 scope.bindsJson = text;
                 scope.bindsValid = true;
-                scope.cats = CheatParse.parse(text, scope.submap, scope.categoryOrder);
+                scope.cats = CheatParse.parse(text, scope.submap, scope.categoryOrder, scope.ctx);
+            }
+        }
+    }
+
+    // Probes `activewindow` then `activeworkspace` — see CheatSheet.qml's
+    // ctxProbe/layoutProbe pair for the full rationale (event-driven, chained,
+    // never on the open path).
+    Process {
+        id: ctxProbe
+        command: ["hyprctl", "-j", "activewindow"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var w;
+                try { w = JSON.parse(text); } catch (e) { return; }
+                if (!w || Object.keys(w).length === 0) {
+                    scope.ctx = Object.assign({}, scope.ctx, { windowClass: "", grouped: false });
+                } else {
+                    var wsName = (w.workspace && w.workspace.name) || "";
+                    scope.ctx = Object.assign({}, scope.ctx, {
+                        windowClass: w.class || "",
+                        grouped: Array.isArray(w.grouped) && w.grouped.length > 0,
+                        workspace: wsName,
+                        gaming: wsName === "gaming"
+                    });
+                }
+                layoutProbe.running = true;
+            }
+        }
+    }
+    Process {
+        id: layoutProbe
+        command: ["hyprctl", "-j", "activeworkspace"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var ws;
+                try { ws = JSON.parse(text); } catch (e) { return; }
+                scope.ctx = Object.assign({}, scope.ctx, { layout: (ws && ws.tiledLayout) || "" });
             }
         }
     }
@@ -107,7 +157,8 @@ Scope {
             // have no intrinsic width, so the card must define it (content-sizing
             // would collapse). Height still follows content.
             implicitWidth: 600
-            implicitHeight: Math.min(header.implicitHeight + cols.implicitHeight + 3 * Theme.pad, 900)
+            implicitHeight: Math.min(header.implicitHeight + contextLine.implicitHeight
+                + cols.implicitHeight + 3 * Theme.pad, 900)
             elevation: "peek"
             radius: Theme.radius
 
@@ -128,6 +179,13 @@ Scope {
                     text: scope.submap === "" ? "Keybinds" : "Keybinds · " + scope.submap
                     color: Theme.accent
                     font { pixelSize: Theme.fs.lg; bold: true }
+                }
+
+                Text {
+                    id: contextLine
+                    text: scope.breadcrumb
+                    color: Theme.subtextAlt
+                    font.pixelSize: Theme.fs.xs
                 }
 
                 Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.border }

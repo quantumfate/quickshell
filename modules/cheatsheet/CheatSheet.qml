@@ -32,6 +32,12 @@ Scope {
     property var cats: []               // [{ name, rows: [{ combo, desc }] }]
     readonly property var columns: CheatParse.splitColumns(cats)  // [leftCats, rightCats]
 
+    // The desk's live four-tuple context, re-probed on focus/workspace change
+    // (never a timer, never from show() — see ctxProbe below) and fed to
+    // CheatParse.parse so a bind that doesn't apply here is hidden outright.
+    property var ctx: ({ workspace: "", windowClass: "", grouped: false, gaming: false, layout: "" })
+    readonly property string breadcrumb: CheatParse.breadcrumb(ctx)
+
     // Raw `hyprctl binds -j` text, fetched once and reused for every submap:
     // the bind table itself only changes on a config reload, so re-shelling
     // out on every nesting step is pure latency for no new information.
@@ -60,7 +66,7 @@ Scope {
         // watermark (the "never shrink while open" rule only applies within
         // one open session, not across separate ones).
         if (!scope.shown) card.resetReserve = true;
-        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder);
+        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder, scope.ctx);
         else refresh.running = true;
         scope.shown = true;
     }
@@ -76,15 +82,26 @@ Scope {
         function onRawEvent(event) {
             if (event.name === "submap") scope.submap = event.data; // "" at root
             else if (event.name === "configreloaded") { scope.bindsValid = false; scope.hide(); }
+            // Context only changes on a focus/workspace/layout transition, so
+            // only these events re-probe it — never a timer, never show().
+            else if (event.name === "activewindow" || event.name === "activewindowv2"
+                || event.name === "workspace" || event.name === "workspacev2"
+                || event.name === "changefloatingmode" || event.name === "fullscreen")
+                ctxProbe.running = true;
         }
     }
+    Component.onCompleted: ctxProbe.running = true
 
     // Which-key follow-along: while open, traversing submaps re-renders from
     // the already-cached bind table — no process spawn on the nesting path.
     onSubmapChanged: if (scope.shown) {
-        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder);
+        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder, scope.ctx);
         else refresh.running = true;
     }
+    // A context change (new focus/workspace) re-filters from the cached bind
+    // table too — still no process spawn on this path, only on ctxProbe above.
+    onCtxChanged: if (scope.shown && scope.bindsValid)
+        scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder, scope.ctx);
 
     Process {
         id: refresh
@@ -93,7 +110,50 @@ Scope {
             onStreamFinished: {
                 scope.bindsJson = text;
                 scope.bindsValid = true;
-                scope.cats = CheatParse.parse(text, scope.submap, scope.categoryOrder);
+                scope.cats = CheatParse.parse(text, scope.submap, scope.categoryOrder, scope.ctx);
+            }
+        }
+    }
+
+    // Probes `activewindow` (class, workspace, group membership) in one shot.
+    // Fired only from the rawEvent filter above and once on startup — never a
+    // timer, never inside show(), so opening the overlay never waits on it.
+    Process {
+        id: ctxProbe
+        command: ["hyprctl", "-j", "activewindow"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var w;
+                try { w = JSON.parse(text); } catch (e) { return; }
+                if (!w || Object.keys(w).length === 0) {
+                    // No focused window (e.g. an empty workspace): keep the
+                    // workspace/layout probe's data, just clear the window-shaped bits.
+                    scope.ctx = Object.assign({}, scope.ctx, { windowClass: "", grouped: false });
+                } else {
+                    var wsName = (w.workspace && w.workspace.name) || "";
+                    scope.ctx = Object.assign({}, scope.ctx, {
+                        windowClass: w.class || "",
+                        grouped: Array.isArray(w.grouped) && w.grouped.length > 0,
+                        workspace: wsName,
+                        gaming: wsName === "gaming"
+                    });
+                }
+                layoutProbe.running = true;
+            }
+        }
+    }
+
+    // Layout has no per-window field, so it's a second, equally cheap shot at
+    // the active workspace — chained after ctxProbe rather than parallel, so
+    // both writes land in one `ctx` update instead of racing each other.
+    Process {
+        id: layoutProbe
+        command: ["hyprctl", "-j", "activeworkspace"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var ws;
+                try { ws = JSON.parse(text); } catch (e) { return; }
+                scope.ctx = Object.assign({}, scope.ctx, { layout: (ws && ws.tiledLayout) || "" });
             }
         }
     }
@@ -128,8 +188,8 @@ Scope {
             // needed so far and only grows into a taller one, smoothly; it
             // never shrinks back while open, so descending never moves
             // anything under the pointer.
-            readonly property real contentHeight: header.implicitHeight + divider.implicitHeight
-                + cols.implicitHeight + footer.implicitHeight + 3 * body.spacing
+            readonly property real contentHeight: header.implicitHeight + contextLine.implicitHeight
+                + divider.implicitHeight + cols.implicitHeight + footer.implicitHeight + 4 * body.spacing
             property real reservedHeight: contentHeight
             // Set by show() on a fresh open, so this session starts from its
             // own content instead of inheriting the previous session's high
@@ -162,6 +222,15 @@ Scope {
                     text: scope.submap === "" ? "Keybinds" : "Keybinds · " + scope.submap
                     color: Theme.accent
                     font { pixelSize: Theme.fs.lg; bold: true }
+                }
+
+                // The four-tuple context this render was filtered against —
+                // workspace > class > group > layout.
+                Text {
+                    id: contextLine
+                    text: scope.breadcrumb
+                    color: Theme.subtextAlt
+                    font.pixelSize: Theme.fs.xs
                 }
 
                 Rectangle { id: divider; Layout.fillWidth: true; implicitHeight: 1; color: Theme.border }

@@ -31,9 +31,36 @@ function categorize(desc) {
     return { cat: "General", label: desc };
 }
 
+// Binds carry no context field — only `description` and `submap` — so a
+// bind's relevance to the live desk (workspace/group) has to be inferred from
+// the same text `categorize()` already buckets on. This is deliberately the
+// fuzzy, no-hypr-change option: a bind is "gaming-scoped" if it landed in the
+// Dofus category (the category itself is keyword-derived from the
+// description), and "group-scoped" if its description mentions a group
+// literally. Precise would mean tagging binds at the source (a convention like
+// a trailing "[gaming]"/"[group]" marker in the Lua description, enforced by
+// hypr/hypr/lib/submap.lua) — a hypr-repo change, out of reach here.
+function contextTag(cat, desc) {
+    if (cat === "Dofus") return "gaming";
+    if (/\bgroup(ed|s)?\b/i.test(desc)) return "group";
+    return null;
+}
+
+// Does a bind belong in the current desk context? `ctx.gaming` is true only
+// on the gaming workspace; `ctx.grouped` only while a Hyprland group is
+// focused. Anything untagged is context-free and always shown.
+function matchesContext(tag, ctx) {
+    ctx = ctx || {};
+    if (tag === "gaming") return !!ctx.gaming;
+    if (tag === "group") return !!ctx.grouped;
+    return true;
+}
+
 // Parse `hyprctl binds -j` for a given submap ("" = root) into ordered
-// categories: [{ name, rows: [{ combo, desc }] }].
-function parse(jsonText, submap, categoryOrder) {
+// categories: [{ name, rows: [{ combo, desc }] }]. `ctx` (optional) filters
+// out binds whose inferred context doesn't match the live desk — they are
+// dropped entirely, not greyed, so a hidden row never costs a read.
+function parse(jsonText, submap, categoryOrder, ctx) {
     var binds;
     try { binds = JSON.parse(jsonText); } catch (e) { return []; }
     var seen = {};
@@ -44,6 +71,7 @@ function parse(jsonText, submap, categoryOrder) {
         if ((b.submap || "") !== submap) continue;
         var c = combo(b.modmask || 0, b.key);
         var parts = categorize(b.description);
+        if (!matchesContext(contextTag(parts.cat, parts.label), ctx)) continue;
         var dedup = parts.cat + "|" + c + "|" + parts.label;
         if (seen[dedup]) continue;
         seen[dedup] = true;
@@ -58,6 +86,16 @@ function parse(jsonText, submap, categoryOrder) {
                 rows: groups[name].sort(function (x, y) { return x.combo.localeCompare(y.combo); })
             };
         });
+}
+
+// Render the four-tuple context as a breadcrumb. Any missing piece (no
+// focused window, no group, layout not yet probed) reads as "—" rather than
+// disappearing, so the shape of the tuple stays legible at a glance.
+function breadcrumb(ctx) {
+    ctx = ctx || {};
+    var dash = "—";
+    var group = ctx.grouped ? "grouped" : dash;
+    return [ctx.workspace || dash, ctx.windowClass || dash, group, ctx.layout || dash].join(" › ");
 }
 
 // Greedily balance categories across two columns by total height (rows+header).

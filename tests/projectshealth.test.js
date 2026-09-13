@@ -5,9 +5,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { roleFor, summarize, fmtAge, sortedRows, ageOf } = loadLibrary(
+const { roleFor, summarize, fmtAge, sortedRows, ageOf, collectionAge } = loadLibrary(
     "modules/bar/ProjectsHealth.js",
-    ["roleFor", "summarize", "fmtAge", "sortedRows", "ageOf"]
+    ["roleFor", "summarize", "fmtAge", "sortedRows", "ageOf", "collectionAge"]
 );
 
 test("plain is neutral, never an error/warn role", () => {
@@ -95,4 +95,13 @@ test("reads the shape ,proj-health actually writes", () => {
 
     const age = ageOf(record.projects.nvim);
     assert.ok(typeof age === "number" && age > 0, "age is derived at read time");
+
+    const staleness = collectionAge(record.collected_at);
+    assert.ok(typeof staleness === "number" && staleness > 0, "collection age is derived at read time, not baked in");
+});
+
+test("collectionAge tolerates a missing or unparsable collected_at", () => {
+    assert.equal(collectionAge(undefined), null);
+    assert.equal(collectionAge(""), null);
+    assert.equal(collectionAge("not a date"), null);
 });

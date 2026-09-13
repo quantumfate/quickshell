@@ -1,7 +1,8 @@
-// FocusPill — bar pill for services/Focus.qml. Shows the current mode and,
-// while running, the time left; click toggles it (same effect as
-// `ipc call focus start/stop`). Read-only over Focus's own state — no store
-// of its own.
+// FocusPill — bar pill for services/Focus.qml. Shows the active mood and,
+// while timed, the time left; click cycles neutral <-> deep (the two ends of
+// "off"/"on" from a single pill — every other mood is a deliberate pick via
+// `ipc call focus set <mood>`, not a click-through). Read-only over Focus's
+// own state — no store of its own.
 import Quickshell
 import QtQuick
 import "../../services"   // Theme, Focus
@@ -13,7 +14,7 @@ Text {
     // Ticks once a second so `remaining` counts down without polling anything.
     readonly property var _clock: SystemClock { precision: SystemClock.Seconds }
 
-    readonly property bool running: Focus.mode === "focus"
+    readonly property bool running: Focus.mode !== "neutral"
     readonly property string remaining: {
         root._clock.date;   // dependency: recompute every tick
         if (!root.running || !Focus.until) return "";
@@ -30,14 +31,14 @@ Text {
 
     MouseArea {
         anchors.fill: parent
-        onClicked: root.running ? Focus.stop() : Focus.start(0)
+        onClicked: root.running ? Focus.stop() : Focus.set("deep", 0)
     }
 
     HoverHandler { id: hover }
     HoverTip {
         shown: hover.hovered; screenName: root.screenName
         text: root.running
-            ? "Focus mode on" + (root.remaining ? " · " + root.remaining + " left" : " · open-ended") + " · click to stop"
-            : "Focus mode off · click to start"
+            ? Focus.current.name + " on" + (root.remaining ? " · " + root.remaining + " left" : " · open-ended") + " · click to stop"
+            : "Neutral · click to start deep work"
     }
 }

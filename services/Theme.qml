@@ -118,7 +118,14 @@ Singleton {
     readonly property color border:        c.surface2
     readonly property color text:          c.text
     readonly property color subtext:       c.subtext0
-    readonly property color accent:        c.mauve
+    // The palette stays the source of truth; the active mood only picks
+    // which role stands in for "accent" (Focus.accentRole names a role on
+    // `c`, never a literal colour — see Focus.qml's `moods` table). This is
+    // a plain binding, not a process/side-effect, so it re-fires reliably on
+    // every mood change with no call to `applyToSystem()` — see that
+    // function's comment for the one case that genuinely needs the explicit
+    // call instead of a binding.
+    readonly property color accent:        c[Focus.accentRole] ?? c.mauve
     readonly property color accentAlt:     c.lavender
     readonly property color success:       c.green
     readonly property color warning:       c.yellow
@@ -187,11 +194,16 @@ Singleton {
     // Paper is opaque. These sit high enough that text is read against a sheet
     // rather than against whatever the wallpaper is doing, and just under 1 so
     // the compositor still frosts what little shows through.
+    // `island`/`modal`/`peek` all track the active mood's single surfaceAlpha
+    // dial (Focus.surfaceAlpha) rather than each other: a mood is one "how
+    // much paper vs glass" setting for every translucent card in the shell,
+    // not a per-surface tune. `backdrop`/`solid` stay fixed — a scrim reads
+    // the same in every mood, and `solid` has no frosting to modulate.
     readonly property var surfaceAlpha: ({
-        island:   0.94,  // bar clusters — ignore_alpha 0.55 (quickshell-bar)
-        modal:    0.985,  // focused cards over a dim backdrop — ignore_alpha 0.6 (…cheatsheet, …window-rename), 0.1 (…team-selector)
+        island:   Focus.surfaceAlpha,  // bar clusters — ignore_alpha 0.55 (quickshell-bar)
+        modal:    Focus.surfaceAlpha,  // focused cards over a dim backdrop — ignore_alpha 0.6 (…cheatsheet, …window-rename), 0.1 (…team-selector)
         backdrop: 0.5,   // the dim scrim behind a modal — must stay under its modal's ignore_alpha
-        peek:     0.94,  // lighter, non-interactive glance panels — ignore_alpha 0.1 (…cheatsheet-peek)
+        peek:     Focus.surfaceAlpha,  // lighter, non-interactive glance panels — ignore_alpha 0.1 (…cheatsheet-peek)
         solid:    1.0    // fully opaque, no frosting needed
     })
 
@@ -216,7 +228,12 @@ Singleton {
     readonly property int barFontSize: fs.md
     readonly property int barFontWeight: Font.DemiBold
 
-    // The fan-out belongs to the palette, not to whoever changed it.
+    // The fan-out belongs to the palette, not to whoever changed it — and not
+    // to a mood switch. `accent`/`surfaceAlpha` above are plain bindings on
+    // Focus.mode; kitty/GTK/Qt already recolour the moment `,theme.sh apply`
+    // runs for the *palette*, and re-running it on every mood change would
+    // reset every window border for a change none of those apps render
+    // anyway. Only `applyToSystem()` below reaches this process.
     //
     // Quickshell and Hyprland watch this store and react on their own, but
     // kitty, GTK, Qt, Kvantum and the wallpaper need a process to poke them.
