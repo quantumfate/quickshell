@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/adapter-result.schema.json",
+  "title": "<adapter>.result.json",
+  "description": "What an action adapter actually did. Written atomically after a run so the shell can report the truth instead of assuming success — the theme fan-out reaches nine surfaces and any of them can be absent on a given machine.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ok", "ts", "adapter", "applied", "pending", "failed"],
+  "properties": {
+    "ok": {
+      "description": "False when anything landed in `failed`. A pending surface is not a failure.",
+      "type": "boolean"
+    },
+    "ts": { "description": "Unix seconds. Lets a reader show the age rather than hide staleness.", "type": "integer" },
+    "adapter": { "type": "string", "minLength": 1 },
+    "applied": {
+      "description": "Surfaces that changed now.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface", "tier"],
+        "properties": {
+          "surface": { "type": "string", "minLength": 1 },
+          "tier": { "$ref": "#/$defs/tier" }
+        }
+      }
+    },
+    "pending": {
+      "description": "Surfaces that will change, but not yet. Each carries the reason, because 'restart Zen' is only actionable if it says why.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface", "tier", "reason"],
+        "properties": {
+          "surface": { "type": "string", "minLength": 1 },
+          "tier": { "$ref": "#/$defs/tier" },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "failed": {
+      "description": "Surfaces that could not be reached. A failure here never aborts the others.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["surface", "reason"],
+        "properties": {
+          "surface": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "tier": {
+      "description": "next-login is deliberately absent: the cursor was the last thing in it and hyprctl setcursor applies live.",
+      "type": "string",
+      "enum": ["immediate", "next-launch"]
+    }
+  }
+}
