@@ -21,7 +21,9 @@ Rectangle {
     // solid    — fully opaque, no frosting needed
     property string elevation: "island"
     readonly property real alpha: Theme.surfaceAlpha[root.elevation] ?? Theme.surfaceAlpha.island
-    property color tint: Theme.backgroundAlt
+    // `backdrop` defaults to `scrim` (deeper than `backgroundAlt`) because it
+    // sits behind a modal, not beside one — callers can still override.
+    property color tint: root.elevation === "backdrop" ? Theme.scrim : Theme.backgroundAlt
 
     radius: Theme.radiusIsland
     color: Theme.withAlpha(root.tint, root.alpha)

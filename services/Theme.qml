@@ -123,6 +123,24 @@ Singleton {
     readonly property color success:       c.green
     readonly property color warning:       c.yellow
     readonly property color error:         c.red
+    readonly property color info:          c.blue
+    readonly property color pending:       c.peach
+
+    // A second tier below `subtext`: for a line that must stay readable but
+    // reads quieter still (a caption under a secondary label).
+    readonly property color subtextAlt:    c.subtext1
+
+    // A second accent hue distinct from `accent`/`accentAlt` (mauve/lavender):
+    // for "ok, and separately notable" state — a clean git tree, a live
+    // connection — that shouldn't compete visually with `success`'s pass/fail
+    // green.
+    readonly property color accentSecondary: c.teal
+
+    // The tier under `backgroundAlt`: the scrim behind a modal, and any sunken
+    // inset well (e.g. a search field) that should look pressed into the
+    // surface rather than sitting on it.
+    readonly property color scrim:         c.crust
+    readonly property color inset:         c.crust
 
     // One knob for how big the shell is. Store-backed, so a panel swap or a
     // change of mind is `ipc call theme scale 1.4` rather than an edit tour of

@@ -69,3 +69,14 @@ test("the day and night palettes the theme store names are defined", () => {
         assert.ok(required in palettes, `palette "${required}" is missing`);
     }
 });
+
+test("every role the design spec (02-visual-language / tokens.json) names is covered", () => {
+    // Regression guard for LEO-218: the spec's semantic tokens map onto these
+    // role names (kept stable because other work is already coded against
+    // them) rather than the spec's own dotted names.
+    for (const required of [
+        "info", "pending", "subtextAlt", "accentSecondary", "scrim", "inset"
+    ]) {
+        assert.ok(required in roles, `role "${required}" missing from Theme.qml`);
+    }
+});

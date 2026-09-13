@@ -30,6 +30,19 @@ tokens:
 		echo "^ literal size/spacing — use Theme.fs.* / Theme.space.* instead" >&2
 		exit 1
 	fi
+	# Same idea, for colour: a hex literal outside Theme.qml is a surface
+	# painting its own colour instead of reading a semantic role, which is what
+	# makes a palette swap a one-file edit. Theme.qml is exempt — it's the one
+	# place a palette is allowed to name its own hex. A line that legitimately
+	# draws a palette's own swatch can opt out with a trailing
+	# `// tokens-color-ok: <reason>` comment; keep that narrow — reach for a new
+	# role instead of the exemption when one is missing.
+	if git ls-files '*.qml' ':!:services/Theme.qml' \
+		| xargs grep -nE '#[0-9a-fA-F]{3,8}' \
+		| grep -v 'tokens-color-ok:'; then
+		echo "^ literal colour — use a Theme.* role instead, or add one if it's missing" >&2
+		exit 1
+	fi
 
 # Does the shell actually load?
 #
