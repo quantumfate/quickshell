@@ -183,6 +183,28 @@ Singleton {
     readonly property int barFontSize: fs.md
     readonly property int barFontWeight: Font.DemiBold
 
+    // The fan-out belongs to the palette, not to whoever changed it.
+    //
+    // Quickshell and Hyprland watch this store and react on their own, but
+    // kitty, GTK, Qt, Kvantum and the wallpaper need a process to poke them.
+    // Hanging that off each writer meant the control centre fanned out and
+    // `ipc call theme set` did not, so a palette switch from a keybind left the
+    // window borders and every Qt app on the old colours.
+    //
+    // `,theme.sh apply` writes the resolved palette back to this same store, but
+    // with the value it just read, so `name` does not change again and this does
+    // not loop.
+    Process { id: fanOut; command: [",theme.sh", "apply"] }
+
+    // Called by every writer rather than bound to `name`: a binding on a
+    // readonly property fed by a store read did not re-fire reliably, so a
+    // palette set from a keybind left the borders and every Qt app behind while
+    // the shell itself had already recoloured.
+    function applyToSystem() {
+        fanOut.running = false;
+        fanOut.running = true;
+    }
+
     // color + alpha (0..1) -> rgba, for translucent panels/backdrops.
     function withAlpha(color, a) {
         return Qt.rgba(color.r, color.g, color.b, a);
@@ -195,7 +217,9 @@ Singleton {
         // Setting a palette by hand is a deliberate choice: it pins the mode so
         // the next sunrise does not undo it. `auto` hands the decision back.
         function set(palette: string): void {
-            if (root.palettes[palette]) store.set({ palette: palette, mode: "manual" });
+            if (!root.palettes[palette]) return;
+            store.set({ palette: palette, mode: "manual" });
+            root.applyToSystem();
         }
         function get(): string { return root.name; }
         // Live size tuning: `theme scale 1.4`, then write the value you settle on
@@ -211,11 +235,13 @@ Singleton {
             const names = Object.keys(root.palettes);
             const next = names[(names.indexOf(root.name) + 1) % names.length];
             store.set({ palette: next, mode: "manual" });
+            root.applyToSystem();
             return next;
         }
         // Hand the choice back to the sun timer.
         function auto(): string {
             store.set({ mode: "auto" });
+            root.applyToSystem();
             return "auto";
         }
         // The global transparency dial. 0 = everything opaque (presentation
@@ -223,6 +249,7 @@ Singleton {
         function transparency(value: real): real {
             const v = Math.max(0.0, Math.min(1.0, value));
             store.set({ transparency: v });
+            root.applyToSystem();
             return v;
         }
     }
