@@ -7,6 +7,7 @@ import "modules/cheatsheet"
 import "modules/bar"
 import "modules/dofus"
 import "modules/obsidian"
+import "modules/control"
 
 ShellRoot {
     // `qs -c quantumfate ipc call help all` — annotated IPC overview.
@@ -55,4 +56,8 @@ ShellRoot {
     // modules/bar/PanelBus.
     ProjectsDashboard {}
     CalendarPanel {}
+
+    // Control Centre: theme/appearance/wallpaper/sound/focus, one panel over
+    // backends that otherwise have no UI. Toggled via IPC.
+    ControlPanel {}
 }

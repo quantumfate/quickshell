@@ -5,6 +5,7 @@
 //
 // Toggle from Hyprland:  qs -c quantumfate ipc call workspaceSwitcher toggle
 pragma ComponentBehavior: Bound
+import Quickshell.Io
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland

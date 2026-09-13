@@ -3,6 +3,7 @@
 // now (calendar.json via PanelBus); the JSON shape already matches what a
 // CalDAV source would hand back, so plugging one in later is a source swap,
 // not a view rewrite.
+import Quickshell
 import QtQuick
 import "../../services"   // Theme
 import "CalendarSource.js" as CalendarSource

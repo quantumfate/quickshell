@@ -15,3 +15,4 @@ singleton SysMon SysMon.qml
 singleton BarInput BarInput.qml
 Store Store.qml
 singleton Tip Tip.qml
+singleton PanelBus PanelBus.qml

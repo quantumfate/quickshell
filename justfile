@@ -31,6 +31,31 @@ tokens:
 		exit 1
 	fi
 
+# Does the shell actually load?
+#
+# qmllint cannot resolve the Quickshell plugin's types — that is why
+# UncreatableType and UnresolvedType are disabled in .qmllint.ini — so a missing
+# `import Quickshell.Io` passes every static check and then fails at startup with
+# "IpcHandler is not a type". A qmldir added to a directory has the same shape of
+# failure: it hides every type in that directory that it does not list.
+#
+# Both happened. Neither was caught by anything until the shell would not start.
+# So the gate loads the real config and greps the log for a load failure.
+smoke:
+	#!/usr/bin/env bash
+	set -euo pipefail
+	log=$(mktemp)
+	trap 'rm -f "$log"' EXIT
+	timeout 20 qs -c quantumfate >"$log" 2>&1 &
+	pid=$!
+	sleep 6
+	kill $pid 2>/dev/null || true
+	wait $pid 2>/dev/null || true
+	if grep -q "Failed to load configuration" "$log"; then
+		grep -E "ERROR" "$log" >&2
+		exit 1
+	fi
+
 # Unit tests. Node's built-in runner, no dependency to install. The specs load
 # the real QML sources rather than copies, so a change to a palette or to the
 # cheatsheet parser is covered the moment it lands.
@@ -61,7 +86,7 @@ lint: qmllint tokens
 
 # CI/pre-commit gate: formatting + QML linting + the token rule + tests
 # (shellcheck/yamllint stay advisory)
-check: fmt-check qmllint tokens test
+check: fmt-check qmllint tokens test smoke
 
 # Ansible playbook syntax check (cheap; part of the CI gate)
 ansible-syntax:

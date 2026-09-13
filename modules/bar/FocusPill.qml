@@ -2,6 +2,7 @@
 // while running, the time left; click toggles it (same effect as
 // `ipc call focus start/stop`). Read-only over Focus's own state — no store
 // of its own.
+import Quickshell
 import QtQuick
 import "../../services"   // Theme, Focus
 
