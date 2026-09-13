@@ -1,28 +1,22 @@
-// Bar — the top bar, one instance per monitor, replacing waybar.
+// Bar — the top bar, one instance per monitor. A status indicator, not a
+// taskbar (LEO-221): three islands, nothing that duplicates what a Hyprland
+// group's own groupbar already shows. The window list is gone from every
+// workspace, including the gaming one — that workspace moves to a group in
+// LEO-230, same as the project terminals already do.
+//   left    where am I    — workspaces · group chip · layout glyph
+//   centre  what's playing — media · brightness · volume
+//   right   when is it     — clock · entry to the calendar centre
 //
-// A Variants spawns one PanelWindow per eligible screen (the small vertical
-// HDMI panel is excluded). The bar is not a strip: it is three translucent
-// islands resting on the wallpaper (Surface, the shared card material — see
-// modules/common/Surface.qml), with the panel itself painting nothing, so the
-// space between them is real wallpaper rather than chrome.
-//   left    where am I  — workspaces · status (sysmon/weather/brightness/
-//           power/idle/language, collapsed behind hover) · media
-//   centre  what is here — taskbar · submap · layout
-//   right   system state — tray · volume · battery · notifications · clock ·
-//           wlogout
-//
-// The center taskbar is ALWAYS present (Dofus strip on the multibox workspace,
-// the generic workspace taskbar everywhere else). Only the on-demand Dofus swap
-// controls toggle, from the Hyprland Dofus submap:
-//   qs -c quantumfate ipc call dofusPanel toggle
+// Everything else (system info, background apps, logout, settings,
+// diagnostics, tray, notifications) moved to the on-demand System Center
+// (SysPanel.qml), reachable from which-key rather than sitting on the bar.
 pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Theme, DofusWindows
+import "../../services"   // Theme, Focus
 import "../common"        // Surface
 
 Scope {
@@ -31,34 +25,13 @@ Scope {
     // Monitors that must NOT carry the bar (the small portrait panel).
     readonly property var excludedScreens: ["HDMI-A-1"]
 
-    // The abstract taskbar setting: which strip each monitor shows.
-    //   "dofus"     — team taskbar (+ swap control), for the multibox screen
-    //   "workspace" — default: the active workspace's windows
-    // Add/repoint a monitor by editing this map; unlisted monitors get "default".
-    readonly property var taskbarByScreen: ({ "DP-1": "dofus" })
-    readonly property string defaultTaskbar: "workspace"
-    function taskbarMode(name) { return scope.taskbarByScreen[name] || scope.defaultTaskbar; }
-
-    // On-demand Dofus TEAM-MANAGEMENT controls (the swap detector panel), opened
-    // from the Hyprland Dofus submap and hidden on leaving it. This does NOT gate
-    // the taskbar — a taskbar is always present; only these extra controls toggle.
-    property bool dofusControlsShown: false
+    // Bumped by the IPC `reveal` call below (bound to a SUPER-tap keybind in
+    // the hypr repo) so every bar instance drops out of autohide at once.
+    property int revealTick: 0
 
     IpcHandler {
         target: "bar"
-        function toggleTaskbar(): void { scope.dofusControlsShown = !scope.dofusControlsShown; }
-        function showTaskbar(): void { scope.dofusControlsShown = true; }
-        function hideTaskbar(): void { scope.dofusControlsShown = false; }
-    }
-
-    // The Dofus submap drives the `dofusPanel` target (show on demand, hide on
-    // leave) — now the swap-controls panel, not the taskbar. Names kept so the
-    // existing hypr binds work unchanged.
-    IpcHandler {
-        target: "dofusPanel"
-        function toggle(): void { scope.dofusControlsShown = !scope.dofusControlsShown; }
-        function show(): void { scope.dofusControlsShown = true; }
-        function hide(): void { scope.dofusControlsShown = false; }
+        function reveal(): void { scope.revealTick++; }
     }
 
     // Tooltip surfaces, one per bar screen (drawn below the bar by TipLayer).
@@ -80,21 +53,6 @@ Scope {
             implicitHeight: Theme.barReserved
             color: "transparent"
 
-            // The team "is here" only when this monitor's active workspace holds
-            // Dofus windows — so the Dofus taskbar hides when you switch away.
-            // Bumped on every compositor event to track workspace switches.
-            property int _wsTick: 0
-            Connections { target: Hyprland; function onRawEvent(e) { bar._wsTick++; } }
-            // This monitor's current workspace id, and whether the team is on it.
-            readonly property int activeWs: {
-                bar._wsTick;   // dependency
-                return Hyprland.monitorFor(bar.screen)?.activeWorkspace?.id ?? -1;
-            }
-            readonly property bool dofusOnActiveWs: {
-                bar._wsTick;   // dependency
-                return DofusWindows.onWorkspace(bar.activeWs);
-            }
-
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "quickshell-bar"
             // Accept the keyboard only while a chip on THIS screen is being
@@ -109,10 +67,36 @@ Scope {
             // keybind/IPC toggle (when no hover has set an anchor yet).
             Component.onCompleted: if (!SysMon.homeScreen) SysMon.homeScreen = bar.screen.name;
 
-            Item {
-                anchors.fill: parent
+            // --- Autohide (LEO-221): honours Focus's mode rather than a local
+            // guess. `deep` sheds every zone but workspaces + clock and starts
+            // autohiding; `game` autohides the full bar without shedding
+            // anything — it just needs to stay out of the way while playing.
+            // Mood-specific idle/slide values land with LEO-227; until then
+            // this reads only the mode string, never a hardcoded timing table.
+            readonly property bool deepMode: Focus.mode === "deep"
+            readonly property bool autohideOn: bar.deepMode || Focus.mode === "game"
 
-                // left island: where am I, and what is the machine doing.
+            property bool revealed: true
+            Connections { target: scope; function onRevealTickChanged() { bar.revealed = true; idle.restart(); } }
+
+            Timer {
+                id: idle
+                interval: 2000
+                running: bar.autohideOn && bar.revealed
+                onTriggered: bar.revealed = false
+            }
+            // Any hover over the islands themselves counts as activity.
+            function wake() { bar.revealed = true; idle.restart(); }
+
+            Item {
+                id: content
+                anchors.fill: parent
+                y: (bar.autohideOn && !bar.revealed) ? -Theme.barReserved : 0
+                Behavior on y { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+
+                HoverHandler { onHoveredChanged: if (hovered) bar.wake() }
+
+                // left island: where am I.
                 Island {
                     anchors {
                         left: parent.left
@@ -120,63 +104,40 @@ Scope {
                         leftMargin: Theme.barInset * 2
                     }
                     Workspaces { screen: bar.screen }
-                    Separator {}
-                    // Collapsed status surface: sysmon/weather/brightness/power/
-                    // idle/language now expand from here on hover (SysPanel).
-                    StatusCluster { screenName: bar.screen.name }
-                    Media { screenName: bar.screen.name }
+                    GroupChip {}
+                    HyprLayout { visible: !bar.deepMode }
                 }
 
-                // centre island: what is on this workspace, and what mode am I in.
+                // centre island: what's playing / what to adjust.
                 Island {
-                    id: centreIsland
+                    visible: !bar.deepMode
                     anchors { horizontalCenter: parent.horizontalCenter; verticalCenter: parent.verticalCenter }
-
-                    readonly property string mode: scope.taskbarMode(bar.screen.name)
-
-                    // The Dofus strip is active on the dofus monitor while this
-                    // monitor's current workspace holds Dofus windows (special
-                    // excluded). Empty ⇒ fall through to the workspace taskbar.
-                    // The taskbar is ALWAYS shown; only the swap controls toggle.
-                    readonly property bool dofusActive: mode === "dofus" && bar.dofusOnActiveWs
-
-                    DofusTaskbar { visible: centreIsland.dofusActive; screenName: bar.screen.name; activeWs: bar.activeWs }
-                    // Swap-detector controls (recalibrate + run/stop) — visible
-                    // whenever the Dofus strip is, so they're always at hand.
-                    SwapControl { visible: centreIsland.dofusActive; screenName: bar.screen.name }
-
-                    // Default taskbar: every screen, every workspace where the Dofus
-                    // strip isn't showing — so ordinary workspaces (Obsidian, etc.)
-                    // get their windows too. Always present.
-                    WorkspaceTaskbar {
-                        screen: bar.screen
-                        visible: !centreIsland.dofusActive
-                    }
-                    Separator {}
-                    Submap {}
-                    HyprLayout {}
+                    Media { screenName: bar.screen.name }
+                    Brightness { screenName: bar.screen.name }
+                    Pulseaudio { screenName: bar.screen.name }
                 }
 
-                // right island: system state, the clock, and the way out.
+                // right island: when is it, and the way into the calendar.
                 Island {
                     anchors {
                         right: parent.right
                         verticalCenter: parent.verticalCenter
                         rightMargin: Theme.barInset * 2
                     }
-                    Tray {}
-                    Pulseaudio { screenName: bar.screen.name }
-                    Battery { screenName: bar.screen.name }
-                    NotifIndicator { screenName: bar.screen.name }
-                    ProjectsPill { screenName: bar.screen.name }
-                    FocusPill { screenName: bar.screen.name }
-                    Separator {}
                     Clock {}
-                    CalendarPill { screenName: bar.screen.name }
-                    Separator {}
-                    Wlogout {}
+                    CalendarPill { screenName: bar.screen.name; visible: !bar.deepMode }
                 }
+            }
 
+            // Thin always-present strip at the true top edge: catches the
+            // pointer even while `content` is slid out of view, so autohide
+            // has a way back in besides the SUPER-tap IPC reveal.
+            MouseArea {
+                anchors { top: parent.top; left: parent.left; right: parent.right }
+                height: 8
+                hoverEnabled: true
+                visible: bar.autohideOn
+                onEntered: bar.wake()
             }
         }
     }

@@ -1,10 +1,14 @@
-// SysPanel — the bar's one status detail popout. A single window driven by the
-// SysMon bus: it appears below the bar on whichever screen is peeking or
-// pinned, anchored under the StatusCluster trigger. Read-only sections stay a
-// passive overlay (no focus, click-through) even when pinned; the quick-
-// control chips at the bottom are the exception (power profile, idle inhibit,
-// language, brightness, weather) — this panel is what six standalone always-on
-// bar modules collapsed into, so those go here instead of the bar strip.
+// SysPanel — the bar's on-demand System Center (LEO-221). A single window
+// driven by the SysMon bus, opened via `qs ipc call sysmon toggle` / which-key
+// rather than a bar trigger: the persistent bar is a status indicator now,
+// not a place for system info, background apps, logout, or diagnostics to
+// live always-on. Read-only sections stay a passive overlay (no focus,
+// click-through) even when pinned; the quick-control chips and the
+// background-apps row at the bottom are the exception — every module that
+// used to sit permanently on the bar (weather, power profile, idle inhibit,
+// language, tray, battery, notifications, projects health, focus mode,
+// logout, the Dofus submap name, the Dofus swap-detector rig) collapsed into
+// this one popout.
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
@@ -109,12 +113,6 @@ Scope {
                         onTapped: weather.openForecast()
                     }
                     QuickChip {
-                        glyph: "brightness"; text: brightness.value; tint: Theme.c.yellow
-                        onTapped: {}
-                        onWheelUp: brightness.step(true)
-                        onWheelDown: brightness.step(false)
-                    }
-                    QuickChip {
                         glyph: "power"; text: power.label; tint: power.tint
                         visible: PowerProfiles.hasPerformanceProfile
                         onTapped: power.cycle()
@@ -127,6 +125,36 @@ Scope {
                         glyph: "lang"; text: language.value; tint: Theme.c.overlay1
                         onTapped: language.cycle()
                     }
+                    // Dofus swap-detector rig (formerly SwapControl.qml on the
+                    // bar) — on demand, not gated to any one workspace anymore.
+                    QuickChip {
+                        glyph: "calib"; text: DofusSwap.calibrated ? "ready" : "calibrate"
+                        tint: DofusSwap.calibrating ? Theme.accent : DofusSwap.calibrated ? Theme.success : Theme.warning
+                        onTapped: DofusSwap.calibrate()
+                    }
+                    QuickChip {
+                        glyph: "swap"; text: DofusSwap.detectorRunning ? "running" : "stopped"
+                        tint: DofusSwap.detectorRunning ? Theme.success : Theme.subtext
+                        onTapped: DofusSwap.toggle()
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
+
+                // ---- Background apps / diagnostics / the way out: every
+                // other always-on bar entry the persistent bar shed. ----
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Theme.space.lg
+
+                    Tray {}
+                    Item { Layout.fillWidth: true }
+                    Submap {}
+                    FocusPill { screenName: SysMon.activeScreen }
+                    ProjectsPill { screenName: SysMon.activeScreen }
+                    NotifIndicator { screenName: SysMon.activeScreen }
+                    Battery { screenName: SysMon.activeScreen }
+                    Wlogout {}
                 }
 
                 Text {
@@ -165,24 +193,6 @@ Scope {
             running: true; repeat: true; triggeredOnStart: true
             onTriggered: if (!weatherFetch.running) weatherFetch.running = true
         }
-    }
-
-    Item {
-        id: brightness
-        property string value: ""
-        function step(up) {
-            brightnessAction.command = ["bash", "-lc", up ? ",brightness.sh --inc" : ",brightness.sh --dec"];
-            brightnessAction.running = true;
-            refresh();
-        }
-        function refresh() { if (!brightnessFetch.running) brightnessFetch.running = true; }
-        Process { id: brightnessAction }
-        Process {
-            id: brightnessFetch
-            command: ["bash", "-lc", ",brightness.sh --get-with-icon"]
-            stdout: StdioCollector { onStreamFinished: brightness.value = (this.text || "").trim() }
-        }
-        Timer { interval: 1000; running: true; repeat: true; triggeredOnStart: true; onTriggered: brightness.refresh() }
     }
 
     Item {
