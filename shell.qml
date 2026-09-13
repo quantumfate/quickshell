@@ -46,4 +46,13 @@ ShellRoot {
     // Passive peek variant: non-focus, non-dimming contextual panel driven by
     // the Hyprland submap event system (hypr/events/peek.lua).
     CheatSheetPeek {}
+
+    // Keyboard-first workspace switcher: type to filter, enter to go, shift+enter
+    // to bring the focused window along. Toggled via IPC.
+    WorkspaceSwitcher {}
+
+    // Detail panels behind the bar's projects/calendar pills, driven by
+    // modules/bar/PanelBus.
+    ProjectsDashboard {}
+    CalendarPanel {}
 }

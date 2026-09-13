@@ -2,6 +2,7 @@ singleton Config Config.qml
 singleton Theme Theme.qml
 singleton Projects Projects.qml
 singleton Focus Focus.qml
+singleton Sound Sound.qml
 singleton DofusState DofusState.qml
 singleton DofusClasses DofusClasses.qml
 singleton DofusWindows DofusWindows.qml

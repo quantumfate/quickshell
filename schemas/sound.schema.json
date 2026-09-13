@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/sound.schema.json",
+  "title": "sound.json",
+  "description": "State for the rain/lofi ambience player. Read and written by the Sound singleton; the audio itself is a long-lived local mpv, driven over its own IPC socket, not through this file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "track", "volume"],
+  "properties": {
+    "mode": {
+      "description": "Which local playlist is loaded. \"off\" means mpv is idle/stopped.",
+      "type": "string",
+      "enum": ["off", "rain", "lofi"]
+    },
+    "track": {
+      "description": "Absolute path of the currently loaded file, or null when mode is \"off\".",
+      "type": ["string", "null"]
+    },
+    "volume": {
+      "description": "mpv volume, 0 (silent) to 1 (mpv's 100).",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  }
+}

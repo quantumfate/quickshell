@@ -168,8 +168,11 @@ Scope {
                     Pulseaudio { screenName: bar.screen.name }
                     Battery { screenName: bar.screen.name }
                     NotifIndicator { screenName: bar.screen.name }
+                    ProjectsPill { screenName: bar.screen.name }
+                    FocusPill { screenName: bar.screen.name }
                     Separator {}
                     Clock {}
+                    CalendarPill { screenName: bar.screen.name }
                     Separator {}
                     Wlogout {}
                 }
