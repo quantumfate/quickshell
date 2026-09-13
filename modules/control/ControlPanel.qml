@@ -610,7 +610,7 @@ Scope {
                                     color: Theme.text
                                     font.pixelSize: Theme.fs.sm
                                 }
-                                MouseArea { anchors.fill: parent; onClicked: Focus.start(0) }
+                                MouseArea { anchors.fill: parent; onClicked: Focus.set("deep", 0) }
                             }
                             Rectangle {
                                 implicitWidth: stopText.implicitWidth + Theme.space.lg

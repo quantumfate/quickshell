@@ -1,23 +1,26 @@
-// mood-policy.json's contract (LEO-236): the mood-mode policy store.
+// mood-policy.json's contract (LEO-236 + LEO-237): the mood-mode policy store.
 //
 // One definitional store keyed by the six moods, recording what each mood
-// allows, changes, or suppresses. The load-bearing invariants, all pinned with
-// no JSON Schema validator in the toolchain (same constraint as focus.test.js
-// and scenes.test.js):
+// allows, changes, or suppresses. Since LEO-237 the store IS the source of
+// truth for the shell — Focus.qml's `policyDefaults` literal seeds it, and the
+// shipped asset must be that literal's exact serialization. The load-bearing
+// invariants, all pinned with no JSON Schema validator in the toolchain (same
+// constraint as focus.test.js and scenes.test.js):
 //
-//   1. The store and the runtime agree on which moods exist — mood set must be
-//      identical to focus.schema.json's `mode` enum AND to Focus.qml's `moods`
-//      table.
-//   2. The visual + notification fields are lockstep copies of Focus.qml's
-//      table (normalized casing), so the store cannot drift from the shell
-//      that still owns them until LEO-237 flips the direction.
-//   3. Launch semantics reproduce Focus.canLaunch exactly: a mood never
+//   1. Focus.qml's `policyDefaults` literal and assets/mood-policy.default.json
+//      are identical — the shell seeds from one and hypr/scripts read the
+//      other; a divergence is a deployment bug. (This replaced the old
+//      casing-normalized lockstep the moment Focus stopped owning a separate
+//      camelCase table.)
+//   2. The mood set matches focus.schema.json's `mode` enum.
+//   3. Every mood record is valid against the schema, with sane enumeration
+//      values and non-duplicated block lists.
+//   4. Launch semantics reproduce Focus.canLaunch exactly: a mood never
 //      refuses itself, neutral never blocks, every other mood is firm on the
 //      same `blockedKinds` minus itself.
-//   4. The background defaults change nothing until configured — policy
-//      allow, `["*"]`, nothing deferred or prevented. Adopting the store must
-//      not alter live behavior.
-//   5. Scene reachability is per-mood and minimal: absent is reachable, so
+//   5. The background defaults change nothing until configured — policy
+//      allow, `["*"]`, nothing deferred or prevented.
+//   6. Scene reachability is per-mood and minimal: absent is reachable, so
 //      only what a mood takes away appears (deep/reflect drop gaming+media).
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -37,35 +40,34 @@ const moods = defaults.moods;
 const moodProps = Object.keys(schema.definitions.mood.properties);
 const moodEnum = focusSchema.properties.mode.enum;
 
-/** Parses Focus.qml's `moods` object the same way focus.test.js does. */
-function loadMoods() {
-    const start = focusSrc.indexOf("readonly property var moods:");
-    if (start === -1) throw new Error("Focus.qml: no `moods` property found");
+/** Parses Focus.qml's `policyDefaults` literal the way focus.test.js does. */
+function loadPolicy() {
+    const start = focusSrc.indexOf("readonly property var policyDefaults:");
+    if (start === -1) throw new Error("Focus.qml: no `policyDefaults` property found");
     const open = focusSrc.indexOf("({", start);
     let depth = 0, end = -1;
     for (let i = open + 1; i < focusSrc.length; i++) {
         if (focusSrc[i] === "{") depth++;
         else if (focusSrc[i] === "}") { depth--; if (depth === 0) { end = i; break; } }
     }
-    if (end === -1) throw new Error("Focus.qml: unterminated `moods` object");
+    if (end === -1) throw new Error("Focus.qml: unterminated `policyDefaults` object");
     return eval("(" + focusSrc.slice(open + 1, end + 1) + ")");
 }
 
-// Normalize Focus.qml's camelCase field names to the store's snake_case.
-const SNAKE = {
-    accentRole: "accent_role",
-    surfaceAlpha: "surface_alpha",
-    motionEnergy: "motion_energy",
-    barAutohide: "bar_autohide",
-    digestOnExit: "digest_on_exit",
-};
+const policy = loadPolicy();
+
+test("Focus.qml's policyDefaults is byte-identical to the shipped default asset", () => {
+    // The core lockstep since LEO-237: Focus seeds the store from this literal
+    // and hypr/scripts read the asset, so both describe one policy. Any edit
+    // must land in both places — this test is the tripwire.
+    assert.deepEqual(policy, defaults, "Focus.qml's `policyDefaults` differs from assets/mood-policy.default.json");
+});
 
 test("the mood set is identical across the schema, the default, and Focus.qml", () => {
-    const qml = loadMoods();
     assert.deepEqual(Object.keys(moods).sort(), [...moodEnum].sort(),
         "mood-policy.default.json does not enumerate focus.schema's moods");
-    assert.deepEqual(Object.keys(qml).sort(), [...moodEnum].sort(),
-        "Focus.qml's moods table does not enumerate focus.schema's moods");
+    assert.deepEqual(Object.keys(policy.moods).sort(), [...moodEnum].sort(),
+        "Focus.qml's policyDefaults does not enumerate focus.schema's moods");
 });
 
 test("every mood record is a valid record against the schema", () => {
@@ -90,30 +92,11 @@ test("every mood record is a valid record against the schema", () => {
     }
 });
 
-test("visual and notification fields are lockstep copies of Focus.qml", () => {
-    const qml = loadMoods();
-    for (const mode of moodEnum) {
-        const src = qml[mode];
-        const stored = moods[mode];
-        assert.equal(stored.name, src.name, `${mode} name differs`);
-        assert.equal(stored.accent_role, src.accentRole, `${mode} accent_role differs`);
-        assert.equal(stored.surface_alpha, src.surfaceAlpha, `${mode} surface_alpha differs`);
-        assert.equal(stored.density, src.density, `${mode} density differs`);
-        assert.equal(stored.motion_energy, src.motionEnergy, `${mode} motion_energy differs`);
-        assert.equal(stored.bar_autohide, src.barAutohide, `${mode} bar_autohide differs`);
-        const qmlNotification = { digest_on_exit: "digestOnExit" };
-        for (const field of ["policy", "position", "timeout", "queue", "digest_on_exit"]) {
-            assert.deepEqual(stored.notifications[field],
-                src.notifications[qmlNotification[field] || field],
-                `${mode} notifications.${field} differs`);
-        }
-    }
-});
-
 test("launch policy reproduces Focus.canLaunch exactly", () => {
-    // Focus.qml: a mood never blocks launching into itself; neutral never
-    // blocks; every non-neutral mood blocks blockedKinds minus itself. The
-    // store must be able to express that for each mood.
+    // Focus.canLaunch: a mood never blocks launching into itself; neutral
+    // never blocks; every other mood refuses blockedKinds minus itself (soft
+    // moods warn and let through — but none of the defaults are soft except
+    // neutral, which blocks nothing).
     const blockedKinds = ["media", "game"];
     for (const mode of moodEnum) {
         for (const kind of blockedKinds) {

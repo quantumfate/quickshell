@@ -13,7 +13,7 @@ import "../../services"   // Config
 Item {
     id: root
 
-    // Which panel is open ("" = none): "projects" | "calendar".
+    // Which panel is open ("" = none): "projects" | "calendar" | "mood".
     property string open: ""
     property string anchorScreen: ""
     property real anchorX: 0

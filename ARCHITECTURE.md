@@ -35,14 +35,15 @@ Every singleton that owns shared state is a Store: `Theme` (`theme.json`),
 `DofusState` (`dofus/team.json`), `ObsidianVault` (`obsidian/tags.json`),
 `Notify` (`notifications.json`).
 
-Two stores define _policy_ rather than current state. They are read by the
-event manager and the launcher scripts (and written by the scene editor and
-the mood config surface), but no singleton owns them yet:
-[`scenes.json`](schemas/scenes.schema.json) (workspace scenes, LEO-235) and
-[`mood-policy.json`](schemas/mood-policy.schema.json) (per-mood policy,
-LEO-236). Their schemas and seeds live under `schemas/` + `assets/`, and the
-tests lock the seeds to the QML that still owns the same facts (Focus.qml's
-mood table) so the two cannot drift.
+Two stores define _policy_ rather than current state. [`scenes.json`](schemas/scenes.schema.json) (workspace scenes, LEO-235) is read by the event
+manager and the scene editor but owned by no singleton yet. [`mood-policy.json`](schemas/mood-policy.schema.json)
+(per-mood policy, LEO-236) is owned by `Focus` since LEO-237: Focus's
+`policyDefaults` literal is the definitional table, the asset under `assets/`
+is its exact serialization, and `Focus.patchMood` is the one writer the mood
+config surface uses — so a UI edit lands in the same file the Hyprland event
+manager and the launcher scripts read. `focus.json` stays the active-state
+pointer (`{ mode, until }`); the lockstep tests pin the policy seeds to the
+QML literals so the file and the shell cannot drift.
 
 ## Command (IPC)
 

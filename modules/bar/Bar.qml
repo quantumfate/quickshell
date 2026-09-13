@@ -5,7 +5,7 @@
 // LEO-230, same as the project terminals already do.
 //   left    where am I    — workspaces · group chip · layout glyph
 //   centre  what's playing — media · brightness · volume
-//   right   when is it     — clock · entry to the calendar centre
+//   right   when is it / where am I — clock · mood · entry to the calendar centre
 //
 // Everything else (system info, background apps, logout, settings,
 // diagnostics, tray, notifications) moved to the on-demand System Center
@@ -117,7 +117,8 @@ Scope {
                     Pulseaudio { screenName: bar.screen.name }
                 }
 
-                // right island: when is it, and the way into the calendar.
+                // right island: when is it, the active mood, and the way into
+                // the calendar.
                 Island {
                     anchors {
                         right: parent.right
@@ -125,6 +126,10 @@ Scope {
                         rightMargin: Theme.barInset * 2
                     }
                     Clock {}
+                    // The mood pill stays even in autohide/deep mode: it
+                    // carries the countdown until the mood ends, which is the
+                    // one thing you want while the rest of the bar drops away.
+                    MoodPill { screenName: bar.screen.name }
                     CalendarPill { screenName: bar.screen.name; visible: !bar.deepMode }
                 }
             }
