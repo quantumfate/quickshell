@@ -9,6 +9,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell.Hyprland
 import "../../services"   // Theme
+import "WorkspaceSwitch.js" as WorkspaceSwitch
 
 Rectangle {
     id: root
@@ -26,22 +27,25 @@ Rectangle {
         "media": "",   //  music
         "gaming": "",   //  gamepad
         "logs": "",   //
-        "misc": ""   //
+        "misc": "",   //
     })
     function _icon(wsName, wsId) {
         return root._iconByName[wsName] ?? (wsId > 0 && wsId < 10 ? String(wsId) : ""); //  dot
     }
 
-    // This monitor's real (non-special) workspaces, sorted by id — the model
-    // order Hyprland hands us is creation order, which is why the raw list looked
-    // shuffled. `_tick` re-evaluates the list on every compositor event.
+    // This monitor's real (non-special) workspaces, in canonical order — the
+    // named ones (declared order, id-backed twins merged) then undeclared
+    // ids. Hyprland's list is creation order, and its named workspaces carry
+    // negative auto ids, so the bar must not sort by id. `_tick` re-evaluates
+    // the list on every compositor event.
     property int _tick: 0
     Connections { target: Hyprland; function onRawEvent(e) { root._tick++; } }
     readonly property var _sorted: {
         root._tick; // dependency
-        return (Hyprland.workspaces?.values ?? [])
-            .filter(w => w.monitor === root._monitor && w.id > 0)
-            .sort((a, b) => a.id - b.id);
+        const all = (Hyprland.workspaces?.values ?? [])
+            .filter(w => w.monitor === root._monitor)
+            .filter(w => w.id > 0 || !w.name.startsWith("special:"));
+        return WorkspaceSwitch.canonical(all);
     }
 
     color: "transparent"
@@ -74,7 +78,12 @@ Rectangle {
                 font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
 
                 HoverHandler { id: ws }
-                TapHandler { onTapped: wsDelegate.modelData.activate() }
+                // Dispatched directly, not via modelData.activate(): a named
+                // workspace's auto id is an internal handle, so both are
+                // spoken through WorkspaceSwitch.selector().
+                TapHandler {
+                    onTapped: Hyprland.dispatch('hl.dsp.workspace("' + WorkspaceSwitch.selector(wsDelegate.modelData) + '")')
+                }
             }
         }
     }

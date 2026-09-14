@@ -5,7 +5,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { buildRows, filterRows } = loadLibrary("modules/bar/WorkspaceSwitch.js", ["buildRows", "filterRows"]);
+const { buildRows, filterRows, canonical, selector } = loadLibrary("modules/bar/WorkspaceSwitch.js", [
+    "buildRows",
+    "filterRows",
+    "canonical",
+    "selector"
+]);
 
 const workspaces = [
     { id: 2, name: "creative" },
@@ -18,9 +23,32 @@ const windows = [
     { wsId: 2, title: "gimp" }
 ];
 
-test("rows are sorted by workspace id, regardless of input order", () => {
+test("rows follow the canonical order regardless of input order", () => {
     const rows = buildRows(workspaces, windows);
     assert.deepEqual(rows.map(r => r.id), [1, 2, 5]);
+});
+
+test("canonical() merges id-backed twins into their named workspace", () => {
+    const rows = canonical([
+        { id: 1, name: "code" },
+        { id: -1338, name: "code" },
+        { id: 2, name: "creative" }
+    ]);
+    assert.deepEqual(rows.map(r => r.id), [-1338, 2]);
+});
+
+test("canonical() keeps one row per undeclared id", () => {
+    const rows = canonical([
+        { id: 8, name: "8" },
+        { id: 3, name: "" }
+    ]);
+    assert.deepEqual(rows.map(r => r.id), [3, 8]);
+});
+
+test("selector() speaks name for named workspaces, id for numeric ones", () => {
+    assert.equal(selector({ id: -1338, name: "code" }), "name:code");
+    assert.equal(selector({ id: 8, name: "8" }), "name:8");
+    assert.equal(selector({ id: 5, name: "" }), "5");
 });
 
 test("windows group under their own workspace only", () => {

@@ -21,8 +21,10 @@ Row {
     required property var screen
     readonly property var _mon: Hyprland.monitorFor(screen)
 
-    // Up only while the group's workspace is this monitor's active one.
-    readonly property bool _onStage: (_mon?.activeWorkspace?.id ?? -1) >= 0
+    // Up only while the group's workspace is this monitor's active one. The
+    // id itself may be anything (named workspaces carry auto ids < 0), so
+    // only presence and the member match count.
+    readonly property bool _onStage: _mon?.activeWorkspace?.id !== undefined
         && (DofusWindows.windows ?? []).some(w => w.workspaceId === _mon.activeWorkspace?.id)
 
     spacing: Theme.space.sm

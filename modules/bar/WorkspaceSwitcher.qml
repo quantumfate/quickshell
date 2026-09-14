@@ -33,17 +33,19 @@ Scope {
 
     readonly property var _rows: {
         scope._tick;   // dependency
+        // Named (auto-id) workspaces are the real ones: include them, and let
+        // WorkspaceSwitch.canonical() merge any id-backed twins.
         const workspaces = (Hyprland.workspaces?.values ?? [])
-            .filter(w => w.id > 0)
+            .filter(w => w.id > 0 || !w.name.startsWith("special:"))
             .map(w => ({ id: w.id, name: w.name }));
         const windows = [];
         for (const t of (Hyprland.toplevels?.values ?? [])) {
             const ipc = t?.lastIpcObject;
             const wsId = (t?.workspace?.id) ?? (ipc?.workspace?.id);
-            if (wsId === undefined || wsId < 0) continue;
+            if (wsId === undefined) continue;
             windows.push({ wsId: wsId, title: ipc?.title ?? t?.title ?? "(untitled)" });
         }
-        return WorkspaceSwitch.buildRows(workspaces, windows);
+        return WorkspaceSwitch.buildRows(WorkspaceSwitch.canonical(workspaces), windows);
     }
 
     readonly property var filtered: WorkspaceSwitch.filterRows(scope._rows, scope.query)
@@ -60,8 +62,11 @@ Scope {
 
     function go(row, bringWindow) {
         if (!row) return;
-        if (bringWindow) Hyprland.dispatch("hl.dsp.movetoworkspace(" + row.id + ")");
-        Hyprland.dispatch("hl.dsp.workspace(" + row.id + ")");
+        // A named workspace is dispatched by name — its auto id is an
+        // internal handle a fresh dispatch may not resolve.
+        const selector = row.name ? "name:" + row.name : String(row.id);
+        if (bringWindow) Hyprland.dispatch('hl.dsp.movetoworkspace("' + selector + '")');
+        Hyprland.dispatch('hl.dsp.workspace("' + selector + '")');
         scope.shown = false;
     }
 
