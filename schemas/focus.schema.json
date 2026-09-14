@@ -16,6 +16,16 @@
       "description": "ISO-8601 timestamp the mood lapses back to `neutral` at, or null for an open-ended session that only an explicit `stop`/`set` ends.",
       "type": ["string", "null"],
       "format": "date-time"
+    },
+    "source": {
+      "description": "Who last wrote this pointer. Absent/null means an existing store written before this field existed, or a write nothing bothered to attribute — treat that as `manual` for precedence purposes, since a pointer of unknown origin is safest treated as a deliberate choice rather than something a schedule may casually overwrite. Once a schedule can write this file alongside a keybind and a timer, the desk needs to say why it changed, not just what it changed to.",
+      "type": ["string", "null"],
+      "enum": ["manual", "timer", "schedule", null]
+    },
+    "set_at": {
+      "description": "ISO-8601 timestamp of the write that produced this state. Absent/null is the same backward-compatible case as a missing `source` — an older store, or one written before provenance existed. Exists so a precedence rule (and a human looking at the file) can tell a fresh manual choice from a stale one instead of guessing from `until` alone.",
+      "type": ["string", "null"],
+      "format": "date-time"
     }
   }
 }
