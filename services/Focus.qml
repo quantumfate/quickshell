@@ -220,16 +220,12 @@ Singleton {
         store.set({ moods: Object.assign({}, root.policyData, { [mode]: merged }) });
     }
 
-    // Whenever the ACTIVE mood changes, ask the scene manager to bring
-    // user-unit background work in line with the new policy (start what the
-    // new mood allows, stop what it refuses). Fire-and-forget and detached:
+    // Whenever the ACTIVE mood changes: the enforced seam (bin/,scene-apply.sh)
+    // brings user-unit background work in line with the new policy (start what
+    // the new mood allows, stop what it refuses). Fire-and-forget and detached:
     // the script reads focus.json itself and does the systemd work, so a
     // missing/failed script never blocks the shell. Runs at rest (neutral)
     // too, so leaving a mood hands the stopped units back.
-    Connections {
-        target: root
-        function onModeChanged() { root._applyScene(); }
-    }
     function _applyScene() {
         if (!root._hydrated) return;
         const mode = root.active ? root.mode : "neutral";
@@ -243,6 +239,29 @@ Singleton {
     function runSceneApply(mode) {
         sceneApply.command = [",scene-apply.sh", mode];
         sceneApply.running = true;
+    }
+
+    // The compositor's half of a mode change, driven the moment the pointer
+    // moves: the shell writes the pointer, then asks the compositor to
+    // converge on it through `hyprctl eval` — `hyprfocus.converge` applies the
+    // workspaces/bindings half and hands the services half to the CLI, without
+    // rewriting the pointer we just wrote. The watcher (the Lua side) is the
+    // cheap fallback that covers writers outside the shell; this trigger is
+    // what keeps mode entry synchronous with the mood centre rather than
+    // waiting for the desk's next event.
+    // Fails open: no hyprctl / wrong eval never blocks the pointer.
+    Process { id: converge; command: ["hyprctl", "eval", ""] }
+    function runConverge(mode) {
+        converge.command = ["hyprctl", "eval", 'require("hypr.hyprfocus.init").converge("' + mode + '")'];
+        converge.running = true;
+    }
+
+    Connections {
+        target: root
+        function onModeChanged() {
+            root._applyScene();
+            root.runConverge(root.active ? root.mode : "neutral");
+        }
     }
 
     // ipc: qs -c quantumfate ipc call focus <fn>
