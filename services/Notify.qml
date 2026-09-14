@@ -24,13 +24,16 @@ import Quickshell.Io
 import Quickshell.Services.Notifications
 import QtQuick
 import "."   // Store, Focus, Config
+import "NotifyRoute.js" as NotifyRoute
 
 Singleton {
     id: root
 
     // Live toasts: [{ id, serverId, appName, appIcon, summary, body, urgency,
-    //                 level, actions:[{id,text}], time, _n }]. `_n` is the live
-    // Notification handle (null for internal sends), used to invoke/dismiss.
+    //                 level, actions:[{id,text}], time, source, tier, _n }].
+    // `_n` is the live Notification handle (null for internal sends), used to
+    // invoke/dismiss. `source` is the resolved identity (NotifyRoute), kept
+    // because `appName` is the sender's own claim and cannot be routed on.
     property var items: []
     // Persisted history (metadata only — no `_n`), newest first, capped.
     property var history: []
@@ -89,9 +92,25 @@ Singleton {
             };
             // When the server/app closes it, drop our toast — and stop us from
             // later dereferencing the (now destroyed) Notification object.
+            // Identity, resolved through the chain rather than taken from
+            // `appName`: that field is self-reported free text, so two programs
+            // can claim one name and a script has none at all. Recorded now so
+            // the routes a mode will key on can be written from what actually
+            // arrives rather than guessed at.
+            root._identify(rec, n);
             n.closed.connect(() => root._drop(rec.id));
             root._ingest(rec);
         }
+    }
+
+    // The resolved source id, the tier it resolved at, and whether that tier
+    // is one the sender could choose freely. A sender that only resolves at the
+    // bottom is visible in history rather than mysterious.
+    function _identify(rec, n) {
+        const r = NotifyRoute.source({ appName: n.appName, desktopEntry: n.desktopEntry, hints: n.hints });
+        rec.source = r.id;
+        rec.tier = r.tier;
+        rec.trusted = r.trusted;
     }
 
     function _urgencyName(u) {
@@ -108,7 +127,8 @@ Singleton {
             summary: summary || "", body: body || "",
             urgency: level === "error" ? "critical" : "normal",
             level: level || "info", actions: [], transient: !!transient,
-            time: Date.now(), _n: null
+            time: Date.now(), _n: null,
+            source: "hyprfocus-shell", tier: NotifyRoute.TIER.HYPRFOCUS, trusted: true
         });
     }
 
