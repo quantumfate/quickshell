@@ -13,17 +13,7 @@
       "music",
       "ankama"
     ],
-    "bindings": [
-      "root",
-      "terminal",
-      "applications",
-      "project",
-      "configuration",
-      "layout",
-      "screencapture",
-      "shell",
-      "dofus"
-    ],
+    "bindings": ["dofus"],
     "services": [
       "theme-auto",
       "obsidian",
@@ -88,6 +78,9 @@
         "density": "comfortable",
         "motion_energy": "base",
         "bar_autohide": false
+      },
+      "bindings": {
+        "remove": ["dofus"]
       }
     },
     "deep": {
@@ -96,7 +89,7 @@
         "remove": ["gaming", "media", "music"]
       },
       "bindings": {
-        "remove": ["dofus", "screencapture"]
+        "remove": ["dofus"]
       },
       "notify": {
         "default": "queue"

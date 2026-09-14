@@ -47,7 +47,7 @@
           "uniqueItems": true
         },
         "bindings": {
-          "description": "Binding trees that are loaded. A tree a mode does not admit has its keybinds disabled, so which-key renders the enabled set by construction rather than by filtering.",
+          "description": "Binding trees UNDER MODE CONTROL \u2014 the ones a mode may withhold. A tree not named here is always available and no mode can remove it.\n\nThe default is deliberately 'available', because the two mistakes cost wildly different amounts. A tree missing from this list means a mode does not take away as much as it meant to. A tree wrongly removed means a desk with no terminal and no way back to another mode, which is a reboot. So a mode names what it takes, never what it keeps.\n\n`root` and the modes tree are refused whatever a declaration says: root carries the leader key, and the modes tree is the only way into another mode.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/id"

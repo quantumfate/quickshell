@@ -41,10 +41,23 @@ test("names what a mode explicitly removes", () => {
     const gone = withholds(shipped, "deep");
     assert.ok(gone.includes("gaming"), "a withdrawn workspace");
     assert.ok(gone.includes("dofus"), "a withheld binding tree");
+    // Named rather than implied: `remove` says the same as an empty `only`
+    // here, and only one of them can be reported back to the user.
 });
 
-test("reports nothing for the resting mode", () => {
-    assert.deepEqual(withholds(shipped, "neutral"), []);
+test("the resting mode still withholds the gaming tree", () => {
+    // Neutral is not "everything on". The Dofus submap is meaningful while a
+    // Dofus group is on screen and noise otherwise, which is the whole reason
+    // binding trees are conditional.
+    assert.deepEqual(withholds(shipped, "neutral"), ["dofus"]);
+});
+
+test("game is the mode that keeps the conditional trees", () => {
+    // It still withholds background work — keeping the Dofus binds and
+    // stopping the sync are the same mode saying two different things.
+    const gone = withholds(shipped, "game");
+    assert.ok(!gone.includes("dofus"), "game withheld the tree it exists to provide");
+    assert.ok(gone.includes("linear-sync"), "game should still stop the sync");
 });
 
 test("does not guess at what an exclusive set leaves out", () => {
