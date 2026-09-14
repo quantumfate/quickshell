@@ -105,6 +105,7 @@ Scope {
                     }
                     Workspaces { screen: bar.screen }
                     GroupChip {}
+                    DofusRoster { screen: bar.screen }
                     HyprLayout { visible: !bar.deepMode }
                 }
 
