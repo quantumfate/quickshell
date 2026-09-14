@@ -154,7 +154,9 @@ Scope {
 
     PanelWindow {
         id: win
-        visible: scope.shown
+        // Visible through the `teamSelector` IPC (binds) or the gaming group
+        // widget's menu (LEO-244) — same surface either way.
+        visible: scope.shown || PanelBus.teamSelectorOpen
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
         exclusiveZone: 0

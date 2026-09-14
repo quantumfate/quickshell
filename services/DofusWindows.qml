@@ -107,6 +107,14 @@ Singleton {
                 selector: "address:" + address,
                 focused: !!w?.activated,
                 grouped: ipc?.grouped ?? ([]),
+                // Geometry and placement, straight off `hyprctl clients`
+                // (at/size are [x,y] arrays there). These feed the group widget's
+                // position above the tile — never stored outside this rebuild.
+                at: { x: ipc?.at?.[0] ?? 0, y: ipc?.at?.[1] ?? 0 },
+                size: { x: ipc?.size?.[0] ?? 0, y: ipc?.size?.[1] ?? 0 },
+                workspaceId: ipc?.workspace?.id ?? -1,
+                workspaceName: ipc?.workspace?.name ?? "",
+                monitor: ipc?.monitor ?? "",
             };
         }
         return byAddr;
@@ -117,6 +125,26 @@ Singleton {
     // Focus a window by its selector ("address:0x…") and raise it — the Active
     // Windows zone's primary gesture.
     function focus(selector) { if (selector) Hypr.focus(selector); }
+
+    // Step the group's active tab one place (hl.dsp.group.next/prev — the
+    // compositor primitives LEO-230 established; no iteration is stored here).
+    // Group dispatches act on the FOCUSED window, so a group where focus has
+    // drifted elsewhere is re-seeded on its first member before stepping.
+    function iterate(reversed) {
+        const members = root.windows || [];
+        if (members.length === 0) return;
+        if (!(members.some(w => w.focused)))
+            root.focus(members[0].selector);
+        Hyprland.dispatch(reversed ? "hl.dsp.group.prev()" : "hl.dsp.group.next()");
+    }
+
+    // Close every member — the group is the session, so closing the group is
+    // closing each live client. Selector-guarded; a member that already left
+    // between the model build and its dispatch just no-ops.
+    function closeAll() {
+        for (const w of (root.windows || []))
+            if (w.selector) Hypr.close(w.selector);
+    }
 
     // Assign a character name to a live window: retitle it (prefix + name). If
     // the name is a team member, the window joins that character the moment any

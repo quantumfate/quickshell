@@ -17,6 +17,11 @@ Item {
     property string open: ""
     property string anchorScreen: ""
     property real anchorX: 0
+    // The Dofus editors (LEO-244): the gaming group widget opens these the same
+    // in-process way the bar's panels open — no new IPC surface on top of the
+    // one `teamSelector`/`classAssigner` already carry for binds.
+    property bool teamSelectorOpen: false
+    property bool classAssignerOpen: false
 
     function toggle(name, screen, x) {
         root.anchorScreen = screen;
