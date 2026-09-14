@@ -349,19 +349,6 @@ Scope {
                             }
                         }
 
-                        // ,theme.sh does not touch Obsidian or Linear at all —
-                        // no entry for either ever appears in applied/pending/
-                        // failed. Saying nothing would read as "themed"; this
-                        // says what is actually true instead of inventing an
-                        // adapter entry for surfaces the adapter never reaches.
-                        Text {
-                            Layout.fillWidth: true
-                            wrapMode: Text.Wrap
-                            text: "Not wired to the theme adapter yet — restart required after a manual retheme: Obsidian, Linear"
-                            color: Theme.subtextAlt
-                            font.pixelSize: Theme.fs.xs
-                        }
-
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: Theme.space.sm
