@@ -114,7 +114,7 @@ Singleton {
                 size: { x: ipc?.size?.[0] ?? 0, y: ipc?.size?.[1] ?? 0 },
                 workspaceId: ipc?.workspace?.id ?? -1,
                 workspaceName: ipc?.workspace?.name ?? "",
-                monitor: ipc?.monitor ?? "",
+                monitorId: ipc?.monitor ?? -1,
             };
         }
         return byAddr;

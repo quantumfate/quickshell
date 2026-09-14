@@ -41,10 +41,11 @@ Scope {
     readonly property var _anchor:
         scope._live.find(w => w.focused ?? false) ?? (scope._live.length > 0 ? scope._live[0] : null)
 
-    // The compositor monitor the tile lives on (by the name `hyprctl clients`
-    // reports), for output-relative geometry math and screen selection.
+    // The compositor monitor the tile lives on. `hyprctl clients` reports
+    // `monitor` as the monitor's numeric id, so monitors match by id — a name
+    // match never resolves and the widget would never appear.
     readonly property var _mon: scope._anchor
-        ? (Hyprland.monitors?.values ?? []).find(m => m.name === scope._anchor.monitor) ?? null
+        ? (Hyprland.monitors?.values ?? []).find(m => m.id === scope._anchor.monitorId) ?? null
         : null
 
     // Up only while the group's workspace is the monitor's ACTIVE one. A
