@@ -130,7 +130,7 @@ Scope {
                     // The mood pill stays even in autohide/deep mode: it
                     // carries the countdown until the mood ends, which is the
                     // one thing you want while the rest of the bar drops away.
-                    MoodPill { screenName: bar.screen.name }
+                    ModePill { screenName: bar.screen.name }
                     CalendarPill { screenName: bar.screen.name; visible: !bar.deepMode }
                 }
             }
