@@ -5,6 +5,11 @@ pragma Singleton
 // per track. Talks to mpv over its JSON IPC socket (--input-ipc-server); a
 // python3 one-liner is the client (already a build dependency here — see
 // dofus_swap.py — so this adds none) rather than a Process per keystroke.
+//
+// Deliberately not mode-gated: rain while working is the point of ambience,
+// and a second gate channel would have to ride the contract's task map
+// (LEO-252/271) rather than grow here. Ambient audio is something the user
+// starts and stops, not something the desk polices.
 import Quickshell
 import Quickshell.Io
 import QtQuick
@@ -16,7 +21,14 @@ Singleton {
     Store {
         id: store
         name: "sound"
-        defaults: ({ mode: "off", track: null, volume: 0.5 })
+        defaults: ({
+            mode: "off", track: null, volume: 0.5,
+            // The pools are declared data, edited like everything else in the
+            // store — "$HOME/..." is resolved below, because JSON cannot
+            // expand environment. The keys must be the schema's mode enum
+            // minus "off"; sound.test.js pins that lockstep.
+            pools: { rain: "$HOME/Music/ambient/rain", lofi: "$HOME/Music/ambient/lofi" },
+        })
     }
 
     readonly property string mode: store.get("mode") ?? "off"
@@ -24,10 +36,13 @@ Singleton {
     readonly property real volume: store.get("volume") ?? 0.5
 
     readonly property string socketPath: Config.stateDir + "/sound.mpv.sock"
-    readonly property var dirs: ({
-        rain: Quickshell.env("HOME") + "/Music/ambient/rain",
-        lofi: Quickshell.env("HOME") + "/Music/ambient/lofi",
-    })
+    readonly property var dirs: {
+        const pools = store.get("pools") ?? {};
+        const home = Quickshell.env("HOME");
+        const out = {};
+        for (const kind in pools) out[kind] = pools[kind].replace("$HOME", home);
+        return out;
+    }
 
     // ---- mpv lifecycle --------------------------------------------------
     //
@@ -48,8 +63,13 @@ Singleton {
 
     Process { id: spawner }
     function _spawn() {
+        // `--loop-file=inf` is the player loop: ambient audio is written to
+        // sound continuous, and a track ending into mpv's idle would read as
+        // a broken player rather than a finished track. Moving between tracks
+        // stays manual (`sound next`) — a playlist that can't be stopped is
+        // not ambience.
         spawner.command = ["bash", "-lc",
-            "rm -f '" + root.socketPath + "'; setsid mpv --idle --no-video --no-terminal " +
+            "rm -f '" + root.socketPath + "'; setsid mpv --idle --no-video --no-terminal --loop-file=inf " +
             "--input-ipc-server='" + root.socketPath + "' --volume=" + Math.round(root.volume * 100) +
             " >/dev/null 2>&1 </dev/null &"];
         spawner.running = true;

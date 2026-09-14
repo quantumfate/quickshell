@@ -1,5 +1,9 @@
 {
   "mode": "off",
   "track": null,
-  "volume": 0.5
+  "volume": 0.5,
+  "pools": {
+    "rain": "$HOME/Music/ambient/rain",
+    "lofi": "$HOME/Music/ambient/lofi"
+  }
 }

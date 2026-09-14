@@ -20,6 +20,10 @@ function validate(doc) {
     if (!schema.properties.mode.enum.includes(doc.mode)) errors.push(`mode "${doc.mode}" not allowed`);
     if (doc.track !== null && typeof doc.track !== "string") errors.push("track is neither string nor null");
     if (typeof doc.volume !== "number" || doc.volume < 0 || doc.volume > 1) errors.push("volume out of range");
+    if (doc.pools === undefined) errors.push("pools missing");
+    else for (const kind of Object.keys(doc.pools ?? {}))
+        if (!schema.properties.pools.additionalProperties.pattern.startsWith("^\\$HOME/") || !doc.pools[kind].startsWith("$HOME/"))
+            errors.push(`pool "${kind}" is not a resolved-by-Sound "$HOME/..." path`);
     return errors;
 }
 
@@ -40,13 +44,30 @@ test("the schema rejects an out-of-range volume", () => {
     assert.ok(validate({ ...defaults, volume: 1.5 }).length);
 });
 
-test("every mode the schema allows has a playlist directory in Sound.qml", () => {
-    const m = src.match(/readonly property var dirs:\s*\(\{([\s\S]*?)\}\)/);
-    assert.ok(m, "dirs property not found in Sound.qml");
-    for (const mode of schema.properties.mode.enum) {
-        if (mode === "off") continue;
-        assert.ok(m[1].includes(mode + ":"), `schema allows mode "${mode}", Sound.qml has no dirs entry for it`);
+test("every mode the schema allows has a declared pool, and nothing else does", () => {
+    // The pool keys are declared data (asset + QML store default, in
+    // lockstep); Sound.qml resolves "$HOME/..." at runtime, so the shipped
+    // asset is what names the directories.
+    const pools = defaults.pools ?? {};
+    const kinds = schema.properties.mode.enum.filter(m => m !== "off");
+    assert.deepEqual(Object.keys(pools).sort(), [...kinds].sort());
+    const literal = src.match(/pools:\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+    for (const kind of kinds) {
+        assert.ok(literal.includes(`${kind}: "${"$"}HOME`), `Sound.qml's defaults literal has no pool for ${kind}`);
+        assert.ok(pools[kind].startsWith("$HOME"), `pool ${kind} must be a "$HOME/..." path`);
     }
+});
+
+test("mpv loops the loaded file — a track ending into idle is a broken player, not ambience", () => {
+    const spawnCmd = src.match(/spawner\.command = \[[\s\S]*?\];/)?.[0] ?? "";
+    assert.ok(spawnCmd.includes("--loop-file=inf"), "the player loop is not declared at spawn");
+});
+
+test("each pool directory has a runtime check path", () => {
+    // _browse resolves dirs[kind]; a kind the schema allows but no pool
+    // names would silently send mpv nothing.
+    const browse = src.match(/function _browse\(kind, wantedTrack\) \{([\s\S]*?)\n    \}/)?.[1] ?? "";
+    assert.ok(browse.includes("if (!dir) return"), "_browse does not guard against a missing pool");
 });
 
 test("every public transport function goes through _ensureAlive before touching mpv", () => {
