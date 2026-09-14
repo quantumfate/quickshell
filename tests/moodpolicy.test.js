@@ -84,8 +84,9 @@ test("every mood record is a valid record against the schema", () => {
             `mood "${mode}" lists a launch category twice`);
         assert.ok(["all", "critical-only", "none"].includes(mood.notifications.policy),
             `mood "${mode}" notification policy "${mood.notifications.policy}"`);
-        assert.ok(["allow", "deny"].includes(mood.background.policy),
-            `mood "${mode}" background policy "${mood.background.policy}"`);
+        // LEO-252 retired policy/allow: the background section is defer/prevent lists.
+        assert.deepEqual(Object.keys(mood.background).sort(), ["defer", "prevent"],
+            `mood "${mode}" background "${JSON.stringify(mood.background)}"`);
         for (const [scene, state] of Object.entries(mood.scenes)) {
             assert.ok(["reachable", "blocked", "limited"].includes(state),
                 `mood "${mode}" scene "${scene}" has unknown state "${state}"`);
@@ -138,10 +139,12 @@ test("launch policy reproduces Focus.canLaunch exactly", () => {
 test("background defaults change nothing until configured", () => {
     for (const mode of moodEnum) {
         const bg = moods[mode].background;
-        assert.equal(bg.policy, "allow", `${mode} restricts background work by default`);
-        assert.ok(bg.allow.includes("*"), `${mode} does not allow everything`);
         assert.deepEqual(bg.defer, [], `${mode} defers something by default`);
         assert.deepEqual(bg.prevent, [], `${mode} prevents something by default`);
+        // Anything not listed runs: the wildcard/policy vocabulary is gone.
+        for (const key of ["policy", "allow"]) {
+            assert.ok(!(key in bg), `${mode} carries the retired background "${key}" shape`);
+        }
     }
 });
 
@@ -179,12 +182,11 @@ test("sceneState resolves absent = reachable and only 'blocked' takes a scene aw
     }
 });
 
-test("backgroundTaskLevel is one resolver: prevent beats defer beats allow, wildcard covers the rest", () => {
+test("backgroundTaskLevel is one resolver: prevent beats defer, not-listed runs", () => {
     const fn = fnBody("backgroundTaskLevel");
     assert.match(fn, /if \(!root\.active\) return "allow";/, "the resting mood must allow all background work");
     assert.match(fn, /prevent\.indexOf\(task\) >= 0/, "prevent must be checked before defer");
-    assert.match(fn, /defer\.indexOf\(task\) >= 0/, "defer must be checked before allow");
-    assert.match(fn, /allow\.indexOf\("\*"\) >= 0/, "a wildcard allow must cover unlisted tasks");
+    assert.match(fn, /defer\.indexOf\(task\) >= 0/, "defer must be checked before the unset fallthrough");
     // The default policy gates nothing and restricts nothing per mood.
     for (const mode of moodEnum) {
         assert.deepEqual(moods[mode].background.defer, [], `${mode} defers something by default`);

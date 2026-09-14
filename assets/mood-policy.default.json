@@ -20,10 +20,6 @@
         "override": false
       },
       "background": {
-        "policy": "allow",
-        "allow": [
-          "*"
-        ],
         "defer": [],
         "prevent": []
       },
@@ -52,10 +48,6 @@
         "override": true
       },
       "background": {
-        "policy": "allow",
-        "allow": [
-          "*"
-        ],
         "defer": [],
         "prevent": []
       },
@@ -87,10 +79,6 @@
         "override": true
       },
       "background": {
-        "policy": "allow",
-        "allow": [
-          "*"
-        ],
         "defer": [],
         "prevent": []
       },
@@ -119,10 +107,6 @@
         "override": true
       },
       "background": {
-        "policy": "allow",
-        "allow": [
-          "*"
-        ],
         "defer": [],
         "prevent": []
       },

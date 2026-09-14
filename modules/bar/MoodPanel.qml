@@ -61,19 +61,19 @@ Scope {
     // a wildcard allow covers everything not listed.
     function taskLevel(task) { return Focus.backgroundTaskLevel(task); }
 
-    // Cycle a task through unset -> allow -> defer -> prevent -> unset. The
-    // wildcard is left untouched so customising one task never flips the rest.
+    // Cycle a task through unset -> defer -> prevent -> unset (LEO-252
+    // retired the wildcard shape: not-listed IS allowed, so an explicit
+    // "allow" state never carried information and the cycle shrinks to what
+    // actually changes behavior).
     function cycleTask(task) {
-        const seq = ["unset", "allow", "defer", "prevent"];
+        const seq = ["unset", "defer", "prevent"];
         const from = scope.taskLevel(task);
         const next = seq[(seq.indexOf(from) + 1) % seq.length];
-        const allow = (scope.bg.allow || []).filter(t => t !== task);
         const defer = (scope.bg.defer || []).filter(t => t !== task);
         const prevent = (scope.bg.prevent || []).filter(t => t !== task);
-        if (next === "allow") allow.push(task);
-        else if (next === "defer") defer.push(task);
+        if (next === "defer") defer.push(task);
         else if (next === "prevent") prevent.push(task);
-        scope.patch({ background: Object.assign({}, scope.bg, { allow: allow, defer: defer, prevent: prevent }) });
+        scope.patch({ background: Object.assign({}, scope.bg, { defer: defer, prevent: prevent }) });
     }
 
     function sceneSummary() {
@@ -333,15 +333,9 @@ Scope {
                         // -- background: user-unit work the desk runs.
                         SectionTag { title: "background" }
 
-                        FieldRow {
-                            label: "gate"
-                            options: ["allow", "deny"]
-                            value: scope.bg.policy || "allow"
-                            onPick: (v) => scope.patch({ background: Object.assign({}, scope.bg, { policy: v }) })
-                        }
                         Text {
                             Layout.fillWidth: true
-                            text: "click a task to cycle allow → defer → prevent → unset (⊗ default = allow all)"
+                            text: "click a task to cycle unset → defer → prevent (nothing listed runs freely)"
                             color: Theme.subtextAlt
                             font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
@@ -380,22 +374,19 @@ Scope {
                                             implicitWidth: lvlText.implicitWidth + Theme.space.sm * 2
                                             implicitHeight: lvlText.implicitHeight + Theme.space.xs
                                             radius: Theme.radiusSmall
-                                            color: trow.lvl === "prevent" || trow.lvl === "blocked" ? Theme.withAlpha(Theme.error, 0.18)
+                                            color: trow.lvl === "prevent" ? Theme.withAlpha(Theme.error, 0.18)
                                                 : trow.lvl === "defer" ? Theme.withAlpha(Theme.warning, 0.18)
-                                                : trow.lvl === "allow" ? Theme.withAlpha(Theme.success, 0.18)
-                                                : Theme.withAlpha(Theme.overlay, 0.18)
-                                            border { width: 1; color: trow.lvl === "prevent" || trow.lvl === "blocked" ? Theme.error
+                                                : Theme.withAlpha(Theme.success, 0.18)
+                                            border { width: 1; color: trow.lvl === "prevent" ? Theme.error
                                                 : trow.lvl === "defer" ? Theme.warning
-                                                : trow.lvl === "allow" ? Theme.success
-                                                : Theme.overlay }
+                                                : Theme.success }
                                             Text {
                                                 id: lvlText
                                                 anchors.centerIn: parent
-                                                text: trow.lvl
-                                                color: trow.lvl === "prevent" || trow.lvl === "blocked" ? Theme.error
+                                                text: trow.lvl === "unset" ? "allow" : trow.lvl
+                                                color: trow.lvl === "prevent" ? Theme.error
                                                     : trow.lvl === "defer" ? Theme.warning
-                                                    : trow.lvl === "allow" ? Theme.success
-                                                    : Theme.subtext
+                                                    : Theme.success
                                                 font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Font.DemiBold }
                                             }
                                             MouseArea {

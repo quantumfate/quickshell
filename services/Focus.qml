@@ -75,7 +75,7 @@ Singleton {
                 density: "comfortable", motion_energy: "base", bar_autohide: false,
                 notifications: { policy: "all", position: "top-right", timeout: 6000, queue: false, digest_on_exit: false },
                 launches: { aggression: "soft", block: [], override: false },
-                background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
+                background: { defer: [], prevent: [] },
                 scenes: {}
             },
             work: {
@@ -83,7 +83,7 @@ Singleton {
                 density: "compact", motion_energy: "instant", bar_autohide: true,
                 notifications: { policy: "critical-only", position: "top-right", timeout: 0, queue: true, digest_on_exit: true },
                 launches: { aggression: "firm", block: ["media", "game"], override: true },
-                background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
+                background: { defer: [], prevent: [] },
                 scenes: { gaming: "blocked", media: "blocked" }
             },
             study: {
@@ -91,7 +91,7 @@ Singleton {
                 density: "compact", motion_energy: "instant", bar_autohide: true,
                 notifications: { policy: "critical-only", position: "top-right", timeout: 0, queue: true, digest_on_exit: true },
                 launches: { aggression: "firm", block: ["media", "game"], override: true },
-                background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
+                background: { defer: [], prevent: [] },
                 scenes: { gaming: "blocked", media: "blocked" }
             },
             gaming: {
@@ -99,7 +99,7 @@ Singleton {
                 density: "compact", motion_energy: "instant", bar_autohide: false,
                 notifications: { policy: "none", position: "top-right", timeout: 0, queue: true, digest_on_exit: false },
                 launches: { aggression: "firm", block: [], override: true },
-                background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
+                background: { defer: [], prevent: [] },
                 scenes: { gaming: "reachable" }
             }
         }
@@ -181,21 +181,18 @@ Singleton {
         return root.current.scenes ? (root.current.scenes[scene] || "reachable") : "reachable";
     }
 
-    // A background task's effective level for the active mood — the
-    // single definitional resolver (MoodPanel and ,scene-apply.sh agree
-    // by both reading this). Absent = allow; wildcard covers everything
-    // not individually listed; a "deny" gate blocks unlisted tasks.
+    // A background task's effective level for the active mood — the single
+    // definitional resolver (MoodPanel and ,scene-apply.sh agree by both
+    // reading this). The background section carries defer/prevent lists only
+    // (LEO-252 retired the wildcard policy shape): anything not listed runs.
     function backgroundTaskLevel(task) {
         if (!root.active) return "allow";
         const bg = root.current.background || {};
-        const allow = bg.allow || [];
         const defer = bg.defer || [];
         const prevent = bg.prevent || [];
         if (prevent.indexOf(task) >= 0) return "prevent";
         if (defer.indexOf(task) >= 0) return "defer";
-        if (allow.indexOf("*") >= 0 || allow.indexOf(task) >= 0)
-            return bg.policy === "deny" ? "blocked" : "allow";
-        return bg.policy === "deny" ? "blocked" : "unset";
+        return "unset";
     }
 
     // Enter a mood. `minutes` <= 0 (or omitted) means open-ended (only
