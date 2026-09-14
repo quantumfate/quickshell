@@ -90,6 +90,12 @@ Scope {
             scope.close();
         }
     }
+    // The tree document is also runtime truth: a mode that withholds the
+    // submap the menu is on removes its node from the dump, and the menu must
+    // go with it — a mode change does not fire a submap event by itself, so
+    // this is what keeps the overlay from surviving into a mode where its
+    // submap no longer exists (LEO-303).
+    onNodeChanged: if (!scope.node) scope.close()
 
     PanelWindow {
         visible: scope.shown
