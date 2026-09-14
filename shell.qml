@@ -8,6 +8,7 @@ import "modules/bar"
 import "modules/dofus"
 import "modules/obsidian"
 import "modules/control"
+import "modules/whichkey"
 
 ShellRoot {
     // `qs -c quantumfate ipc call help all` — annotated IPC overview.
@@ -47,6 +48,11 @@ ShellRoot {
     // Passive peek variant: non-focus, non-dimming contextual panel driven by
     // the Hyprland submap event system (hypr/events/peek.lua).
     CheatSheetPeek {}
+
+    // Which-key overlay (LEO-222): the SUPER-Space leader's tree renderer. It
+    // mirrors the submap stack automatically, so no binding action ever needs
+    // to open it — the Lua side only ever tells it to dismiss.
+    WhichKey {}
 
     // Keyboard-first workspace switcher: type to filter, enter to go, shift+enter
     // to bring the focused window along. Toggled via IPC.
