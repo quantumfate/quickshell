@@ -12,11 +12,13 @@
       "members": [
         {
           "match": { "class": "Proj-[A-Za-z0-9_-]+" },
+          "group": true,
           "props": { "group": "set always" },
           "bindings": ["code"]
         },
         {
           "match": { "class": "Kitty-Main" },
+          "group": true,
           "props": { "group": "set always" }
         },
         {
@@ -39,6 +41,7 @@
       "members": [
         {
           "match": { "initial_class": "Dofus.x64" },
+          "group": true,
           "props": {
             "workspace": "name:gaming",
             "group": "set always",
@@ -61,6 +64,10 @@
         {
           "match": { "class": "net.lutris.Lutris" },
           "props": { "size": ["monitor_w * 0.35", "monitor_h * 0.8"] }
+        },
+        {
+          "match": { "class": "zen-gaming-media" },
+          "props": { "group": "barred" }
         }
       ]
     },

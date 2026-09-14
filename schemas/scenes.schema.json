@@ -95,6 +95,14 @@
           "type": "array",
           "description": "Per-member binding-context tags, for matches that own their binds (the Dofus surface tags its keys `gaming` in CheatParse.js).",
           "items": { "type": "string" }
+        },
+        "group": {
+          "type": "boolean",
+          "description": "true = class-pure Hyprland group for this match set (fold in, eject others). Do not use lock."
+        },
+        "spawn": {
+          "type": "string",
+          "description": "Companion app key or class to open when first match maps; close when last leaves."
         }
       }
     },

@@ -77,7 +77,7 @@ test("member records match the windowrule predicate shape", () => {
             assert.ok(member.match && Object.keys(member.match).length > 0,
                 `scene "${name}" member ${i} has an empty match`);
             assert.deepEqual(
-                Object.keys(member).filter(k => !["match", "props", "bindings"].includes(k)), [],
+                Object.keys(member).filter(k => !["match", "props", "bindings", "group", "spawn"].includes(k)), [],
                 `scene "${name}" member ${i} has unknown keys`
             );
             if ("props" in member) {
