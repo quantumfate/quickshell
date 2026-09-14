@@ -66,3 +66,21 @@ function narrows(declaration, id) {
     }
     return false;
 }
+
+/**
+ * Notification routing for a mode: the base's rules with the mode's merged on
+ * top, keyed by resolved source id.
+ *
+ * This is a merge, not a resolution — one shallow layer over another, with no
+ * delta grammar and nothing to close transitively. That is why it can live
+ * here without becoming a third answer to what a mode means.
+ */
+function routes(declaration, id) {
+    var base = (declaration && declaration.base && declaration.base.notify) || {};
+    var spec = _modes(declaration)[id];
+    var over = (spec && spec.notify) || {};
+    var out = {};
+    for (var key in base) out[key] = base[key];
+    for (var key2 in over) out[key2] = over[key2];
+    return out;
+}

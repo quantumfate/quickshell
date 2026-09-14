@@ -5,7 +5,7 @@
 // reflected by the running shell immediately — Notify's suppression reads
 // Focus.notifications.policy, Theme's accent/surfaceAlpha read the same store,
 // and the Hyprland event manager and launcher scripts read the identical file.
-// Opened from MoodPill via PanelBus, same single-window pattern as CalendarPanel.
+// Opened from ModePill via PanelBus, same single-window pattern as CalendarPanel.
 pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Wayland

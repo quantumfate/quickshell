@@ -23,7 +23,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 import QtQuick
-import "."   // Store, Focus, Config
+import "."   // Store, Focus, Hyprfocus, Config
 import "NotifyRoute.js" as NotifyRoute
 
 Singleton {
@@ -144,7 +144,10 @@ Singleton {
             // on exit (queue + digest_on_exit are the mood's own flags — see
             // Focus.notifications). The buffer is runtime-only, deliberately:
             // history already logged the suppressed records in full.
-            if (route && Focus.notifications.queue) {
+            // Buffered for the digest when the mood asks for one, and also
+            // when a rule said `queue` outright — a verdict that names
+            // queueing should queue whatever the mood happens to want.
+            if (route && (Focus.notifications.queue || route === "mode:queue")) {
                 root._queued = root._queued.concat([meta]);
                 root._queueMood = Focus.mode;
             }
@@ -166,8 +169,45 @@ Singleton {
     // critical still breaks through), or "mood" (the active mood's policy —
     // critical does NOT break a strict mood). The reason is recorded as each
     // history entry's `route`; only "shown" ever toasted.
+    //
+    // A declared rule for this notification's resolved source wins over the
+    // mood's blanket policy, because it is the more specific statement: "queue
+    // the sync results" should hold whether or not the mood silences
+    // everything else. Only an EXPLICIT source rule applies — the declaration's
+    // `default` is deliberately not consulted yet, so a desk with no
+    // declaration, or one carrying only a default, behaves exactly as before.
+    // The blanket policy moves across when the mode surface replaces the mood
+    // panel that still owns it.
+    // The verdict a declaration gives this notification's resolved source, or
+    // "" when it declares none. Only an EXPLICIT source rule counts: the
+    // declaration's `default` is deliberately not consulted yet, so a desk
+    // with no declaration — or one carrying only a default — behaves exactly
+    // as it did before. The blanket policy moves across when the mode surface
+    // replaces the mood panel that still owns it.
+    function _verdict(rec) {
+        const rules = Hyprfocus.routes;
+        if (!rules || !rec.source) return "";
+        const verdict = rules[rec.source] || "";
+        if (!verdict) return "";
+        // Critical escalates out of silence unless the rule says otherwise. A
+        // mode that hides "battery at 2%" is not reducing distraction, it is
+        // withholding something that was needed.
+        if (rec.urgency === "critical" && verdict !== "show" && !rules.allowCriticalSuppression) {
+            return "show";
+        }
+        return verdict;
+    }
+
     function _route(rec) {
         if (root.dnd && rec.urgency !== "critical") return "dnd";
+
+        // A declared rule for this source wins over the mood's blanket policy,
+        // because it is the more specific statement: "queue the sync results"
+        // should hold whether or not the mood silences everything else, and an
+        // explicit "show" should break through a mood that does.
+        const verdict = root._verdict(rec);
+        if (verdict) return verdict === "show" ? "" : "mode:" + verdict;
+
         const policy = Focus.notifications.policy;
         if (policy === "critical-only") return rec.urgency === "critical" ? "" : "mood";
         return policy === "none" ? "mood" : "";

@@ -58,3 +58,25 @@ test("does not guess at what an exclusive set leaves out", () => {
 test("a mode using only removals is reported in full", () => {
     assert.equal(narrows(shipped, "deep"), false);
 });
+
+test("merges a mode's notification routes over the base's", () => {
+    const { routes } = loadLibrary("services/HyprfocusRead.js");
+    const game = routes(shipped, "game");
+    assert.equal(game.default, "drop", "the mode's fallback wins");
+});
+
+test("keeps a base rule the mode does not mention", () => {
+    const { routes } = loadLibrary("services/HyprfocusRead.js");
+    const declaration = {
+        base: { notify: { default: "show", "linear-sync": "queue" } },
+        modes: { game: { name: "Game", notify: { default: "drop" } } }
+    };
+    assert.deepEqual(routes(declaration, "game"), { default: "drop", "linear-sync": "queue" });
+});
+
+test("reports no routing rather than a guess when nothing is declared", () => {
+    // An empty table reads as "nothing declared"; inventing a default here
+    // would silence notifications the moment the store went missing.
+    const { routes } = loadLibrary("services/HyprfocusRead.js");
+    assert.deepEqual(routes(undefined, "game"), {});
+});

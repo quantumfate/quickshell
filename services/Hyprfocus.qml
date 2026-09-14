@@ -76,4 +76,9 @@ Singleton {
 
     /** Whether `withholds` is telling less than the whole story for this mode. */
     function narrows(id) { return Read.narrows(declaration.data, id); }
+
+    // Notification routing for the active mode: the base's rules with this
+    // mode's merged over them. Empty until a declaration is seeded, which the
+    // daemon reads as "no routing declared" rather than as "drop everything".
+    readonly property var routes: root.modes ? Read.routes(declaration.data, root.mode) : ({})
 }

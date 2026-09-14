@@ -150,7 +150,7 @@ Scope {
                     Tray {}
                     Item { Layout.fillWidth: true }
                     Submap {}
-                    MoodPill { screenName: SysMon.activeScreen }
+                    ModePill { screenName: SysMon.activeScreen }
                     ProjectsPill { screenName: SysMon.activeScreen }
                     NotifIndicator { screenName: SysMon.activeScreen }
                     Battery { screenName: SysMon.activeScreen }
