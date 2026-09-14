@@ -7,8 +7,8 @@
 // geometry fixed so replacing the list never moves the cursor's target.
 //
 // The tree itself comes from hypr/lib/whichkey.lua, which records every
-// submap.tree node at config load and dumps it to $XDG_STATE_HOME/whichkey.json
-// (same data plane as hypr/lib/store.lua). The FileView below watches the file,
+// submap.tree node at config load and dumps it to $QF_STORE/whichkey.json, the
+// same data plane as hypr/lib/store.lua. The FileView below watches the file,
 // so a reload lands a fresh tree without restarting the shell.
 //
 // Show:    qs -c quantumfate ipc call whichkey show

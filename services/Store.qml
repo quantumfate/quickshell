@@ -7,9 +7,12 @@
 //   store.set({ selected: "duo" })   // shallow-merge patch + persist
 //   store.put(obj)                   // replace whole document + persist
 //
-// The file (in $XDG_STATE_HOME/<name>.json) is the single source of truth.
+// The file (in $QF_STORE/<name>.json) is the single source of truth.
 // watchChanges makes external writes (Lua config, scripts) reload reactively;
 // our writes bump the file so the Lua side picks them up on next access.
+// A store not yet under the store directory is adopted from the legacy
+// location on first load, so moving the collection needs no tooling — the
+// first save relocates it.
 import Quickshell
 import Quickshell.Io
 import QtQuick
@@ -20,6 +23,7 @@ Item {
 
     required property string name
     readonly property string path: Config.stateDir + "/" + name + ".json"
+    readonly property string legacyPath: Config.legacyStateDir + "/" + name + ".json"
 
     // Seed written on first run when the file is missing or empty, so a fresh
     // checkout/machine works with no manual provisioning. Leave {} for none.
@@ -70,10 +74,25 @@ Item {
                 console.warn("Store(" + root.name + "): bad JSON", e);
             }
         }
-        // Missing file: seed defaults (which creates it), else just warn.
+        // Missing file: adopt the legacy location if it still holds the
+        // document (writing it forward relocates it), else seed defaults.
         onLoadFailed: (err) => {
+            const legacyRaw = (legacy.text() || "").trim();
+            if (legacyRaw !== "" && legacyRaw !== "{}") {
+                try {
+                    root.put(JSON.parse(legacyRaw));
+                    return;
+                } catch (e) {
+                    console.warn("Store(" + root.name + "): legacy JSON unreadable", e);
+                }
+            }
             if (root._hasDefaults()) root.put(root.defaults);
             else console.warn("Store(" + root.name + "): load failed", err);
         }
+    }
+
+    FileView {
+        id: legacy
+        path: root.legacyPath
     }
 }

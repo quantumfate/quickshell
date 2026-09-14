@@ -132,7 +132,9 @@ Singleton {
     Process { id: starter }
     function run() {
         if (root.detectorRunning) return;
-        const log = (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/dofus_swap.log";
+        // The shared quantum-store directory (QF_STORE): the swap log lives
+        // with the rest of the desk's state.
+        const log = (Quickshell.env("QF_STORE") || (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/quantum-store") + "/dofus_swap.log";
         starter.command = ["bash", "-lc", "setsid dofus_swap.py run >> '" + log + "' 2>&1 </dev/null &"];
         starter.running = true;
     }

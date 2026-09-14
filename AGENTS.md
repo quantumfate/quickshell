@@ -32,7 +32,9 @@ New to the repo, read in this order — each layer points at the next:
 ## The two languages
 
 - State → a `Store` (`services/Store.qml`): reactive wrapper over
-  `$XDG_STATE_HOME/<name>.json`, atomic writes, `watchChanges` reloads. The
+  `$QF_STORE/<name>.json` — the shared quantum-store directory, named by the
+  `QF_STORE` env and seeded/migrated by a legacy read-back — atomic writes,
+  `watchChanges` reloads. The
   Lua side mirrors it in hypr's `hypr/lib/store.lua` — same file, either side
   edits, both converge.
 - Commands → IPC (`IpcHandler`); `qs -c quantumfate ipc call help all` for the

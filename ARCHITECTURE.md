@@ -16,7 +16,7 @@ Agent entry points: hypr and system-config `AGENTS.md`, this repo's
 
 ## the Store
 
-The `Store` is a reactive wrapper over `$XDG_STATE_HOME/<name>.json`, the single
+The `Store` is a reactive wrapper over a JSON file under `$QF_STORE` (the shared quantum-store directory; default `$XDG_STATE_HOME/quantum-store`), the single
 source of truth shared by both runtimes.
 
 | direction                           | mechanism                                                         |

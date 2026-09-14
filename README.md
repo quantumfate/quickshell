@@ -25,13 +25,13 @@ ln -s path/to/quickshell ~/.config/quickshell/quantumfate
 ## Shared state — the Store
 
 A `Store` is a reactive wrapper around a JSON file in
-`$XDG_STATE_HOME/<name>.json` that is the single source of truth for a piece of
+`$QF_STORE/<name>.json` — the shared quantum-store directory (every runtime's state in one place) — that is the single source of truth for a piece of
 shared state — the **general mechanism** every singleton uses to persist and
 stay live, on the Quickshell side and mirrored on the Lua side.
 
 ```qml
 Store {
-    name: "theme"                    // -> $XDG_STATE_HOME/theme.json
+    name: "theme"                    // -> $QF_STORE/theme.json
     defaults: ({ palette: "macchiato" })
     // data  — parsed object, reactive
     // get(...keys)  — drill into nested keys

@@ -12,7 +12,8 @@
 # else fall back to the file directly.
 set -euo pipefail
 
-FILE="${XDG_STATE_HOME:-$HOME/.local/state}/dofus/team.json"
+FILE="${QF_STORE:-${XDG_STATE_HOME:-$HOME/.local/state}/quantum-store}/dofus/team.json"
+[ -f "$FILE" ] || FILE="${XDG_STATE_HOME:-$HOME/.local/state}/dofus/team.json"
 
 _names_file() {
     local team="${1:-$(jq -r .selected "$FILE")}"

@@ -2,10 +2,13 @@
 quickshell_config_name: quantumfate
 quickshell_repo_path: "{{ playbook_dir }}/.."
 
-# XDG state root the shell's Store files live under.
+# XDG state root the shell's Store files live under: the shared quantum-store
+# directory. QF_STORE (the env the whole desk agrees on) takes precedence;
+# otherwise one dir deeper than the state home.
 quickshell_state_home: >-
-  {{ ansible_facts.env.XDG_STATE_HOME
-     | default(ansible_facts.user_dir + '/.local/state') }}
+  {{ ansible_facts.env.QF_STORE
+     | default((ansible_facts.env.XDG_STATE_HOME
+                | default(ansible_facts.user_dir + '/.local/state')) ~ '/quantum-store') }}
 
 quickshell_install_packages: true
 quickshell_packages:
