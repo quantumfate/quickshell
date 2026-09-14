@@ -38,10 +38,6 @@ ShellRoot {
     // team panel). Opened via the Dofus submap or IPC.
     ClassAssigner {}
 
-    // Dofus group widget: the groupbar rendered above the Dofus group (LEO-234),
-    // with the group's quick-actions context menu (LEO-244).
-    GroupBar {}
-
     // Obsidian new-note form: type/title/topic + index-chain preview over the
     // ObsidianVault store. Opened via the Obsidian submap or IPC.
     ObsidianCreate {}

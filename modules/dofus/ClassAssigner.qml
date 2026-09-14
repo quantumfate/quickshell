@@ -121,9 +121,7 @@ Scope {
 
     PanelWindow {
         id: win
-        // Visible through the `classAssigner` IPC (binds) or the gaming group
-        // widget's menu (LEO-244) — same surface either way.
-        visible: scope.shown || PanelBus.classAssignerOpen
+        visible: scope.shown
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
         exclusiveZone: 0

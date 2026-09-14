@@ -134,41 +134,6 @@ Singleton {
     // Windows zone's primary gesture.
     function focus(selector) { if (selector) Hypr.focus(selector); }
 
-    // Close a window by selector. Team state is untouched (a closed team slot
-    // just goes absent); a separate window simply disappears.
-    function close(selector) { if (selector) Hypr.close(selector); }
-
-    // Rename a window: retitle it (prefix + name). For a named team member
-    // (index >= 0) also rewrite team.json so the join stays stable; for an
-    // un-named client (index < 0) it is just a retitle — which, if the new
-    // name is a team member, makes the window join that character's slot.
-    function rename(index, pid, newName) {
-        const name = (newName || "").trim();
-        if (name.length === 0 || !(pid > 0)) return;
-        Hypr.retitle(pid, root.titlePrefix + name);
-        if (index >= 0) DofusState.rename(index, name);
-    }
-
-    // Step the group's active tab one place (hl.dsp.group.next/prev — the
-    // compositor primitives LEO-230 established; no iteration is stored here).
-    // Group dispatches act on the FOCUSED window, so a group where focus has
-    // drifted elsewhere is re-seeded on its first member before stepping.
-    function iterate(reversed) {
-        const members = root.windows || [];
-        if (members.length === 0) return;
-        if (!(members.some(w => w.focused)))
-            root.focus(members[0].selector);
-        Hyprland.dispatch(reversed ? "hl.dsp.group.prev()" : "hl.dsp.group.next()");
-    }
-
-    // Close every member — the group is the session, so closing the group is
-    // closing each live client. Selector-guarded; a member that already left
-    // between the model build and its dispatch just no-ops.
-    function closeAll() {
-        for (const w of (root.windows || []))
-            if (w.selector) Hypr.close(w.selector);
-    }
-
     // Assign a character name to a live window: retitle it (prefix + name). If
     // the name is a team member, the window joins that character the moment any
     // UI rebuilds — state (team.json) is untouched.
