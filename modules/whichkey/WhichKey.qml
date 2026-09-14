@@ -37,9 +37,14 @@ Scope {
     property var rows: WK.rowsFor(node)
     readonly property var path: WK.pathFromRoot(tree, submap)
 
-    // Entrance fade, owned here so the layerrule's `popin` never fights it.
+    // Entrance/exit fade, owned here so the layerrule's `popin` never fights
+    // it. The duration reads the mode's motion contract: `instant` modes
+    // (work/study/gaming) get what is effectively an instant swap, both
+    // directions — the overlay tracks the submap stack at keyboard speed, and
+    // a fade is motion the mode did not ask for.
     property real cardOpacity: 0
-    Behavior on cardOpacity { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
+    readonly property int cardFades: Focus.motionEnergy === "instant" ? 30 : 90
+    Behavior on cardOpacity { NumberAnimation { duration: scope.cardFades; easing.type: Easing.OutCubic } }
 
     function open() {
         scope.shown = true;

@@ -126,6 +126,10 @@ Singleton {
     // `Focus.notifications.policy`; Bar reads `Focus.mode`.
     readonly property string accentRole: root.current.accent_role ?? "mauve"
     readonly property real surfaceAlpha: root.current.surface_alpha ?? 0.84
+    // `"base" | "instant"` — surfaces that animate read this rather than
+    // hardcode durations, so a mode's motion contract is one place (which-key
+    // uses it to size its entrance/exit fades, LEO-300).
+    readonly property string motionEnergy: root.current.motion_energy ?? "base"
     readonly property var notifications: root.current.notifications ?? {}
     readonly property var launches: root.current.launches ?? {}
     readonly property var background: root.current.background ?? {}
