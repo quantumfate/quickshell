@@ -17,12 +17,12 @@
 //      values and non-duplicated block lists.
 //   4. Launch semantics reproduce Focus.canLaunch exactly: a mood never
 //      refuses itself, neutral never blocks, every other mood is firm on the
-//      same `blockedKinds` minus itself — game excepted, which since this
+//      same `blockedKinds` minus itself — gaming excepted, which since this
 //      revision lets a media browser through (Zen media while gaming).
 //   5. The background defaults change nothing until configured — policy
 //      allow, `["*"]`, nothing deferred or prevented.
 //   6. Scene reachability is per-mood and minimal: absent is reachable, so
-//      only what a mood takes away appears (deep/reflect drop gaming+media).
+//      only what a mood takes away appears (work/study drop gaming+media).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -100,20 +100,34 @@ test("launch policy reproduces Focus.canLaunch exactly", () => {
     // neutral, which blocks nothing). Gaming does NOT refuse media: a
     // media browser (Zen) stays launchable while gaming.
     const blockedKinds = ["media", "game"];
+    // The launch kind a mood id owns (Focus.qml's kindOwner): the game kind
+    // belongs to the gaming mood, however the two vocabularies spell it.
+    const kindOwner = { game: "gaming" };
     for (const mode of moodEnum) {
         for (const kind of blockedKinds) {
-            const blocksKind = moods[mode].launches.block.includes(kind);
-            const focusAllows = mode === "neutral" || mode === kind;
-            const expectsBlocks = !focusAllows && !(mode === "game" && kind === "media");
-            assert.equal(blocksKind, expectsBlocks,
-                `${mode} ${blocksKind ? "blocks" : "allows"} "${kind}", Focus.allows=${focusAllows}`);
+            const allowed = mode === "neutral" || mode === kind || kindOwner[kind] === mode;
+            // A mood never lists a launch Focus would always let it through:
+            // blocking your own kind is a lock-out, not a policy.
+            if (allowed) {
+                assert.ok(!moods[mode].launches.block.includes(kind),
+                    `${mode} lists its own launch "${kind}" in launches.block`);
+            }
         }
     }
+    // And the refusals the defaults intend hold: work and study are firm on
+    // both kinds; gaming names nothing, so the media browser stays launchable.
+    for (const mode of ["work", "study"]) {
+        assert.ok(moods[mode].launches.block.includes("media"), `${mode} refuses media`);
+        assert.ok(moods[mode].launches.block.includes("game"), `${mode} refuses game`);
+        assert.equal(moods[mode].launches.aggression, "firm", `${mode} refusal is firm`);
+        assert.equal(moods[mode].launches.override, true, `${mode} honours an explicit override key`);
+    }
+    assert.deepEqual(moods.gaming.launches.block, [], "gaming keeps the media browser launchable");
     assert.equal(moods.neutral.launches.aggression, "soft",
         "neutral blocks nothing and has no reason to be strict");
     assert.equal(moods.neutral.launches.override, false,
         "a mood with nothing to refuse has no override");
-    for (const mode of ["deep", "chores", "reflect", "game", "media"]) {
+    for (const mode of ["work", "study", "gaming"]) {
         assert.equal(moods[mode].launches.aggression, "firm",
             `${mode} should stay firm (open decision #3 baseline)`);
         assert.equal(moods[mode].launches.override, true,
@@ -133,13 +147,12 @@ test("background defaults change nothing until configured", () => {
 
 test("scene reachability is per-mood and only lists what a mood takes away", () => {
     assert.deepEqual(moods.neutral.scenes, {}, "neutral restricts no scenes");
-    assert.deepEqual(moods.chores.scenes, {}, "chores restricts no scenes");
-    for (const mode of ["deep", "reflect"]) {
+    for (const mode of ["work", "study"]) {
         assert.equal(moods[mode].scenes.gaming, "blocked", `${mode} should block gaming`);
         assert.equal(moods[mode].scenes.media, "blocked", `${mode} should block media`);
     }
-    assert.equal(moods.game.scenes.gaming, "reachable", "gaming must not lock itself out");
-    assert.equal(moods.media.scenes.media, "reachable", "media must not lock itself out");
+    assert.equal(moods.gaming.scenes.gaming, "reachable", "gaming must not lock itself out");
+    assert.equal(moods.gaming.scenes.media, undefined, "an unlisted scene stays reachable");
 });
 
 // Extracts a named function's body from Focus.qml, stopping at its closing

@@ -87,17 +87,18 @@ test("ymOf reads year/month(0-based) out of an ISO date", () => {
 });
 
 test("impliedMode prefers an explicit entry.mode over any keyword", () => {
-    const entry = { title: "review the deck", mode: "deep" };
-    assert.equal(impliedMode(entry), "deep");
+    const entry = { title: "review the deck", mode: "work" };
+    assert.equal(impliedMode(entry), "work");
 });
 
 test("impliedMode falls back to a per-calendar default before guessing keywords", () => {
-    const entry = { title: "standup", calendar: "chores-cal" };
-    assert.equal(impliedMode(entry, { "chores-cal": "chores" }), "chores");
+    const entry = { title: "standup", calendar: "work-cal" };
+    assert.equal(impliedMode(entry, { "work-cal": "work" }), "work");
 });
 
-test("impliedMode guesses from a title keyword ('review' -> chores)", () => {
-    assert.equal(impliedMode({ title: "15:00 review" }), "chores");
+test("impliedMode guesses from a title keyword ('dofus raid' -> gaming)", () => {
+    assert.equal(impliedMode({ title: "20:00 raid" }), "gaming");
+    assert.equal(impliedMode({ title: "exam prep" }), "study");
 });
 
 test("impliedMode defaults to neutral with no signal at all", () => {

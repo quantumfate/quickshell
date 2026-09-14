@@ -12,7 +12,7 @@ pragma Singleton
 // launcher scripts read. A mood is therefore one edit away in a JSON file, and
 // every runtime reads the same policy.
 //
-// `mode` names one of six moods (see `policyDefaults`); `neutral` is the resting
+// `mode` names one of the declared moods (see `policyDefaults`); `neutral` is the resting
 // state every desk starts in. Switching moods is a single `set()` — exactly like
 // Theme's palette switch — and everything that reads `Focus.mode` /
 // `Focus.current` reacts on its own: Theme.qml binds its `accent` and
@@ -78,45 +78,29 @@ Singleton {
                 background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
                 scenes: {}
             },
-            deep: {
-                name: "Deep work", accent_role: "blue", surface_alpha: 0.94,
+            work: {
+                name: "Work", accent_role: "blue", surface_alpha: 0.94,
                 density: "compact", motion_energy: "instant", bar_autohide: true,
                 notifications: { policy: "critical-only", position: "top-right", timeout: 0, queue: true, digest_on_exit: true },
                 launches: { aggression: "firm", block: ["media", "game"], override: true },
                 background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
                 scenes: { gaming: "blocked", media: "blocked" }
             },
-            chores: {
-                name: "Chores", accent_role: "peach", surface_alpha: 0.8,
-                density: "dense", motion_energy: "fast", bar_autohide: false,
-                notifications: { policy: "all", position: "top-right", timeout: 4000, queue: false, digest_on_exit: false },
-                launches: { aggression: "firm", block: ["media", "game"], override: true },
-                background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
-                scenes: {}
-            },
-            reflect: {
-                name: "Reflect", accent_role: "mauve", surface_alpha: 0.7,
-                density: "airy", motion_energy: "slow", bar_autohide: false,
-                notifications: { policy: "none", position: "top-right", timeout: 0, queue: true, digest_on_exit: true },
+            study: {
+                name: "Study", accent_role: "mauve", surface_alpha: 0.94,
+                density: "compact", motion_energy: "instant", bar_autohide: true,
+                notifications: { policy: "critical-only", position: "top-right", timeout: 0, queue: true, digest_on_exit: true },
                 launches: { aggression: "firm", block: ["media", "game"], override: true },
                 background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
                 scenes: { gaming: "blocked", media: "blocked" }
             },
-            game: {
+            gaming: {
                 name: "Gaming", accent_role: "green", surface_alpha: 0.96,
                 density: "compact", motion_energy: "instant", bar_autohide: false,
                 notifications: { policy: "none", position: "top-right", timeout: 0, queue: true, digest_on_exit: false },
                 launches: { aggression: "firm", block: [], override: true },
                 background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
                 scenes: { gaming: "reachable" }
-            },
-            media: {
-                name: "Media", accent_role: "pink", surface_alpha: 0.62,
-                density: "airy", motion_energy: "ambient", bar_autohide: true,
-                notifications: { policy: "critical-only", position: "bottom-right", timeout: 0, queue: false, digest_on_exit: false },
-                launches: { aggression: "firm", block: ["game"], override: true },
-                background: { policy: "allow", allow: ["*"], defer: [], prevent: [] },
-                scenes: { media: "reachable" }
             }
         }
     })
@@ -165,9 +149,15 @@ Singleton {
     // A mood never blocks launching into itself — entering `game` is how you
     // start gaming, so it cannot also refuse the game launch that got you
     // there. Neutral blocks nothing (`active` is false at rest).
+    // The launch kind a mood id owns. The launch vocabulary ("media", "game")
+    // and the mood ids ("work", "study", "gaming") stopped overlapping when the
+    // mood set was trimmed, so "a mood never blocks launching into itself"
+    // needs this one link: the game kind is the gaming mood's own territory.
+    readonly property var kindOwner: ({ game: "gaming" })
+
     function canLaunch(kind) {
         if (!root.active) return true;
-        if (root.mode === kind) return true;
+        if (root.mode === kind || root.kindOwner[kind] === root.mode) return true;
         const launch = root.current.launches || {};
         const blocked = Array.isArray(launch.block) && launch.block.indexOf(kind) >= 0;
         return !blocked || launch.aggression === "soft";
@@ -246,7 +236,7 @@ Singleton {
         root.runSceneApply(mode);
     }
 
-    // The enforced seam itself lives in the scripts repo (bin/,scene-apply.sh)
+    // The enforced seam itself lives in the hypr repo's bin/ (bin/,scene-apply.sh)
     // — this is only the trigger, and the process runs async so Focus never
     // waits on it. Absent a script on PATH the run just fails silently.
     Process { id: sceneApply; command: [",scene-apply.sh", "neutral"] }

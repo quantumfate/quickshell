@@ -93,15 +93,15 @@ test("every mode carries a human-readable name", () => {
 test("the lint catches an unknown name rather than letting it resolve to nothing", () => {
     // A typo must fail here, not silently produce a desk missing a workspace.
     const broken = structuredClone(declaration);
-    broken.modes.game.workspaces = { only: ["gamming"] };
+    broken.modes.gaming.workspaces = { only: ["gamming"] };
     assert.deepEqual(lint(broken), [
-        "game.workspaces.only: unknown workspaces 'gamming'",
+        "gaming.workspaces.only: unknown workspaces 'gamming'",
     ]);
 });
 
 test("the lint catches `only` combined with `add`", () => {
     const broken = structuredClone(declaration);
-    broken.modes.deep.services = { only: ["theme-auto"], add: ["obsidian"] };
+    broken.modes.work.services = { only: ["theme-auto"], add: ["obsidian"] };
     assert.ok(lint(broken).some((e) => e.includes("cannot be combined")));
 });
 

@@ -21,14 +21,16 @@
       },
       "background": {
         "policy": "allow",
-        "allow": ["*"],
+        "allow": [
+          "*"
+        ],
         "defer": [],
         "prevent": []
       },
       "scenes": {}
     },
-    "deep": {
-      "name": "Deep work",
+    "work": {
+      "name": "Work",
       "accent_role": "blue",
       "surface_alpha": 0.94,
       "density": "compact",
@@ -43,12 +45,17 @@
       },
       "launches": {
         "aggression": "firm",
-        "block": ["media", "game"],
+        "block": [
+          "media",
+          "game"
+        ],
         "override": true
       },
       "background": {
         "policy": "allow",
-        "allow": ["*"],
+        "allow": [
+          "*"
+        ],
         "defer": [],
         "prevent": []
       },
@@ -57,42 +64,15 @@
         "media": "blocked"
       }
     },
-    "chores": {
-      "name": "Chores",
-      "accent_role": "peach",
-      "surface_alpha": 0.8,
-      "density": "dense",
-      "motion_energy": "fast",
-      "bar_autohide": false,
-      "notifications": {
-        "policy": "all",
-        "position": "top-right",
-        "timeout": 4000,
-        "queue": false,
-        "digest_on_exit": false
-      },
-      "launches": {
-        "aggression": "firm",
-        "block": ["media", "game"],
-        "override": true
-      },
-      "background": {
-        "policy": "allow",
-        "allow": ["*"],
-        "defer": [],
-        "prevent": []
-      },
-      "scenes": {}
-    },
-    "reflect": {
-      "name": "Reflect",
+    "study": {
+      "name": "Study",
       "accent_role": "mauve",
-      "surface_alpha": 0.7,
-      "density": "airy",
-      "motion_energy": "slow",
-      "bar_autohide": false,
+      "surface_alpha": 0.94,
+      "density": "compact",
+      "motion_energy": "instant",
+      "bar_autohide": true,
       "notifications": {
-        "policy": "none",
+        "policy": "critical-only",
         "position": "top-right",
         "timeout": 0,
         "queue": true,
@@ -100,12 +80,17 @@
       },
       "launches": {
         "aggression": "firm",
-        "block": ["media", "game"],
+        "block": [
+          "media",
+          "game"
+        ],
         "override": true
       },
       "background": {
         "policy": "allow",
-        "allow": ["*"],
+        "allow": [
+          "*"
+        ],
         "defer": [],
         "prevent": []
       },
@@ -114,7 +99,7 @@
         "media": "blocked"
       }
     },
-    "game": {
+    "gaming": {
       "name": "Gaming",
       "accent_role": "green",
       "surface_alpha": 0.96,
@@ -135,41 +120,14 @@
       },
       "background": {
         "policy": "allow",
-        "allow": ["*"],
+        "allow": [
+          "*"
+        ],
         "defer": [],
         "prevent": []
       },
       "scenes": {
         "gaming": "reachable"
-      }
-    },
-    "media": {
-      "name": "Media",
-      "accent_role": "pink",
-      "surface_alpha": 0.62,
-      "density": "airy",
-      "motion_energy": "ambient",
-      "bar_autohide": true,
-      "notifications": {
-        "policy": "critical-only",
-        "position": "bottom-right",
-        "timeout": 0,
-        "queue": false,
-        "digest_on_exit": false
-      },
-      "launches": {
-        "aggression": "firm",
-        "block": ["game"],
-        "override": true
-      },
-      "background": {
-        "policy": "allow",
-        "allow": ["*"],
-        "defer": [],
-        "prevent": []
-      },
-      "scenes": {
-        "media": "reachable"
       }
     }
   }

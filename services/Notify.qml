@@ -208,6 +208,13 @@ Singleton {
         const verdict = root._verdict(rec);
         if (verdict) return verdict === "show" ? "" : "mode:" + verdict;
 
+        // The desk's own voice is not an interruption a mood suppresses:
+        // internal feedback (tier HYPRFOCUS, trusted — the wrapper sources
+        // rank above self-reported names) answers a key the user just pressed,
+        // and "launch enabled" vanishing under a silence policy reads as a
+        // broken key, not a mood. App notifications still cross this gate.
+        if (rec.trusted && rec.tier === NotifyRoute.TIER.HYPRFOCUS) return "";
+
         const policy = Focus.notifications.policy;
         if (policy === "critical-only") return rec.urgency === "critical" ? "" : "mood";
         return policy === "none" ? "mood" : "";

@@ -62,15 +62,13 @@ function ymOf(iso) {
 // the fallback tier — an explicit `entry.mode` or a per-calendar default
 // (see impliedMode) always wins over a keyword guess.
 const MODE_KEYWORDS = [
-    ["deep", ["deep work", "deep", "write", "writing", "code", "coding", "design", "focus block"]],
-    ["chores", ["review", "chore", "chores", "clean", "cleaning", "laundry", "errand", "grocery", "groceries"]],
-    ["reflect", ["journal", "reflect", "reflection", "therapy", "planning", "retro"]],
-    ["game", ["game", "gaming", "raid", "dofus"]],
-    ["media", ["movie", "watch", "stream", "streaming", "media"]]
+    ["study", ["study", "studying", "exam", "revision", "flashcards"]],
+    ["work", ["deep work", "write", "writing", "code", "coding", "design", "focus block", "review", "planning"]],
+    ["gaming", ["game", "gaming", "raid", "dofus"]]
 ];
 
-// entry -> one of the six mode ids (neutral, deep, chores, reflect, game,
-// media). Precedence, most to least specific:
+// entry -> one of the declared mode ids (neutral, work, study, gaming).
+// Precedence, most to least specific:
 //   1. entry.mode          — explicit, always wins (the per-event override)
 //   2. calendarDefaults[entry.calendar] — a per-calendar default, for a feed
 //      (eventually CalDAV) whose calendar name already implies a mode

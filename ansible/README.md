@@ -34,5 +34,5 @@ See `roles/quickshell/defaults/main.yml`. Key ones: `quickshell_config_name`,
 `quickshell_install_extra_packages`.
 
 The Obsidian tag store (`$XDG_STATE_HOME/obsidian/tags.json`) is maintained
-exclusively by `obsidian_vault.py sync` (scripts repo) — it is a projection of
+exclusively by `obsidian_vault.py sync` (hypr repo's `bin/`) — it is a projection of
 the already-synced vault, so it is not deployed by this role.

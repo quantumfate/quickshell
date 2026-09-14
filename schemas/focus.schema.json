@@ -10,7 +10,7 @@
     "mode": {
       "description": "The active mood. `neutral` is the default, unrestricted state; every other mood blocks the launches enforce.md lists (except launching into itself) until `until`, or forever if `until` is null.",
       "type": "string",
-      "enum": ["neutral", "deep", "chores", "reflect", "game", "media"]
+      "enum": ["neutral", "work", "study", "gaming"]
     },
     "until": {
       "description": "ISO-8601 timestamp the mood lapses back to `neutral` at, or null for an open-ended session that only an explicit `stop`/`set` ends.",

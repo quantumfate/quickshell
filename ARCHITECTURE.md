@@ -2,15 +2,17 @@
 
 This repository bridges everything on my desktop with the concept of a `store`.
 
-## The three repositories
+## The repositories
 
-| Repo                                                          | Role                                                          |
-| ------------------------------------------------------------- | ------------------------------------------------------------- |
-| [**quickshell**](https://github.com/quantumfate/quickshell) | The desktop shell: widgets, theming, shared-state singletons. |
-| [**hypr**](https://github.com/quantumfate/hypr)             | The Hyprland config (Lua): keybinds, submaps, window rules.   |
-| [**scripts**](https://github.com/quantumfate/scripts)       | Standalone CLI helpers on `$PATH`.                            |
+| Repo                                                              | Role                                                                       |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [**quickshell**](https://github.com/quantumfate/quickshell)       | The desktop shell: widgets, theming, shared-state singletons.              |
+| [**hypr**](https://github.com/quantumfate/hypr)                   | The Hyprland config (Lua) + the `bin/` helpers binds and this shell spawn. |
+| [**system-config**](https://github.com/quantumfate/system-config) | Provisioning (Ansible/flake) and the `hyprfocus` engine docs.              |
+| [**dofus-scripts**](https://github.com/quantumfate/dofus-scripts) | Retired — its helpers live in hypr `bin/` now.                             |
 
-My obsidian is managed too but not listed here.
+Agent entry points: hypr and system-config `AGENTS.md`, this repo's
+`ARCHITECTURE.md` + `AGENTS.md`.
 
 ## the Store
 
@@ -52,7 +54,7 @@ Three consequences for the code below:
   that a mode does not admit is simply not loaded. Gates survive only for what
   escapes declaration.
 - **`background` is inert today.** Every shipped mood sets `allow: ["*"]`,
-  while real stopping happens off a _scene_ key in the scripts repo. Policy
+  while real stopping happens off a _scene_ key enforced in hypr `bin/`. Policy
   keyed by mode and enforcement keyed by scene cannot express one intent, which
   is the divergence the declaration removes.
 - **Notification routing needs identity first.** `route` records what happened

@@ -1,5 +1,5 @@
 #compdef qfs
-# Completion for `qfs` (quantumfate shell IPC wrapper, in the scripts repo).
+# Completion for `qfs` (quantumfate shell IPC wrapper, in the hypr repo's bin/).
 # Targets and functions are read live from `qs -c <config> ipc show`, so it never
 # goes stale as IpcHandlers change. Config via $QFS_CONFIG (default quantumfate).
 #

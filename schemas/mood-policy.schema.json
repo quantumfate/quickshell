@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/quantumfate/quickshell/schemas/mood-policy.schema.json",
   "title": "mood-policy.json",
-  "description": "The mood-mode policy store (LEO-236). One definitional store, keyed by the six mood ids the focus store enumerates, recording what each mood allows, changes, or suppresses across notifications, launches, background work, and the reachability of named workspace scenes. `focus.json` stays the *active* state ({ mode, until }); this file is what a mode *means*, so both runtimes \u2014 Quickshell's Focus/Notify, Hyprland Lua's event manager, and the launcher scripts on $PATH \u2014 read one policy instead of each re-inventing one. The defaults deliberately reproduce today's behavior (the firm focus gate, per-mood notification policies from Focus.qml) so adopting the store changes nothing until LEO-237 exposes it and LEO-238 enforces it.",
+  "description": "The mood-mode policy store (LEO-236). One definitional store, keyed by the mood ids the focus store enumerates, recording what each mood allows, changes, or suppresses across notifications, launches, background work, and the reachability of named workspace scenes. `focus.json` stays the *active* state ({ mode, until }); this file is what a mode *means*, so both runtimes \u2014 Quickshell's Focus/Notify, Hyprland Lua's event manager, and the launcher scripts on $PATH \u2014 read one policy instead of each re-inventing one. The defaults deliberately reproduce today's behavior (the firm focus gate, per-mood notification policies from Focus.qml) so adopting the store changes nothing until LEO-237 exposes it and LEO-238 enforces it.",
   "type": "object",
   "additionalProperties": false,
   "required": ["moods"],
   "properties": {
     "moods": {
       "type": "object",
-      "description": "Per-mood policy. Keys are the mood ids the focus store enumerates (neutral, deep, chores, reflect, game, media). Visual knobs live here too: a mood is a visual operating state \u2014 a palette accent role and a surface alpha \u2014 not just a notification switch, and Focus.qml already) owns that table. Palette/policy divergence between this file and Focus.qml is a deployment bug; the lockstep test pins it, and LEO-237 makes this store the source Focus.qml mirrors.",
+      "description": "Per-mood policy. Keys are the mood ids the focus store enumerates (neutral, work, study, gaming). Visual knobs live here too: a mood is a visual operating state \u2014 a palette accent role and a surface alpha \u2014 not just a notification switch, and Focus.qml already) owns that table. Palette/policy divergence between this file and Focus.qml is a deployment bug; the lockstep test pins it, and LEO-237 makes this store the source Focus.qml mirrors.",
       "additionalProperties": { "$ref": "#/definitions/mood" }
     }
   },

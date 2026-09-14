@@ -60,10 +60,10 @@ test("the schema rejects an unknown mode", () => {
     assert.ok(validate({ mode: "paused", until: null }).length);
 });
 
-test("the schema's mode enum names exactly the six moods", () => {
+test("the schema's mode enum names exactly the declared moods", () => {
     assert.deepEqual(
         [...moodEnum].sort(),
-        ["chores", "deep", "game", "media", "neutral", "reflect"]
+        ["gaming", "neutral", "study", "work"]
     );
 });
 
@@ -112,19 +112,21 @@ test("a mood never blocks launching into itself", () => {
     assert.match(fn, /root\.mode === kind/, "canLaunch has no self-exemption for the active mood");
 });
 
-test("deep and reflect queue notifications and deliver a digest on exit", () => {
-    for (const id of ["deep", "reflect"]) {
+test("work and study queue notifications and deliver a digest on exit", () => {
+    for (const id of ["work", "study"]) {
         assert.equal(moods[id].notifications.queue, true, `${id} should queue notifications`);
         assert.equal(moods[id].notifications.digest_on_exit, true, `${id} should digest on exit`);
     }
 });
 
-test("game and media moods leave the other four untouched by definition", () => {
-    // Sanity check that game/media are distinct entries, not aliases of a
-    // shared object (which would make "unaffected by every mood except game"
-    // impossible to guarantee).
-    assert.notEqual(moods.game, moods.media);
-    assert.notEqual(moods.game.accent_role, moods.media.accent_role);
+test("work and study are distinct entries, not aliases of one object", () => {
+    // Sanity check that a copy did not fold two moods into a shared reference,
+    // which would make "unaffected by every mood except one" impossible to
+    // guarantee.
+    assert.notEqual(moods.work, moods.study);
+    assert.notEqual(moods.work.accent_role, moods.study.accent_role);
+    assert.notEqual(moods.gaming, moods.work);
+    assert.notEqual(moods.gaming.accent_role, moods.work.accent_role);
 });
 
 test("the focus IPC exposes scene reachability and background verdicts for dispatchers", () => {
