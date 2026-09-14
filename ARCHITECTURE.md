@@ -35,6 +35,34 @@ Every singleton that owns shared state is a Store: `Theme` (`theme.json`),
 `DofusState` (`dofus/team.json`), `ObsidianVault` (`obsidian/tags.json`),
 `Notify` (`notifications.json`).
 
+### Where this is going
+
+The two policy stores below are being replaced by one **declaration**: a mode
+names what may exist on the desk — workspaces, scenes, binding trees, services,
+notification routing, projects — and a reconciler converges the running system
+on it. The engine is `hyprfocus`; the cross-repo architecture lives in the
+sibling `system-config` repo, and this repo is where the declaration is edited,
+since the shell is the runtime that can write the store while the compositor
+reads it.
+
+Three consequences for the code below:
+
+- **Oracles mostly disappear.** `sceneState` and `backgroundTaskLevel` answer
+  "is this allowed"; a declaration answers "does this exist", and a binding
+  that a mode does not admit is simply not loaded. Gates survive only for what
+  escapes declaration.
+- **`background` is inert today.** Every shipped mood sets `allow: ["*"]`,
+  while real stopping happens off a _scene_ key in the scripts repo. Policy
+  keyed by mode and enforcement keyed by scene cannot express one intent, which
+  is the divergence the declaration removes.
+- **Notification routing needs identity first.** `route` records what happened
+  but keys on nothing stable; `app_name` is self-reported free text. Resolution
+  moves to a chain — `desktopEntry`, our own `x-hyprfocus-source` hint,
+  `category`, then urgency for severity only.
+
+The naming is settled: the engine is hyprfocus, a state is a **mode**, and
+"mood" retires.
+
 Two stores define _policy_ rather than current state. [`scenes.json`](schemas/scenes.schema.json) (workspace scenes, LEO-235) is read by the event
 manager and the scene editor but owned by no singleton yet. [`mood-policy.json`](schemas/mood-policy.schema.json)
 (per-mood policy, LEO-236) is owned by `Focus` since LEO-237: Focus's
