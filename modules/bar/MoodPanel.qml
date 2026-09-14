@@ -33,7 +33,13 @@ Scope {
 
     // Cap so the panel fits on a laptop screen; taller content scrolls instead
     // of clipping (fs.xl = the largest type step, so the cap scales with the UI).
-    readonly property real maxCardHeight: Theme.fs.xl * 30
+    // How much the panel can grow before it scrolls. Both knobs are steps on
+    // the type scale rather than pixel counts, so the laptop lid and the
+    // ultrawide compute their own answers (LEO-297): the mode list, per-task
+    // cycling and the transitions all fit without scroll on the desktop and
+    // get one x-height more on the lid before the scroll takes over.
+    readonly property real maxCardHeight: Theme.fs.xl * 34
+    readonly property real maxCardWidth: Theme.fs.xl * 26
 
     function patch(p) { Focus.patchMood(scope.mood, p); }
     function adopt(id) { Focus.set(id, 0); }
@@ -173,7 +179,7 @@ Scope {
             id: card
             x: Math.max(Theme.space.sm, Math.min(PanelBus.anchorX - card.width / 2, win.width - card.width - Theme.space.sm))
             y: 0
-            width: Math.min(440, win.width - Theme.space.sm * 2)
+            width: Math.min(scope.maxCardWidth, win.width - Theme.space.sm * 2)
             implicitHeight: Math.min(flick.contentHeight, scope.maxCardHeight) + Theme.space.xl * 2
             elevation: "peek"
             radius: Theme.radius

@@ -248,7 +248,11 @@ Scope {
 
             Surface {
                 id: card
-                width: Math.min(win.width * 0.5, 620)
+                // Room in steps of the scale, not pixels: the mood widget's
+                // transitions, per-task cycling and the wallpaper grid want
+                // more than the half-screen slice the panel used to give, and
+                // the laptop lid budgets its own fraction (LEO-297).
+                width: Math.min(win.width * 0.62, Theme.fs.xl * 56)
                 height: Math.min(win.height * 0.85, content.implicitHeight + 2 * Theme.pad)
                 elevation: "modal"
                 radius: Theme.radius
