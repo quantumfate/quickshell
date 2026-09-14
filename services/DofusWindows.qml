@@ -7,12 +7,17 @@ pragma Singleton
 // and which member is focused. LEO-230 moved iteration into Hyprland
 // (hl.dsp.group.next/prev), so this service no longer drives navigation; it is
 // a read model over the group plus the window actions that still have logic
-// behind them (focus, assign/clear a name, rename a character).
+// behind them (focus, iterate, close the group, assign/clear a name, rename a
+// character).
 //
-// The model is recomputed reactively whenever windows open/close/rename/focus
-// (Hyprland.toplevels + rawEvent), backed by a periodic IPC refresh so
-// `grouped` membership is available — no window ids are ever stored in state.
+// The model is a SNAPSHOT, rebuilt from `hyprctl clients -j` on a poll plus a
+// debounced copy of Hyprland's raw events (open/close/title/focus moves it
+// within 200ms). No Quickshell-side toplevel fields are trusted: refreshToplevels
+// leaves lastIpcObject `{}` on this runtime (the Lua dispatch bridge — see
+// hyprrepo ARCHITECTURE.md), so class/membership/geometry all come from the
+// compositor's own JSON. No window ids are ever stored in state.
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 import QtQuick
 import "."   // DofusState, Config singletons
@@ -29,54 +34,89 @@ Singleton {
     //   address: string     Hyprland address ("0x..") or "" when absent
     //   selector: string    the stable "address:0x…" used for actions
     //   focused: bool       that window is the group's active tab
+    //   grouped: string[]   the whole group's address list (membership order)
+    //   at / size: point    the tile's global geometry (all members share it)
+    //   workspaceId / workspaceName / monitorId: where the tile lives
     property var windows: []
 
     readonly property string titlePrefix: DofusState.titlePrefix
+    readonly property string _dofusClass: "Dofus.x64"
 
-    // Live compositor state we depend on; changes here drive _rebuild().
-    // Hyprland.toplevels is an external, mutable model owned by the compositor.
-    readonly property var _toplevels: Hyprland.toplevels
+    // ── the snapshot pipeline ───────────────────────────────────────────────
+    // One `hyprctl clients -j` fetch, parsed into `windows`. Polling keeps the
+    // model warm; events make it feel instant.
+    Process {
+        id: snap
+        command: ["sh", "-c", "hyprctl clients -j"]
+        stdout: StdioCollector { onStreamFinished: root._applyClients(this.text || "") }
+        stderr: StdioCollector {}
+    }
 
-    // Recompute whenever the window set changes or any window's title/focus does.
-    Connections {
-        target: Hyprland.toplevels
-        function onValuesChanged() { root._rebuild(); }
+    Timer {
+        interval: 2000; running: true; repeat: true; triggeredOnStart: true
+        onTriggered: snap.running = true
+    }
+    // Event debounce: many raw events coalesce into one fetch.
+    Timer {
+        id: eventDebounce
+        interval: 200; repeat: false
+        onTriggered: snap.running = true
     }
     Connections {
         target: Hyprland
-        // activewindow / title changes arrive as raw events; cheap to rebuild.
-        function onRawEvent(event) { root._rebuild(); }
-    }
-    Component.onCompleted: { Hyprland.refreshToplevels(); root._rebuild(); }
-
-    // lastIpcObject (address, pid, grouped) is populated lazily; refresh it so
-    // the model can read the group membership, not just the title from the
-    // event stream.
-    Timer {
-        interval: 2000; running: true; repeat: true; triggeredOnStart: true
-        onTriggered: Hyprland.refreshToplevels()
+        function onRawEvent(event) { eventDebounce.restart(); }
     }
 
-    // Recompute the roster from the live Dofus windows, in group order. The
-    // group's member order comes from any window's `grouped` IPC field (the
-    // address list of the whole group, itself included); while that is still
-    // warming up it falls back to the list order.
-    function _rebuild() {
-        const byAddr = root._dofusWindows();
+    function _applyClients(text) {
+        const prefix = root.titlePrefix;
+        let clients = [];
+        try { clients = JSON.parse(text) || []; }
+        catch (e) { return; }   // a truncated/unparsable snapshot is just dropped; the next poll repairs it
 
+        const byAddr = {};
+        for (const c of clients) {
+            if (c?.class !== root._dofusClass) continue;
+            const address = c?.address ?? "";
+            if (!address) continue;   // un-addressable windows can't be grouped or acted on
+            const title = c?.title ?? "";
+            byAddr[address] = {
+                name: title.startsWith(prefix) ? title.slice(prefix.length).trim() : "",
+                title: title,
+                pid: c?.pid ?? -1,
+                address: address,
+                selector: "address:" + address,
+                grouped: c?.grouped ?? [],
+                at: { x: c?.at?.[0] ?? 0, y: c?.at?.[1] ?? 0 },
+                size: { x: c?.size?.[0] ?? 0, y: c?.size?.[1] ?? 0 },
+                workspaceId: c?.workspace?.id ?? -1,
+                workspaceName: c?.workspace?.name ?? "",
+                // hyprctl reports the monitor by numeric id, not name.
+                monitorId: c?.monitor ?? -1,
+                focusHistoryID: c?.focusHistoryID ?? -1,
+            };
+        }
+
+        const members = Object.values(byAddr);
+        // The group's active tab is its most-recently-focused member (highest
+        // focus history id). With no membership this degenerates to "any".
+        let recent = -1;
+        for (const w of members) if (w.focusHistoryID > recent) recent = w.focusHistoryID;
+        for (const w of members) w.focused = w.focusHistoryID === recent;
+
+        // Group order comes from a member's own `grouped` list (the whole
+        // group, itself included); while it is missing, fall back to report
+        // order so the model never goes empty.
         const out = [];
-        const seen = ({});
+        const seen = {};
         const push = (addr) => {
             const w = byAddr[addr];
             if (!w || seen[addr]) return;
             seen[addr] = true;
             out.push(w);
         };
-
         let order = [];
-        for (const addr of Object.keys(byAddr)) {
-            const grouped = byAddr[addr].grouped;
-            if (grouped && grouped.length > 0) { order = grouped; break; }
+        for (const w of members) {
+            if (w.grouped && w.grouped.length > 0) { order = w.grouped; break; }
         }
         if (order.length > 0) for (const addr of order) push(addr);
         for (const addr of Object.keys(byAddr)) push(addr);
@@ -84,47 +124,26 @@ Singleton {
         root.windows = out;
     }
 
-    // Every live Dofus window, keyed by address. Matched STRICTLY by window
-    // class (Dofus.x64) — never by title, so unrelated windows that merely
-    // carry "Dofus" in their title (a browser tab, an editor) are excluded.
-    // `name` is "" for an un-named window.
-    function _dofusWindows() {
-        const prefix = root.titlePrefix;
-        const byAddr = ({});
-        const wins = (Hyprland.toplevels?.values) || [];
-        for (const w of wins) {
-            const ipc = w?.lastIpcObject;
-            const cls = (ipc?.class) ?? "";
-            if (cls !== "Dofus.x64") continue;
-            const title = (ipc?.title) ?? w?.title ?? "";
-            const address = ipc?.address ?? "";
-            if (!address) continue;   // un-addressable windows can't be grouped or acted on
-            byAddr[address] = {
-                name: title.startsWith(prefix) ? title.slice(prefix.length).trim() : "",
-                title: title,
-                pid: ipc?.pid ?? -1,
-                address: address,
-                selector: "address:" + address,
-                focused: !!w?.activated,
-                grouped: ipc?.grouped ?? ([]),
-                // Geometry and placement, straight off `hyprctl clients`
-                // (at/size are [x,y] arrays there). These feed the group widget's
-                // position above the tile — never stored outside this rebuild.
-                at: { x: ipc?.at?.[0] ?? 0, y: ipc?.at?.[1] ?? 0 },
-                size: { x: ipc?.size?.[0] ?? 0, y: ipc?.size?.[1] ?? 0 },
-                workspaceId: ipc?.workspace?.id ?? -1,
-                workspaceName: ipc?.workspace?.name ?? "",
-                monitorId: ipc?.monitor ?? -1,
-            };
-        }
-        return byAddr;
-    }
-
     // ---- window actions -----------------------------------------------------
 
     // Focus a window by its selector ("address:0x…") and raise it — the Active
     // Windows zone's primary gesture.
     function focus(selector) { if (selector) Hypr.focus(selector); }
+
+    // Close a window by selector. Team state is untouched (a closed team slot
+    // just goes absent); a separate window simply disappears.
+    function close(selector) { if (selector) Hypr.close(selector); }
+
+    // Rename a window: retitle it (prefix + name). For a named team member
+    // (index >= 0) also rewrite team.json so the join stays stable; for an
+    // un-named client (index < 0) it is just a retitle — which, if the new
+    // name is a team member, makes the window join that character's slot.
+    function rename(index, pid, newName) {
+        const name = (newName || "").trim();
+        if (name.length === 0 || !(pid > 0)) return;
+        Hypr.retitle(pid, root.titlePrefix + name);
+        if (index >= 0) DofusState.rename(index, name);
+    }
 
     // Step the group's active tab one place (hl.dsp.group.next/prev — the
     // compositor primitives LEO-230 established; no iteration is stored here).

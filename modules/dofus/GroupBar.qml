@@ -1,31 +1,28 @@
-// Dofus group widget (LEO-234/LEO-244): the groupbar's twin, rendered
-// ABOVE the Dofus group instead of in the bar.
+// Dofus group widget (LEO-234/LEO-244): the tile's groupbar, rebuilt.
 //
-// Two surfaces, one window:
+// It sits exactly on the slot the compositor's own groupbar occupies — the top
+// of the Dofus tile — and paints over it as a fully-styled tab strip, so the
+// group has ONE bar, ours, carrying the actions the old bar taskbar had:
 //
-//   slide — the always-on chip strip: one chip per group member, in group
-//           order, the active tab highlighted. The same list the tile's own
-//           groupbar renders, read from DofusWindows — no second opinion, no
-//           private join.
-//   menu  — right-click context menu: member list with one-click focus, group
-//           iteration, the full editors, close the group. Keyboard-navigable
-//           (arrows/enter/escape) like the panel editors.
+//   click the name      focus + raise
+//   double-click        rename (retitles the window; team members update team.json)
+//   ◀ ▶                 reorder the character in the team's turn order
+//   ◎                   capture a turn-hash for the swap detector (during their turn)
+//   ✕                   close that window
+//   right-click         the group quick-actions menu (LEO-244)
 //
-// The widget is geometry-tracked, not pinned to a corner: it positions itself
-// just above the group tile on the tile's monitor, using the same
-// `hyprctl clients` snapshot the roster comes from. It is only visible while
-// the group's workspace is the focused one, so leaving gaming takes it away
-// with the workspace.
-//
-// Every action funnels through an existing service (DofusWindows / DofusState
-// / PanelBus / Notify) — no new IPC surface.
+// Membership, the active tab, and the tile geometry all read from the group
+// (DofusWindows) — never reconstructed. Every action goes through an existing
+// service (DofusWindows / DofusState / DofusSwap / PanelBus / Notify); no new
+// IPC surface. `stripHeight` must keep in step with the compositor bar's slot:
+// hypr/hypr/conf.lua `group.groupbar.height`.
 pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Theme, PanelBus, DofusState, DofusWindows, Notify
+import "../../services"   // Theme, PanelBus, DofusState, DofusWindows, DofusSwap, BarInput, Notify
 import "../common"        // Surface, ClassIcon
 
 Scope {
@@ -60,6 +57,10 @@ Scope {
     property bool menuOpen: false
     function closeMenu() { scope.menuOpen = false; }
     onPlacedChanged: if (!scope.placed) scope.closeMenu()
+
+    // Any chip's inline rename; the window takes OnDemand keyboard focus while
+    // one is open so the TextInput receives keystrokes.
+    property bool editingOpen: false
 
     // Quick actions, in menu order. Tones default to accent; the destructive
     // row carries red.
@@ -101,18 +102,19 @@ Scope {
         anchors { top: true; bottom: true; left: true; right: true }
         exclusiveZone: 0
         WlrLayershell.layer: WlrLayer.Overlay
-        // Only the menu ever needs the keyboard; the chip strip is mouse-only.
+        // Keyboard focus is needed only while a chip rename or the menu has it;
+        // the Dofus group underneath must receive keystrokes at rest.
         WlrLayershell.keyboardFocus: visible
-            ? (scope.menuOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None)
+            ? (scope.menuOpen || scope.editingOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None)
             : WlrKeyboardFocus.None
-        // Covered by the hypr-side layerrules rule keyed by this namespace
-        // (slidefade 20%, blur, ignore_alpha 0.1) — the same landing the old
-        // HUD had.
+        // The hypr-side layerrules rule keyed by this namespace (fade + blur)
+        // styles this surface; geometry changes must not re-trigger a travel
+        // animation, which is why it is a plain fade.
         WlrLayershell.namespace: "quickshell-dofus"
 
         // While the menu is open the whole window takes input (click-away
-        // catch); otherwise only the chip strip does — the Dofus group must
-        // receive clicks underneath.
+        // catch); otherwise only the strip does — the Dofus group must receive
+        // clicks underneath.
         mask: scope.menuOpen ? null : chipsWin
         Region { id: chipsWin; item: slide }
 
@@ -124,26 +126,22 @@ Scope {
             onClicked: scope.closeMenu()
         }
 
-        // ── The chip strip: the groupbar itself ─────────────────────────────
+        // ── The strip: the compositor groupbar's slot, restyled ────────────
         Surface {
             id: slide
             elevation: "island"
-
-            // At least chip-strip wide, never past the monitor's edge.
-            implicitWidth: Math.min(
-                Math.max(240, scope._anchor?.size?.x ?? 240),
-                Math.max(240, (scope._mon?.width ?? 0) - Theme.space.lg * 2))
-            implicitHeight: 30
             radius: Theme.radiusIsland
 
-            // Above the tile, in output-local coordinates. The layer-shell
-            // window starts at the monitor's (0,0), so a tile at global (tx,ty)
-            // on a monitor at (mx,my) sits at (tx-mx, ty-my) here.
+            // Near-opaque so the compositor bar's own paint cannot bleed through.
+            color: Theme.withAlpha(Theme.backgroundAlt, 0.92)
+
+            // The compositor groupbar's slot: tile's top edge, full tile width,
+            // in output-local coordinates (the window origin is the monitor's).
+            readonly property int groupbarHeight: 26
+            implicitWidth: scope._anchor?.size?.x ?? 240
+            implicitHeight: groupbarHeight
             x: scope._mon ? (scope._anchor.at.x - scope._mon.x) : 0
-            y: scope._mon
-                ? Math.max(Theme.space.sm,
-                    scope._anchor.at.y - scope._mon.y - height - Theme.space.xs)
-                : 0
+            y: scope._mon ? (scope._anchor.at.y - scope._mon.y) : 0
 
             Row {
                 anchors { fill: parent; leftMargin: Theme.space.xs; rightMargin: Theme.space.xs }
@@ -156,41 +154,197 @@ Scope {
                         id: chip
                         required property var modelData
                         required property int index
-                        readonly property bool active: modelData.focused ?? false
-                        readonly property bool named: !!modelData.name
-                        readonly property string label: chip.modelData.name || ("client " + (chip.index + 1))
+                        readonly property string name: modelData.name || ""
+                        readonly property bool focused: modelData.focused ?? false
+                        readonly property bool named: !!chip.name
+                        // Position of this character in the team's TURN order —
+                        // -1 when the window is not a named team member.
+                        readonly property int teamIndex: DofusState.team?.indexOf(chip.name) ?? -1
+                        readonly property bool inTeam: chip.teamIndex >= 0
+                        readonly property bool learned: DofusSwap.learned(chip.name)
 
-                        width: Math.min(labelText.implicitWidth + 16, 150)
-                        height: parent.height
-                        radius: Theme.radiusIsland
-                        color: chip.active
-                            ? Theme.withAlpha(Theme.accent, 0.18)
-                            : Theme.withAlpha(Theme.surfaceAlt, 0.35)
-                        border { width: 1; color: chip.active ? Theme.accent : Theme.border }
-
-                        Text {
-                            id: labelText
-                            anchors.centerIn: parent
-                            width: chip.width - 2 * Theme.space.sm
-                            text: chip.label
-                            color: chip.active ? Theme.accent
-                                 : chip.named ? Theme.text : Theme.overlay
-                            font { pixelSize: Theme.fs.xs; family: "monospace" }
-                            elide: Text.ElideRight
-                            horizontalAlignment: Text.AlignHCenter
+                        // Turn-hash state: idle · busy · flash ok/fail.
+                        property string flash
+                        readonly property bool busy: chip.inTeam && DofusSwap.capturing === chip.name
+                        Timer { id: flashTimer; interval: 1400; onTriggered: chip.flash = "" }
+                        Connections {
+                            enabled: chip.inTeam
+                            target: DofusSwap
+                            function onCaptured(name, ok) {
+                                if (name !== chip.name) return;
+                                chip.flash = ok ? "ok" : "fail";
+                                flashTimer.restart();
+                            }
                         }
 
+                        // If the chip dies mid-rename (window closed, rebuild),
+                        // never leave the shell holding a keyboard grab.
+                        Component.onDestruction: if (chip._renaming) {
+                            chip._renaming = false;
+                            scope.editingOpen = false;
+                            BarInput.end();
+                        }
+
+                        // Hover state for the whole chip (buttons keep their own).
+                        HoverHandler { id: chipHover }
+
+                        height: parent.height
+                        width: chipRow.implicitWidth
+                        radius: Theme.radiusIsland
+                        color: chip.focused
+                            ? Theme.withAlpha(Theme.accent, 0.28)
+                            : chipHover.hovered ? Theme.surfaceAlt : "transparent"
+                        border {
+                            width: (chip.busy || chip.flash !== "") ? 2 : 1
+                            color: chip.flash === "ok" ? Theme.success
+                                 : chip.flash === "fail" ? Theme.error
+                                 : chip.busy ? Theme.warning
+                                 : chip.focused ? Theme.accent
+                                 : chip.named ? Theme.border : Theme.withAlpha(Theme.border, 0.4)
+                        }
+
+                        // ── chip content: dot · emblem · name/editor · actions
+                        RowLayout {
+                            id: chipRow
+                            anchors { fill: parent; leftMargin: Theme.space.xs; rightMargin: Theme.space.xs }
+                            spacing: Theme.space.xs
+
+                            // Learn-state dot: green once a turn-hash exists.
+                            Rectangle {
+                                visible: chip.inTeam
+                                implicitWidth: 6; implicitHeight: 6; radius: 3
+                                color: chip.learned ? Theme.success : Theme.overlay
+                            }
+
+                            ClassIcon {
+                                cls: chip.inTeam ? DofusState.classOf(chip.name) : ""
+                                size: 16
+                            }
+
+                            // Name — click focuses, double-click renames.
+                            Text {
+                                id: label
+                                visible: !editor.visible
+                                text: chip.named ? chip.name : "unnamed"
+                                color: chip.focused ? Theme.accent
+                                     : chip.named ? Theme.text : Theme.overlay
+                                font { pixelSize: Theme.fs.xs; family: "monospace" }
+                                elide: Text.ElideRight
+                                Layout.maximumWidth: 150
+
+                                TapHandler {
+                                    acceptedButtons: Qt.LeftButton
+                                    onSingleTapped: chip.focusMe()
+                                    onDoubleTapped: chip.beginRename()
+                                }
+                            }
+
+                            // Inline rename field: retitles the window; team
+                            // members also rewrite team.json (DofusWindows.rename).
+                            TextInput {
+                                id: editor
+                                visible: false
+                                color: Theme.text
+                                font { pixelSize: Theme.fs.xs; family: "monospace" }
+                                Layout.preferredWidth: Math.max(70, label.implicitWidth)
+                                verticalAlignment: TextInput.AlignVCenter
+                                clip: true; selectByMouse: true
+                                onEditingFinished: chip.commitRename()
+                                Keys.onEscapePressed: chip.cancelRename()
+                            }
+
+                            // Capture (◎) — press during this character's turn.
+                            ChipButton {
+                                visible: chip.inTeam
+                                symbol: "◎"
+                                enabled: DofusSwap.calibrated
+                                onActivated: DofusSwap.learn(chip.name)
+                            }
+                            // Reorder in the team's turn order.
+                            ChipButton {
+                                visible: chip.inTeam
+                                symbol: "◀"
+                                enabled: chip.teamIndex > 0
+                                onActivated: DofusState.reorder(chip.teamIndex, chip.teamIndex - 1)
+                            }
+                            ChipButton {
+                                visible: chip.inTeam
+                                symbol: "▶"
+                                enabled: chip.teamIndex >= 0 && chip.teamIndex < (DofusState.team?.length ?? 0) - 1
+                                onActivated: DofusState.reorder(chip.teamIndex, chip.teamIndex + 1)
+                            }
+                            // Close just this window.
+                            ChipButton {
+                                symbol: "✕"
+                                onActivated: DofusWindows.close(chip.modelData.selector)
+                            }
+                        }
+
+                        // Right-click opens the group quick-actions menu.
                         MouseArea {
                             anchors.fill: parent
+                            acceptedButtons: Qt.RightButton
                             cursorShape: Qt.PointingHandCursor
-                            acceptedButtons: Qt.LeftButton | Qt.RightButton
-                            onClicked: (event) => {
-                                if (event.button === Qt.LeftButton) {
-                                    DofusWindows.focus(chip.modelData.selector);
-                                    scope.closeMenu();
-                                } else {
-                                    scope.menuOpen = true;
-                                }
+                            onClicked: scope.menuOpen = true
+                        }
+
+                        // Capture feedback: colour wash only (DofusSwap sends
+                        // the words as a toast).
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: chip.radius
+                            visible: chip.busy || chip.flash !== ""
+                            color: chip.flash === "ok" ? Theme.withAlpha(Theme.success, 0.30)
+                                 : chip.flash === "fail" ? Theme.withAlpha(Theme.error, 0.30)
+                                 : Theme.withAlpha(Theme.warning, 0.22)
+                        }
+
+                        // Inline-rename plumbing, same as the old bar chip.
+                        property bool _renaming: false
+                        function focusMe() {
+                            DofusWindows.focus(chip.modelData.selector);
+                            scope.closeMenu();
+                        }
+                        function beginRename() {
+                            if (chip._renaming) return;
+                            scope.editingOpen = true;
+                            chip._renaming = true;
+                            editor.text = chip.inTeam ? chip.name : "";
+                            editor.visible = true;
+                            Qt.callLater(() => { editor.forceActiveFocus(); editor.selectAll(); });
+                        }
+                        function commitRename() {
+                            if (!chip._renaming) return;
+                            chip._renaming = false;
+                            scope.editingOpen = false;
+                            editor.visible = false;
+                            DofusWindows.rename(chip.inTeam ? chip.teamIndex : -1,
+                                chip.modelData.pid, editor.text);
+                        }
+                        function cancelRename() {
+                            chip._renaming = false;
+                            scope.editingOpen = false;
+                            editor.visible = false;
+                        }
+
+                        // A tiny square action button.
+                        component ChipButton: Rectangle {
+                            property string symbol
+                            property bool active: true
+                            signal activated
+                            Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                            radius: Theme.radiusSmall
+                            color: btnHover.containsMouse && active ? Theme.overlay : "transparent"
+                            Text {
+                                anchors.centerIn: parent; text: parent.symbol
+                                color: parent.active ? Theme.subtext : Theme.withAlpha(Theme.subtext, 0.3)
+                                font.pixelSize: Theme.fs.xs
+                            }
+                            MouseArea {
+                                id: btnHover
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: if (parent.active) parent.activated()
                             }
                         }
                     }
@@ -205,8 +359,8 @@ Scope {
             elevation: "peek"
             radius: Theme.radius
 
-            // Below the chip strip, aligned to its left edge; clamped inside
-            // the monitor so a low tile can't push the menu off-screen.
+            // Below the strip, aligned to its left edge; clamped inside the
+            // monitor so a low tile can't push the menu off-screen.
             x: slide.x
             width: Math.max(slide.width, 280)
             y: Math.max(Theme.space.sm,
