@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/focus.schema.json",
+  "$id": "https://github.com/quantumfate/quickshell/schemas/focus.schema.json",
   "title": "focus.json",
   "description": "The current mood: a visual operating state, not just a notification switch. `neutral` is the resting state; the other five each carry their own accent role, surface alpha, density, motion energy and notification policy (see Focus.qml's `moods` table — not duplicated here, same as theme.json naming a palette rather than embedding one). Also the firm-focus contract: read by the media browser and game launchers (refuse-to-start, with a reason) and by do-not-disturb; never by anything that would kill an already-running session.",
   "type": "object",

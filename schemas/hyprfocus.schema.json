@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/hyprfocus.schema.json",
+  "$id": "https://github.com/quantumfate/quickshell/schemas/hyprfocus.schema.json",
   "title": "hyprfocus.json",
   "description": "The hyprfocus declaration: what may exist on the desk, per mode. One `base` declares the whole desk; each mode states only its difference from it. This is a materialisation model, not a permission model \u2014 a resource a mode does not admit is not loaded, so there is nothing to ask permission about. Deltas are a writing convenience with no runtime existence: a resolver folds base + mode into one complete desk BEFORE anything acts on it, because applying deltas incrementally against a running system would make the result depend on the order they were applied. Read by the compositor, the shell and the CLI; written by the shell's mode panel.",
   "type": "object",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/adapter-result.schema.json",
+  "$id": "https://github.com/quantumfate/quickshell/schemas/adapter-result.schema.json",
   "title": "<adapter>.result.json",
   "description": "What an action adapter actually did. Written atomically after a run so the shell can report the truth instead of assuming success — the theme fan-out reaches nine surfaces and any of them can be absent on a given machine.",
   "type": "object",

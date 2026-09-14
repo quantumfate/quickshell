@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/sound.schema.json",
+  "$id": "https://github.com/quantumfate/quickshell/schemas/sound.schema.json",
   "title": "sound.json",
   "description": "State for the rain/lofi ambience player. Read and written by the Sound singleton; the audio itself is a long-lived local mpv, driven over its own IPC socket, not through this file.",
   "type": "object",

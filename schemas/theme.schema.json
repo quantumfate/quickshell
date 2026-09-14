@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/theme.schema.json",
+  "$id": "https://github.com/quantumfate/quickshell/schemas/theme.schema.json",
   "title": "theme.json",
   "description": "The desk's appearance contract. Read by the Quickshell Theme singleton, by the Hyprland opacity rules, and by ,theme.sh apply \u2014 three readers, so a shape change needs a check that is not any one of them.",
   "type": "object",

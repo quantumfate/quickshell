@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/projects.schema.json",
+  "$id": "https://github.com/quantumfate/quickshell/schemas/projects.schema.json",
   "title": "projects.json",
   "description": "Per-project dashboard metadata, keyed by project name. Deliberately does NOT carry `path`: the project's existence and location are `,proj.sh`'s alone (scraped from the tms config), so this file cannot disagree with it about where a project lives. `,proj.sh drift` flags a name here that `,proj.sh list` no longer knows.",
   "type": "object",

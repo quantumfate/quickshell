@@ -6,9 +6,9 @@ This repository bridges everything on my desktop with the concept of a `store`.
 
 | Repo                                                          | Role                                                          |
 | ------------------------------------------------------------- | ------------------------------------------------------------- |
-| [**quickshell**](https://codeberg.org/quantumfate/quickshell) | The desktop shell: widgets, theming, shared-state singletons. |
-| [**hypr**](https://codeberg.org/quantumfate/hypr)             | The Hyprland config (Lua): keybinds, submaps, window rules.   |
-| [**scripts**](https://codeberg.org/quantumfate/scripts)       | Standalone CLI helpers on `$PATH`.                            |
+| [**quickshell**](https://github.com/quantumfate/quickshell) | The desktop shell: widgets, theming, shared-state singletons. |
+| [**hypr**](https://github.com/quantumfate/hypr)             | The Hyprland config (Lua): keybinds, submaps, window rules.   |
+| [**scripts**](https://github.com/quantumfate/scripts)       | Standalone CLI helpers on `$PATH`.                            |
 
 My obsidian is managed too but not listed here.
 
@@ -26,7 +26,7 @@ source of truth shared by both runtimes.
 - QML side: `services/Store.qml` — `Store { name: "theme" }` → `.data`,
   `.get(...)`, `.set(patch)`, `.put(obj)`, `defaults` (seeds an empty file).
 - Lua side:
-  [`hypr/lib/store.lua`](https://codeberg.org/quantumfate/hypr/src/branch/main/hypr/lib/store.lua)
+  [`hypr/lib/store.lua`](https://github.com/quantumfate/hypr/src/branch/main/hypr/lib/store.lua)
   — `Store.define("theme")` → `:get(...)`, `:set(patch)`, `:update(fn)`
   (vendored `json.lua`, no `jq`).
 - A third reader (script, cron) just reads the JSON — no coordination.
