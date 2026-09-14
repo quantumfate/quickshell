@@ -1,0 +1,208 @@
+{
+  "version": 1,
+  "base": {
+    "workspaces": [
+      "code",
+      "creative",
+      "proton",
+      "media",
+      "gaming",
+      "logs",
+      "misc",
+      "comms",
+      "music",
+      "ankama"
+    ],
+    "bindings": [
+      "root",
+      "terminal",
+      "applications",
+      "project",
+      "configuration",
+      "layout",
+      "screencapture",
+      "shell",
+      "dofus"
+    ],
+    "services": [
+      "theme-auto",
+      "obsidian",
+      "obsidian-index",
+      "linear-sync",
+      "state-backup",
+      "chezmoi",
+      "audio-notify"
+    ],
+    "projects": [],
+    "requires": {
+      "binding:dofus": ["workspace:gaming"]
+    },
+    "notify": {
+      "default": "show"
+    },
+    "scenes": {
+      "gaming": {
+        "blocks": [
+          {
+            "classes": ["Dofus.x64"],
+            "order": 1,
+            "group": true,
+            "share": 0.67,
+            "collect": true
+          },
+          {
+            "classes": ["zen-gaming-media"],
+            "order": 2,
+            "share": 0.33,
+            "guard": "deny"
+          }
+        ],
+        "barred": ["steam_app_default", "steam_app_\\d+", "Ankama Launcher"]
+      },
+      "code": {
+        "blocks": [
+          {
+            "classes": ["Kitty-Main", "Proj-[A-Za-z0-9_-]+"],
+            "order": 1,
+            "group": true,
+            "share": 0.67
+          },
+          {
+            "classes": ["zen-twilight", "firefox-developer-edition"],
+            "order": 2,
+            "share": 0.33
+          }
+        ]
+      }
+    },
+    "wants": {
+      "service:obsidian": ["service:obsidian-index", "service:linear-sync"]
+    }
+  },
+  "modes": {
+    "neutral": {
+      "name": "Neutral",
+      "presentation": {
+        "accent_role": "lavender",
+        "surface_alpha": 0.84,
+        "density": "comfortable",
+        "motion_energy": "base",
+        "bar_autohide": false
+      }
+    },
+    "deep": {
+      "name": "Deep work",
+      "workspaces": {
+        "remove": ["gaming", "media", "music"]
+      },
+      "bindings": {
+        "remove": ["dofus", "screencapture"]
+      },
+      "notify": {
+        "default": "queue"
+      },
+      "presentation": {
+        "accent_role": "blue",
+        "surface_alpha": 0.94,
+        "density": "compact",
+        "motion_energy": "instant",
+        "bar_autohide": true
+      }
+    },
+    "chores": {
+      "name": "Chores",
+      "workspaces": {
+        "remove": ["gaming"]
+      },
+      "bindings": {
+        "remove": ["dofus"]
+      },
+      "presentation": {
+        "accent_role": "peach",
+        "surface_alpha": 0.8,
+        "density": "dense",
+        "motion_energy": "fast",
+        "bar_autohide": false
+      }
+    },
+    "reflect": {
+      "name": "Reflect",
+      "workspaces": {
+        "remove": ["gaming", "media"]
+      },
+      "bindings": {
+        "remove": ["dofus"]
+      },
+      "notify": {
+        "default": "queue"
+      },
+      "presentation": {
+        "accent_role": "mauve",
+        "surface_alpha": 0.7,
+        "density": "airy",
+        "motion_energy": "slow",
+        "bar_autohide": false
+      }
+    },
+    "game": {
+      "name": "Gaming",
+      "workspaces": {
+        "only": ["gaming", "comms", "ankama", "logs"]
+      },
+      "services": {
+        "remove": ["obsidian", "obsidian-index", "linear-sync"]
+      },
+      "notify": {
+        "default": "drop"
+      },
+      "presentation": {
+        "accent_role": "green",
+        "surface_alpha": 0.96,
+        "density": "compact",
+        "motion_energy": "instant",
+        "bar_autohide": false
+      }
+    },
+    "media": {
+      "name": "Media",
+      "workspaces": {
+        "remove": ["gaming"]
+      },
+      "bindings": {
+        "remove": ["dofus"]
+      },
+      "services": {
+        "remove": ["obsidian-index", "linear-sync"]
+      },
+      "notify": {
+        "default": "queue"
+      },
+      "presentation": {
+        "accent_role": "pink",
+        "surface_alpha": 0.62,
+        "density": "airy",
+        "motion_energy": "ambient",
+        "bar_autohide": true
+      }
+    },
+    "llm": {
+      "name": "LLM",
+      "workspaces": {
+        "remove": ["gaming", "media"]
+      },
+      "bindings": {
+        "remove": ["dofus"]
+      },
+      "notify": {
+        "default": "queue"
+      },
+      "presentation": {
+        "accent_role": "teal",
+        "surface_alpha": 0.9,
+        "density": "compact",
+        "motion_energy": "fast",
+        "bar_autohide": false
+      }
+    }
+  }
+}

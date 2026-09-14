@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeberg.org/quantumfate/quickshell/schemas/hyprfocus.schema.json",
+  "title": "hyprfocus.json",
+  "description": "The hyprfocus declaration: what may exist on the desk, per mode. One `base` declares the whole desk; each mode states only its difference from it. This is a materialisation model, not a permission model \u2014 a resource a mode does not admit is not loaded, so there is nothing to ask permission about. Deltas are a writing convenience with no runtime existence: a resolver folds base + mode into one complete desk BEFORE anything acts on it, because applying deltas incrementally against a running system would make the result depend on the order they were applied. Read by the compositor, the shell and the CLI; written by the shell's mode panel.",
+  "type": "object",
+  "required": ["version", "base", "modes"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "description": "Declaration format version. Bumped when the grammar changes incompatibly.",
+      "const": 1
+    },
+    "base": {
+      "$ref": "#/$defs/desk"
+    },
+    "modes": {
+      "description": "Every mode, keyed by id. `neutral` is the resting state and must exist.",
+      "type": "object",
+      "required": ["neutral"],
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/mode"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "description": "A stable kebab-case identifier. Names the thing, not the file that happens to implement it, so moving code does not change a declaration.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "maxLength": 64
+    },
+    "desk": {
+      "description": "A complete desk: every resource that exists, named. This is both the shape of `base` and the shape a resolver produces.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workspaces": {
+          "description": "Workspaces that exist and are reachable. Admitted by enabling their workspace rule; withdrawn by disabling it, with any windows on them held.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "bindings": {
+          "description": "Binding trees that are loaded. A tree a mode does not admit has its keybinds disabled, so which-key renders the enabled set by construction rather than by filtering.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "services": {
+          "description": "Background tasks that run, named from the scripts contract's task map rather than as raw units \u2014 so the declaration says what work happens and the contract says which units implement it.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "projects": {
+          "description": "Projects open on their scene's workspace, named from the projects store.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "scenes": {
+          "description": "Scene definitions, keyed by the workspace name they arrange. Geometry only \u2014 a scene never decides whether its workspace exists. A scene is admitted implicitly with its workspace; per-mode scene substitution is deliberately not in version 1.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/scene"
+          }
+        },
+        "notify": {
+          "description": "Notification routing, keyed by resolved source id (never by the self-reported application name). `default` applies to anything unmatched.",
+          "type": "object",
+          "propertyNames": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/id"
+              },
+              {
+                "const": "default"
+              }
+            ]
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/verdict"
+          }
+        },
+        "requires": {
+          "description": "Hard composition edges, keyed by `kind:name`: what a resource CANNOT FUNCTION without. The resolver takes the transitive closure, so a mode that admits `project:obsidian` gets what it needs without listing it. A mode that explicitly `remove`s something required is a conflict the resolver reports.\n\nThis expresses composition only. Ordering, readiness and failure handling between the units of one capability belong in the unit files, where systemd already does them better than a resolver could.\n\nMirrors systemd's `Requires=`. Prefer `wants` unless the resource is genuinely broken without the dependency.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/ref"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          }
+        },
+        "wants": {
+          "description": "Soft composition edges, keyed by `kind:name`: what a resource USES but can run without. Pulled in by default like `requires`, but a mode may drop it and the resolver honours that silently rather than reporting a conflict.\n\nThis is the common case and the one to reach for first. Obsidian without its indexer is degraded, not broken \u2014 so a media mode can keep the window and stop the indexing to reclaim resources, which is behaviour that already ships today.\n\nMirrors systemd's `Wants=`.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/ref"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/ref"
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "verdict": {
+      "description": "What a notification does on screen. History records every notification with the verdict applied to it regardless \u2014 suppression governs what interrupts, never what is knowable afterwards.",
+      "enum": ["show", "queue", "digest", "drop"]
+    },
+    "revocation": {
+      "description": "What happens to a resource a mode stops admitting. `hold` parks it out of sight and restores it when the mode ends; `retire` stops it and does not bring it back. Holding buys attention, retiring buys capacity \u2014 so windows usually hold and services usually retire.",
+      "enum": ["hold", "retire"]
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "blocks": {
+          "description": "Ordered groups of window classes sharing the workspace.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          }
+        },
+        "barred": {
+          "description": "Classes that legitimately open here without belonging to a block. Barred because auto_group grabs whatever opens while a group holds focus.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "required": ["classes", "order"],
+      "additionalProperties": false,
+      "properties": {
+        "classes": {
+          "description": "Literal class or Lua pattern, matched literal-first so a hyphenated class does not trip on `-` being a quantifier.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "order": {
+          "description": "Position in the left-to-right sequence. With a layout provider this is the order boxes are placed, not a correction applied afterwards.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "group": {
+          "description": "All matching windows live in one Hyprland group, so the block is a single tile however many windows it holds.",
+          "type": "boolean",
+          "default": false
+        },
+        "share": {
+          "description": "Fraction of the work area this block holds.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "collect": {
+          "description": "Members that drifted to another workspace come home. Off by default: a window moved away deliberately should stay where it was put.",
+          "type": "boolean",
+          "default": false
+        },
+        "guard": {
+          "description": "How a non-group block resists being grouped. `deny` also refuses a deliberate toggle, for a tile whose job is to be a fixed region beside a group.",
+          "enum": ["barred", "deny"],
+          "default": "barred"
+        },
+        "revoke": {
+          "$ref": "#/$defs/revocation",
+          "default": "hold"
+        }
+      }
+    },
+    "delta": {
+      "description": "A change to one resource kind. `only` is exclusive and replaces the base's set; `add` and `remove` apply against it. The two forms are mutually exclusive, because a declaration that said both would have no single obvious meaning.\n\n`only` and `remove` differ in how they meet a requirement. `only` says what to inherit, so the requirement closure may still add to it. `remove` is an explicit statement that a resource should not be there, so a requirement that contradicts it is a conflict the resolver reports rather than silently resolving either way \u2014 silently starting it ignores what you said, and silently omitting it breaks whatever needed it.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "only": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "add": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": ["only", "add"]
+          },
+          {
+            "required": ["only", "remove"]
+          }
+        ]
+      }
+    },
+    "mode": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Human-readable label for the shell.",
+          "type": "string"
+        },
+        "workspaces": {
+          "$ref": "#/$defs/delta"
+        },
+        "bindings": {
+          "$ref": "#/$defs/delta"
+        },
+        "services": {
+          "$ref": "#/$defs/delta"
+        },
+        "projects": {
+          "$ref": "#/$defs/delta"
+        },
+        "notify": {
+          "description": "Routing overrides merged onto the base's, keyed by source id. `default` sets the fallback for this mode.",
+          "type": "object",
+          "propertyNames": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/id"
+              },
+              {
+                "const": "default"
+              }
+            ]
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/verdict"
+          }
+        },
+        "revoke": {
+          "description": "Per-resource revocation overrides for this mode, keyed by resource id.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/revocation"
+          }
+        },
+        "presentation": {
+          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.",
+          "type": "object"
+        }
+      }
+    },
+    "ref": {
+      "description": "A resource reference, `kind:name` \u2014 `workspace:`, `binding:`, `service:`, `project:`. Singular, and qualified because requirements cross kinds: opening a project pulls in the background work it needs.",
+      "type": "string",
+      "pattern": "^(workspace|binding|service|project):[a-z0-9][a-z0-9-]*$"
+    }
+  }
+}
