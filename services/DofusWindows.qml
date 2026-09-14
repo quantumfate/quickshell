@@ -86,6 +86,10 @@ Singleton {
                 address: address,
                 selector: "address:" + address,
                 grouped: c?.grouped ?? [],
+                // Internal fullscreen bitmask (0 none, 1 fullscreen, 2
+                // maximize, 3 both) — Hypr hides its own bar when a member
+                // renders fullscreen, and the widget must follow (LEO-243).
+                fullscreen: c?.fullscreen ?? 0,
                 at: { x: c?.at?.[0] ?? 0, y: c?.at?.[1] ?? 0 },
                 size: { x: c?.size?.[0] ?? 0, y: c?.size?.[1] ?? 0 },
                 workspaceId: c?.workspace?.id ?? -1,

@@ -47,9 +47,12 @@ Scope {
 
     // Up only while the group's workspace is the monitor's ACTIVE one. A
     // focus/workspace change that moves attention off the gaming workspace
-    // takes the widget — and any open menu — with it.
+    // takes the widget — and any open menu — with it. A member rendering
+    // fullscreen takes the bar away too, exactly as Hypr's own bar does
+    // (LEO-243 carries fullscreen state within the group).
     readonly property bool placed: !!scope._anchor && !!scope._mon
         && scope._mon.activeWorkspace?.id === scope._anchor.workspaceId
+        && !((scope._live.some(w => (w.fullscreen ?? 0) > 0)))
 
     // The context menu open state. Closed by an action, a click-away, or the
     // group's workspace losing focus — the menu is attached to the tile, and
@@ -127,25 +130,40 @@ Scope {
         }
 
         // ── The strip: the compositor groupbar's slot, restyled ────────────
+        // Hypr's own bar insets the tile (takes the top edge from the client),
+        // but it carries no actions and cannot be themed per palette. The
+        // strip paints on exactly that reserved slot — same height, same
+        // position — so the tile shows ONE attached bar: 30px out of the
+        // window, by the compositor's own reservation. Fractions of a pixel
+        // drift here are what the "sheet" look is gauged on, so `height` and
+        // hypr conf.lua's `group.groupbar.height` must be changed together.
         Surface {
             id: slide
             elevation: "island"
             radius: Theme.radiusIsland
 
-            // Near-opaque so the compositor bar's own paint cannot bleed through.
-            color: Theme.withAlpha(Theme.backgroundAlt, 0.92)
+            // Near-opaque so the compositor bar's own paint cannot bleed.
+            color: Theme.withAlpha(Theme.backgroundAlt, 0.94)
 
-            // The compositor groupbar's slot: tile's top edge, full tile width,
-            // in output-local coordinates (the window origin is the monitor's).
-            readonly property int groupbarHeight: 26
+            readonly property int groupbarHeight: 30
             implicitWidth: scope._anchor?.size?.x ?? 240
             implicitHeight: groupbarHeight
+            // Tile top edge, output-local: exactly the bar's slot.
             x: scope._mon ? (scope._anchor.at.x - scope._mon.x) : 0
             y: scope._mon ? (scope._anchor.at.y - scope._mon.y) : 0
 
+            // Scroll over the bar walks the stack — the same gesture Hypr's
+            // native bar carries.
+            WheelHandler {
+                onWheel: (event) => {
+                    const dir = event.angleDelta.y < 0;
+                    if (event.angleDelta.y !== 0) DofusWindows.iterate(dir);
+                }
+            }
+
             Row {
-                anchors { fill: parent; leftMargin: Theme.space.xs; rightMargin: Theme.space.xs }
-                spacing: Theme.space.xs
+                anchors { fill: parent; leftMargin: Theme.space.sm; rightMargin: Theme.space.sm }
+                spacing: Theme.space.sm
 
                 Repeater {
                     model: scope._live
@@ -212,13 +230,13 @@ Scope {
                             // Learn-state dot: green once a turn-hash exists.
                             Rectangle {
                                 visible: chip.inTeam
-                                implicitWidth: 6; implicitHeight: 6; radius: 3
+                                implicitWidth: 8; implicitHeight: 8; radius: 4
                                 color: chip.learned ? Theme.success : Theme.overlay
                             }
 
                             ClassIcon {
                                 cls: chip.inTeam ? DofusState.classOf(chip.name) : ""
-                                size: 16
+                                size: 18
                             }
 
                             // Name — click focuses, double-click renames.
@@ -228,7 +246,7 @@ Scope {
                                 text: chip.named ? chip.name : "unnamed"
                                 color: chip.focused ? Theme.accent
                                      : chip.named ? Theme.text : Theme.overlay
-                                font { pixelSize: Theme.fs.xs; family: "monospace" }
+                                font { pixelSize: Theme.fs.sm; family: "monospace" }
                                 elide: Text.ElideRight
                                 Layout.maximumWidth: 150
 
@@ -332,7 +350,7 @@ Scope {
                             property string symbol
                             property bool active: true
                             signal activated
-                            Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                            Layout.preferredWidth: 18; Layout.preferredHeight: 18
                             radius: Theme.radiusSmall
                             color: btnHover.containsMouse && active ? Theme.overlay : "transparent"
                             Text {
