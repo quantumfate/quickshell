@@ -174,7 +174,9 @@
         ]
       },
       "notify": {
-        "default": "drop"
+        "default": "drop",
+        "im": "drop",
+        "linear-sync": "queue"
       },
       "presentation": {
         "accent_role": "green",

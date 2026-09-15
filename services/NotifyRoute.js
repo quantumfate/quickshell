@@ -67,14 +67,14 @@ function source(n) {
  *
  * A critical notification escalates out of silence unless the mode says
  * otherwise. A mode that hides "battery at 2%" is not reducing distraction, it
- * is withholding something you needed; `allowCriticalSuppression` exists so
+ * is withholding something you needed; `allow-critical-suppression` exists so
  * that is a deliberate choice rather than an accident of the default route.
  */
 function verdict(resolved, n, routes) {
     routes = routes || {};
     n = n || {};
 
-    var category = _hint(n.hints, "category");
+    var category = _hint(n.hints, "category") || n.category || "";
     var family = category.indexOf(".") > 0 ? category.split(".")[0] : "";
 
     var decided = "";
@@ -93,7 +93,7 @@ function verdict(resolved, n, routes) {
         rule = "default";
     }
 
-    if (n.urgency === "critical" && decided !== "show" && !routes.allowCriticalSuppression) {
+    if (n.urgency === "critical" && decided !== "show" && !routes["allow-critical-suppression"]) {
         return { verdict: "show", rule: rule, escalated: true };
     }
     return { verdict: decided, rule: rule, escalated: false };

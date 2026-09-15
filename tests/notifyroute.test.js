@@ -9,9 +9,20 @@
 // resolution chain that replaces it.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { loadLibrary } from "./qml.js";
 
-const { source, verdict, route, TIER } = loadLibrary("services/NotifyRoute.js");
+const { source, verdict, route } = loadLibrary("services/NotifyRoute.js");
+// `TIER` is named explicitly because the auto-detected export list only finds
+// functions, and `TIER` is a table.
+const { TIER } = loadLibrary("services/NotifyRoute.js", ["TIER"]);
+const { routes } = loadLibrary("services/HyprfocusRead.js");
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const shipped = JSON.parse(
+    readFileSync(join(root, "assets/hyprfocus.default.json"), "utf8"),
+);
 
 const n = over => ({ appName: "", desktopEntry: "", hints: {}, urgency: "normal", ...over });
 
@@ -68,6 +79,16 @@ test("a category family matches when the exact category does not", () => {
     assert.equal(r.rule, "email");
 });
 
+test("a category carried on the record routes the same as one in hints", () => {
+    // The daemon keeps `category` on the record rather than the sender's whole
+    // hint map, so the verdict must read both shapes identically.
+    const hinted = route(n({ appName: "some-client", hints: { category: "im.received" } }), { im: "drop" });
+    const rec = route({ appName: "some-client", desktopEntry: "", hints: {}, category: "im.received", urgency: "normal" }, { im: "drop" });
+    assert.equal(hinted.verdict, "drop");
+    assert.equal(rec.verdict, hinted.verdict);
+    assert.equal(rec.rule, hinted.rule);
+});
+
 test("an exact category beats its family", () => {
     const routes = { email: "drop", "email.arrived": "show" };
     assert.equal(route(n({ appName: "mail", hints: { category: "email.arrived" } }), routes).verdict, "show");
@@ -98,7 +119,7 @@ test("a critical notification escalates out of silence", () => {
 });
 
 test("critical escalation can be turned off deliberately", () => {
-    const routes = { default: "drop", allowCriticalSuppression: true };
+    const routes = { default: "drop", "allow-critical-suppression": true };
     const r = route(n({ appName: "upower", urgency: "critical" }), routes);
     assert.equal(r.verdict, "drop");
     assert.ok(!r.escalated);
@@ -120,4 +141,39 @@ test("every routed notification carries what decided it", () => {
 test("ids are normalised so case and suffix cannot split one sender in two", () => {
     assert.equal(source(n({ desktopEntry: "Obsidian.desktop" })).id, "obsidian");
     assert.equal(source(n({ appName: "  Spotify  " })).id, "spotify");
+});
+
+// The mode acceptance case, against the shipped declaration: gaming drops
+// chat, queues the sync's results, and still shows a critical battery
+// warning — and every one of them is recorded with the rule that decided it.
+const gaming = routes(shipped, "gaming");
+
+test("gaming drops a chat toast", () => {
+    // A client without a desktop entry that declares the spec's vocabulary
+    // resolves at category tier and matches through the family rule.
+    const r = route(n({ appName: "some-client", hints: { category: "im.received" } }), gaming);
+    assert.equal(r.verdict, "drop");
+    assert.equal(r.rule, "im");
+});
+
+test("gaming queues the sync's results, though the mode stops the sync itself", () => {
+    const r = route(n({ appName: "notify-send", hints: { "x-hyprfocus-source": "linear-sync" } }), gaming);
+    assert.equal(r.verdict, "queue");
+    assert.equal(r.rule, "linear-sync");
+});
+
+test("gaming drops at its default but a critical still shows", () => {
+    const r = route(n({ appName: "upower", urgency: "critical" }), gaming);
+    assert.equal(r.verdict, "show");
+    assert.ok(r.escalated, "battery at 2% is not distraction");
+});
+
+test("gaming drops an app that never states what it is", () => {
+    // The untrusted last resort still resolves — and the mode verdict then
+    // decides, so the sender is a name in history rather than a mystery.
+    const r = route(n({ appName: "Steam" }), gaming);
+    assert.equal(r.verdict, "drop");
+    assert.equal(r.source, "steam");
+    assert.equal(r.tier, TIER.APP_NAME);
+    assert.ok(!r.trusted);
 });

@@ -9,7 +9,8 @@ pragma ComponentBehavior: Bound
 //   items    live on-screen toasts (auto-expiring per policy, sticky when
 //            critical or the active mood's timeout is 0)
 //   history  capped, persisted metadata log (survives restarts, via Store);
-//            every entry records its `route`: "shown" | "dnd" | "mood:<mode>"
+//            every entry records its `route` — "shown" | "dnd" | "mode:<v>" |
+//            "mood" — plus the source it resolved to and the rule that decided
 //   dnd      manual do-not-disturb: suppress toasts (still logged to history)
 //   moods    the active focus mood's notification policy also gates the screen
 //            ("critical-only"/"none" silence toasts; history still records),
@@ -111,6 +112,11 @@ Singleton {
         rec.source = r.id;
         rec.tier = r.tier;
         rec.trusted = r.trusted;
+        // Kept beside the identity: a family rule (`im`, `email`) is a route's
+        // second voice, and the record must carry it without shipping the
+        // sender's whole hint map into history.
+        const cat = n.hints && n.hints.category;
+        rec.category = typeof cat === "string" ? cat.trim() : "";
     }
 
     function _urgencyName(u) {
@@ -147,7 +153,12 @@ Singleton {
             // Buffered for the digest when the mood asks for one, and also
             // when a rule said `queue` outright — a verdict that names
             // queueing should queue whatever the mood happens to want.
-            if (route && (Focus.notifications.queue || route === "mode:queue")) {
+            // Buffered when the mood asks for a digest, and also when a
+            // verdict named queueing or a count outright — a verdict that
+            // says queue should queue whatever the mood happens to want.
+            // Digest (counted only) buffers too; the summary then counts it
+            // without naming the senders.
+            if (route && (Focus.notifications.queue || route === "mode:queue" || route === "mode:digest")) {
                 root._queued = root._queued.concat([meta]);
                 root._queueMood = Focus.mode;
             }
@@ -166,54 +177,53 @@ Singleton {
     }
 
     // Why a record is (or is not) on screen: "" (shown), "dnd" (manual DND —
-    // critical still breaks through), or "mood" (the active mood's policy —
-    // critical does NOT break a strict mood). The reason is recorded as each
-    // history entry's `route`; only "shown" ever toasted.
+    // critical still breaks through), or "mode:<verdict>" / "mood" (a policy —
+    // critical handled per rule). The reason is recorded as each history
+    // entry's `route`; only "" ever toasted.
     //
-    // A declared rule for this notification's resolved source wins over the
-    // mood's blanket policy, because it is the more specific statement: "queue
-    // the sync results" should hold whether or not the mood silences
-    // everything else. Only an EXPLICIT source rule applies — the declaration's
-    // `default` is deliberately not consulted yet, so a desk with no
-    // declaration, or one carrying only a default, behaves exactly as before.
-    // The blanket policy moves across when the mode surface replaces the mood
-    // panel that still owns it.
-    // The verdict a declaration gives this notification's resolved source, or
-    // "" when it declares none. Only an EXPLICIT source rule counts: the
-    // declaration's `default` is deliberately not consulted yet, so a desk
-    // with no declaration — or one carrying only a default — behaves exactly
-    // as it did before. The blanket policy moves across when the mode surface
-    // replaces the mood panel that still owns it.
+    // A seeded declaration owns routing outright: source id, then category,
+    // then its family, then the mode's `default` — most specific wins, and
+    // urgency only ever qualifies severity. The default stands in for the
+    // blanket policy below, which keeps speaking only while no declaration is
+    // seeded — the mood panel still edits that half, and the mode surface
+    // takes it when it replaces the panel (LEO-281).
+    // The verdict the declaration gives this notification's source, or null
+    // when nothing was declared: an empty table reads as "nothing declared",
+    // so the mood's blanket policy keeps speaking rather than silence
+    // inheriting from a missing store.
     function _verdict(rec) {
         const rules = Hyprfocus.routes;
-        if (!rules || !rec.source) return "";
-        const verdict = rules[rec.source] || "";
-        if (!verdict) return "";
-        // Critical escalates out of silence unless the rule says otherwise. A
-        // mode that hides "battery at 2%" is not reducing distraction, it is
-        // withholding something that was needed.
-        if (rec.urgency === "critical" && verdict !== "show" && !rules.allowCriticalSuppression) {
-            return "show";
-        }
-        return verdict;
+        if (!rules || !rec.source || !Object.keys(rules).length) return null;
+        return NotifyRoute.verdict(
+            { id: rec.source, tier: rec.tier, trusted: rec.trusted }, rec, rules);
     }
 
     function _route(rec) {
         if (root.dnd && rec.urgency !== "critical") return "dnd";
 
-        // A declared rule for this source wins over the mood's blanket policy,
-        // because it is the more specific statement: "queue the sync results"
-        // should hold whether or not the mood silences everything else, and an
-        // explicit "show" should break through a mood that does.
-        const verdict = root._verdict(rec);
-        if (verdict) return verdict === "show" ? "" : "mode:" + verdict;
+        const decision = root._verdict(rec);
+        if (decision) {
+            // Every entry carries what decided it — resolved source (already
+            // on the record), tier, the matched rule, and whether a critical
+            // escalated out of silence. History is never conditional: a mode
+            // that hid something must be able to show what it hid, and why.
+            rec.rule = decision.rule;
+            rec.escalated = decision.escalated;
+            // An explicit rule is the more specific statement: "queue the sync
+            // results" holds whether or not a blanket policy silences
+            // everything else, and an explicit "show" breaks through one that
+            // does. The `default` is held past the shell-feedback gate below,
+            // which is the desk's own voice and not an interruption.
+            if (decision.rule !== "default")
+                return decision.verdict === "show" ? "" : "mode:" + decision.verdict;
+        }
 
-        // The desk's own voice is not an interruption a mood suppresses:
-        // internal feedback (tier HYPRFOCUS, trusted — the wrapper sources
-        // rank above self-reported names) answers a key the user just pressed,
-        // and "launch enabled" vanishing under a silence policy reads as a
-        // broken key, not a mood. App notifications still cross this gate.
+        // Internal feedback answers a key the user just pressed; "launch
+        // enabled" vanishing under a silence policy reads as a broken key, not
+        // a policy. App notifications still cross this gate.
         if (rec.trusted && rec.tier === NotifyRoute.TIER.HYPRFOCUS) return "";
+
+        if (decision) return decision.verdict === "show" ? "" : "mode:" + decision.verdict;
 
         const policy = Focus.notifications.policy;
         if (policy === "critical-only") return rec.urgency === "critical" ? "" : "mood";
@@ -230,9 +240,11 @@ Singleton {
         return (typeof t === "number" && t > 0) ? t : 0;
     }
 
-    // Fold a finished mood's buffered work into ONE digest toast, per that
-    // mood's own queue/digest_on_exit flags. Fires when the mood ends however
-    // it ends — a switch away, an explicit stop, or a timed lapse.
+    // Fold a finished mode's buffered work into ONE digest toast. Fires when
+    // the mode ends however it ends — a switch away, an explicit stop, or a
+    // timed lapse — and when the mode asked for it (digest_on_exit) or a rule
+    // queued work under it. Digest verdicts are counted only: they raise the
+    // count but do not name their senders; queue verdicts do.
     Connections {
         target: Focus
         function onModeChanged() { root._moodChanged(); }
@@ -243,8 +255,9 @@ Singleton {
         if (!over) return;
         const m = Focus.policyData[root._queueMood] || {};
         const n = m.notifications || {};
-        if (n.digest_on_exit) {
-            const names = [...new Set(root._queued.map(q => q.appName || "notification"))];
+        if (n.digest_on_exit || root._queued.some(q => q.route === "mode:queue")) {
+            const detailed = root._queued.filter(q => q.route !== "mode:digest");
+            const names = [...new Set(detailed.map(q => q.appName || "notification"))];
             const label = names.slice(0, 3).join(", ") + (names.length > 3 ? ", \u2026" : "");
             const count = root._queued.length + " notification" + (root._queued.length === 1 ? "" : "s");
             root.send(count + " while " + (m.name || root._queueMood) + " was on", label, "info");
