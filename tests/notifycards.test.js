@@ -9,7 +9,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { sender, tierLine, routeLine, verdict, verdictRole } = loadLibrary("services/NotifyCards.js");
+const { sender, tierLine, routeLine, verdict, verdictRole, bySource, suppressed } = loadLibrary("services/NotifyCards.js",
+    ["sender", "tierLine", "routeLine", "verdict", "verdictRole", "bySource", "suppressed"]);
 
 test("the panel names the resolved source, not the app's claim", () => {
     assert.equal(sender({ source: "obsidian", tier: 1, trusted: true }), "obsidian");
@@ -82,4 +83,35 @@ test("badge colour: the verdict first, the shell level when no verdict decided",
     assert.equal(verdictRole("shown", "success"), "success");
     assert.equal(verdictRole("shown"), "accent");
     assert.equal(verdictRole(undefined, "error"), "error", "a legacy entry reads by level too");
+});
+
+test("grouping by source keeps a source's entries together, newest first within", () => {
+    const grouped = bySource([
+        { source: "mocha", time: 3 },
+        { source: "obsidian", time: 1 },
+        { source: "mocha", time: 2 },
+        { source: "obsidian", time: 4 },
+    ]);
+    assert.deepEqual(grouped.map(e => e.source), ["mocha", "mocha", "obsidian", "obsidian"]);
+    assert.deepEqual(grouped.filter(e => e.source === "mocha").map(e => e.time), [3, 2]);
+});
+
+test("an unroutable entry groups under unknown", () => {
+    // Not thrown away: the mystery sender sorts beside the unknown sources —
+    // the display word (sender()) reads "unknown" without a field it never had.
+    const e = bySource([{ time: 1 }])[0];
+    assert.equal(!("source" in e), true, "an entry without a source is passed through, not rewritten");
+});
+
+test("the review reads only what a mode held back", () => {
+    const history = [
+        { route: "shown" },
+        { route: "mode:queue" },
+        { route: "mode:drop" },
+        { route: "dnd" },
+        { route: "mood" },
+    ];
+    assert.deepEqual(suppressed(history).length, 4);
+    assert.deepEqual(suppressed([{ route: "shown" }]), []);
+    assert.deepEqual(suppressed([]), []);
 });

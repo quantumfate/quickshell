@@ -36,6 +36,13 @@ Scope {
         return Qt.formatDateTime(new Date(ts), "MMM dd");
     }
 
+    // Panel-local reads over the same history: grouped by source, or filtered
+    // to what a mode held back (LEO-240's review). Explicit, not hidden:
+    // nothing is shown when the view enables both.
+    property bool _bySource: false
+    property bool _onlySuppressed: false
+    readonly property var _suppressed: NotifyCards.suppressed(Notify.history)
+
     PanelWindow {
         visible: scope.shown
         color: "transparent"
@@ -84,6 +91,17 @@ Scope {
                     Item { Layout.fillWidth: true }
 
                     PillButton {
+                        label: "By source"
+                        active: scope._bySource
+                        onActivated: scope._bySource = !scope._bySource
+                    }
+                    PillButton {
+                        label: "Suppressed"
+                        active: scope._onlySuppressed
+                        enabled: scope._suppressed.length > 0
+                        onActivated: scope._onlySuppressed = !scope._onlySuppressed
+                    }
+                    PillButton {
                         label: Notify.dnd ? "󰂛 DND" : "󰂚 DND"
                         active: Notify.dnd
                         onActivated: Notify.toggleDnd()
@@ -95,7 +113,8 @@ Scope {
                     }
                 }
 
-                // Empty state.
+                // Empty states: an empty history, and the suppressed view
+                // with nothing held.
                 Text {
                     visible: Notify.history.length === 0
                     Layout.fillWidth: true
@@ -105,15 +124,30 @@ Scope {
                     color: Theme.overlay
                     font { family: Theme.fontFamily; pixelSize: Theme.fs.md }
                 }
+                Text {
+                    visible: entries.count === 0 && Notify.history.length > 0
+                    Layout.fillWidth: true
+                    Layout.topMargin: Theme.space.xl + Theme.space.md
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "Nothing held back"
+                    color: Theme.overlay
+                    font { family: Theme.fontFamily; pixelSize: Theme.fs.md }
+                }
 
-                // History list, newest first.
+                // History list, newest first; grouping and the suppressed
+                // review are panel-local reads over the same store.
                 ListView {
+                    id: entries
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    visible: Notify.history.length > 0
+                    readonly property int count: scope._onlySuppressed
+                        ? scope._suppressed.length
+                        : (scope._bySource ? NotifyCards.bySource(Notify.history) : Notify.history).length
+                    visible: entries.count > 0
                     clip: true
                     spacing: Theme.space.md
-                    model: Notify.history
+                    model: scope._onlySuppressed ? scope._suppressed
+                        : scope._bySource ? NotifyCards.bySource(Notify.history) : Notify.history
 
                     delegate: Rectangle {
                         id: histCard

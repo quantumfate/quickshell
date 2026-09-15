@@ -88,3 +88,31 @@ function verdictRole(route, level) {
         default: return "accent";
     }
 }
+
+/**
+ * The history as the panel reads it when grouping by source rather than by
+ * arrival order: same-source entries sit together, and within a source the
+ * newest reads first.
+ */
+function bySource(history) {
+    return [...(history || [])].sort((a, b) => {
+        const sa = (a && a.source) || "unknown";
+        const sb = (b && b.source) || "unknown";
+        if (sa !== sb) return sa < sb ? -1 : 1;
+        const ta = (a && a.time) || 0;
+        const tb = (b && b.time) || 0;
+        return tb - ta;
+    });
+}
+
+/**
+ * What a mode held back: the entries whose verdict was queue, digest, drop
+ * or a hold — the review of what the mode did not show. Empty when the desk
+ * showed everything it was told.
+ */
+function suppressed(history) {
+    return (history || []).filter(e => {
+        const v = verdict(e && e.route);
+        return v !== "shown";
+    });
+}
