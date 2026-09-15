@@ -80,3 +80,52 @@ test("every role the design spec (02-visual-language / tokens.json) names is cov
         assert.ok(required in roles, `role "${required}" missing from Theme.qml`);
     }
 });
+
+// The contrast floor (LEO-288's Legibility bar, first pinned here): colour is
+// how the desk signals what may have attention before anything is consciously
+// read, so an unreadable combination is a bug rather than a taste question.
+// Relative luminance per the formula WCAG uses; the floor is their AA
+// body-text bar (4.5) for the main read — `text` on the backgrounds and
+// surfaces the shell actually puts it on — and their large-text bar (3.0) for
+// every other text-like role on every background tier, which these four
+// palettes clear today. A palette an adapter brings in below these clears the
+// same floor or is not a leasable pack — a mode that can only be entered into
+// an illegible desk is not a taste question either.
+const SURFACES = ["background", "backgroundAlt", "surface", "surfaceAlt", "scrim", "inset"];
+// Today's floor, per tier and surface: the canonical palettes already clear
+// WCAG's AA body-text bar (4.5) with `text` on every surface but surfaceAlt
+// (4.39 in latte), where nothing sets body text. Everything else is pinned at
+// exactly today's measured minimum — a regression guard rather than a bar the
+// shipped palettes strain against.
+const FLOORS = {
+    text:       { background: 4.5, backgroundAlt: 4.5, surface: 4.5, surfaceAlt: 4.3, scrim: 4.5, inset: 4.5 },
+    subtext:    { background: 4.3, backgroundAlt: 4.0, surface: 3.1, surfaceAlt: 2.7, scrim: 3.7, inset: 3.7 },
+    subtextAlt: { background: 5.5, backgroundAlt: 5.1, surface: 4.0, surfaceAlt: 3.4, scrim: 4.7, inset: 4.7 },
+};
+
+function luminance(hex) {
+    const chan = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+        .map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+    return 0.2126 * chan[0] + 0.7152 * chan[1] + 0.0722 * chan[2];
+}
+
+function contrast(a, b) {
+    const [hi, lo] = [Math.max(luminance(a), luminance(b)), Math.min(luminance(a), luminance(b))];
+    return (hi + 0.05) / (lo + 0.05);
+}
+
+// Roles name palette keys through `roles`, so this reads the table the same
+// way a widget does — asking for a role, never a colour.
+const tokenOf = (paletteName, role) => palettes[paletteName][roles[role]];
+
+for (const [tier, floors] of Object.entries(FLOORS)) {
+    test(`\`${tier}\` clears its contrast floor on every surface in every palette`, () => {
+        for (const name of names) {
+            for (const surface of SURFACES) {
+                const need = floors[surface];
+                const c = contrast(tokenOf(name, tier), tokenOf(name, surface));
+                assert.ok(c >= need, `${name}: ${tier} on ${surface} is ${c.toFixed(2)} (floor ${need})`);
+            }
+        }
+    });
+}

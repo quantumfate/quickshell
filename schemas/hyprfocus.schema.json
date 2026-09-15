@@ -287,8 +287,14 @@
           }
         },
         "presentation": {
-          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.",
-          "type": "object"
+          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.\n\n`palette` is a LEASE, not a write (LEO-288): while the mode runs the desk shows this palette, and when it ends the baseline (the sun's, or the user's pick) comes back untouched. Omit it and the mode tints nothing — `accent_role` already picks a role within whatever palette is active, and this optional field is for the rare mode that must pick a different palette altogether.",
+          "type": "object",
+          "properties": {
+            "palette": {
+              "description": "The palette leased while this mode holds. Must name a variant the shell carries (Theme.qml / a theme pack); an unknown name reads as no lease — resolution never fails.",
+              "$ref": "#/$defs/id"
+            }
+          }
         }
       }
     },

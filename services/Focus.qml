@@ -39,7 +39,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import "."
+import "."   // Theme
 
 Singleton {
     id: root
@@ -262,6 +262,11 @@ Singleton {
         function onModeChanged() {
             root._applyScene();
             root.runConverge(root.active ? root.mode : "neutral");
+            // The palette a mode leases (LEO-288): entry and exit both fan
+            // every external surface out through `,theme.sh apply` — the
+            // effective palette moved. The shell-side roles recolour on their
+            // own binding; this is the external half.
+            Theme.noteLease();
         }
     }
 

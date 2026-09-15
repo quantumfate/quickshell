@@ -35,7 +35,44 @@ Singleton {
         })
     }
 
-    readonly property string name: store.get("palette") ?? "macchiato"
+    readonly property string name: withLease(lease, store.get("palette") ?? "macchiato")
+
+    // The palette a mode leases while it runs (LEO-288): the declaration names
+    // one in the mode's `presentation`, the pointer says whether the mode is
+    // on, and the lease is in effect only then. "", or a name no palette
+    // answers to, means "no lease". The baseline stays in the store untouched
+    // — a mode holds the palette the way it holds a window, and gives it back
+    // when the mode ends — so the sun timer and a manual pick outlast any
+    // mood, and the lease is the ONE thing that changes on entry.
+    readonly property string lease:
+        (Hyprfocus.known && Focus.active)
+            ? (Hyprfocus.presentation.palette ?? "")
+            : ""
+    function withLease(lease, baseline) {
+        return (lease && root.palettes[lease]) ? lease : baseline;
+    }
+
+    // The one fan-out a lease owes. Called from Focus's mode-change seam
+    // (the same place the compositor converge and the scene apply fire),
+    // reading the whole composition explicitly rather than trusting that the
+    // `name` binding above has settled yet. Only a real move fans out: a lease
+    // naming the palette already showing runs nothing (the fan-out reloads
+    // Hyprland and resets every window border, which is noise when nothing
+    // recolours — the fan-out belongs to the palette, not to the mode switch).
+    property string _applied: root.name
+    function noteLease() {
+        const held = (Hyprfocus.known && Focus.active)
+            ? (Hyprfocus.presentation.palette ?? "") : "";
+        const now = root.withLease(held, store.get("palette") ?? "macchiato");
+        if (now === root._applied) return;
+        root._applied = now;
+        root.applyToSystem();
+    }
+    function applyToSystem() {
+        root._applied = root.name;
+        fanOut.running = false;
+        fanOut.running = true;
+    }
 
     // How the palette is chosen. "auto" hands the decision to the sun timer;
     // "manual" means a deliberate pick that outlasts the next sunrise.
@@ -244,16 +281,11 @@ Singleton {
     // `,theme.sh apply` writes the resolved palette back to this same store, but
     // with the value it just read, so `name` does not change again and this does
     // not loop.
-    Process { id: fanOut; command: [",theme.sh", "apply"] }
-
     // Called by every writer rather than bound to `name`: a binding on a
     // readonly property fed by a store read did not re-fire reliably, so a
-    // palette set from a keybind left the borders and every Qt app behind while
-    // the shell itself had already recoloured.
-    function applyToSystem() {
-        fanOut.running = false;
-        fanOut.running = true;
-    }
+    // palette set from a keybind left the borders and every Qt app behind
+    // while the shell itself had already recoloured.
+    Process { id: fanOut; command: [",theme.sh", "apply"] }
 
     // color + alpha (0..1) -> rgba, for translucent panels/backdrops.
     function withAlpha(color, a) {
