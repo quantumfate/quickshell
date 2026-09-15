@@ -37,8 +37,12 @@ export function loadLibrary(relPath, names) {
 export function loadTheme() {
     const src = readFileSync(join(root, "services/Theme.qml"), "utf8");
 
-    const start = src.indexOf("readonly property var palettes:");
-    if (start === -1) throw new Error("Theme.qml: no `palettes` property found");
+    // The seed: the hand tables in Theme.qml, which the pack files derive
+    // over at runtime (see `palettes` there). Extracted from the source
+    // rather than mirrored — a test that imports a copy passes while the
+    // thing it tests breaks.
+    const start = src.indexOf("readonly property var _seedPalettes:");
+    if (start === -1) throw new Error("Theme.qml: no `_seedPalettes` property found");
     const open = src.indexOf("({", start);
     let depth = 0, end = -1;
     for (let i = open + 1; i < src.length; i++) {

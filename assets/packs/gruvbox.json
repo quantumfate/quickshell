@@ -9,6 +9,29 @@
     "pink": "base17",
     "teal": "base0c"
   },
+  "names": {
+    "base": "base00",
+    "crust": "base11",
+    "mantle": "base01",
+    "text": "base05",
+    "red": "base08",
+    "peach": "base09",
+    "yellow": "base0a",
+    "green": "base0b",
+    "teal": "base0c",
+    "blue": "base0d",
+    "mauve": "base0e",
+    "pink": "base17",
+    "lavender": "base16",
+    "subtext0": "base04",
+    "subtext1": "base04",
+    "overlay0": "base03",
+    "overlay1": "base03",
+    "overlay2": "base03",
+    "surface0": "base02",
+    "surface1": "base03",
+    "surface2": "base04"
+  },
   "variants": {
     "dark": {
       "kind": "dark",

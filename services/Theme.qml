@@ -98,9 +98,11 @@ Singleton {
         return wallpapers[palette] ?? wallpaper;
     }
 
-    // Raw palettes. Add more here; switching is just a name change. `cycle`
-    // walks them in insertion order.
-    readonly property var palettes: ({
+    // The hand tables: the seed the packs derive over. Kept as the load-time
+    // fallback and the lockstep reference: the pack files derive over it, so a
+    // pack that cannot answer keeps the desk working, and a pack proven equal
+    // replaces it when it settles.
+    readonly property var _seedPalettes: ({
         frappe: {
             rosewater: "#f2d5cf", flamingo: "#eebebe", pink: "#f4b8e4", mauve: "#ca9ee6",
             red: "#e78284", maroon: "#ea999c", peach: "#ef9f76", yellow: "#e5c890",
@@ -142,6 +144,13 @@ Singleton {
             base: "#eff1f5", mantle: "#e6e9ef", crust: "#dce0e8"
         }
     })
+
+    // Everything the switch speaks: the seed, with every pack's derived
+    // variants merged over it. `cycle` walks them in insertion order.
+    readonly property var palettes: Packs.settled
+        ? Object.assign({}, _seedPalettes, Packs.palettes)
+        : _seedPalettes
+
 
     // Current raw palette (named colors: Theme.c.mauve, ...).
     readonly property var c: palettes[name] ?? palettes.macchiato

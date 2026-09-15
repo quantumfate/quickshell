@@ -68,7 +68,8 @@ function roleTable(pack, variant) {
 
 /**
  * The palette a variant renders in full: the roles plus the seven accent
- * hues the mode lease may pick, resolved per the pack's accent map.
+ * hues the mode lease may pick, the pack's own source words (its adapter's
+ * translation recorded as `names`), then the analysis above applied.
  */
 function palette(pack, id) {
     var variant = variants(pack)[id];
@@ -81,6 +82,16 @@ function palette(pack, id) {
         // lowercase.
         var slot = accents[role] && accents[role].toLowerCase();
         table[role] = slot ? variant.slots[slot] : table[role];
+    }
+    // The pack's source vocabulary, so anything that must speak the source's
+    // words (a widget or an adapter fan-out referencing `rosewater`) keeps
+    // working without widgets owning the translation.
+    var names = pack.names || {};
+    var rampTable = variant.ramp || {};
+    for (var word in names) {
+        var place = String(names[word]).toLowerCase();
+        var value = variant.slots[place] ?? rampTable[place];
+        if (value !== undefined) table[word] = value;
     }
     return table;
 }
@@ -146,17 +157,19 @@ function lint(pack) {
         }
     }
     if (pack.accents) {
-        const hues = {};
-        for (const role of ACCENT_ROLES) {
-            const slot = pack.accents[role];
-            if (slot && !SLOTS.includes(slot)) problems.push(`accent '${role}' names unknown slot '${slot}'`);
-            hues[role] = slot;
-        }
         const seen = {};
         for (const role of ACCENT_ROLES) {
             const slot = pack.accents[role];
-            if (seen[slot]) problems.push(`accents '${seen[slot]}' and '${role}' share slot '${slot}' — two modes would render identically`);
-            else seen[slot] = role;
+            if (slot && !SLOTS.includes(slot)) problems.push(`accent '${role}' names unknown slot '${slot}'`);
+            else if (seen[slot]) problems.push(`accents '${seen[slot]}' and '${role}' share slot '${slot}' — two modes would render identically`);
+            seen[slot] = role;
+        }
+    }
+    const names = pack.names || {};
+    for (const word in names) {
+        const place = String(names[word]).toLowerCase();
+        if (!SLOTS.includes(place) && RAMP.indexOf(place) < 0) {
+            problems.push(`names '${word}' points at unknown ${place}`);
         }
     }
     return problems;

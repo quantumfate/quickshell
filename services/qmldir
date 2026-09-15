@@ -1,5 +1,6 @@
 singleton Config Config.qml
 singleton Theme Theme.qml
+singleton Packs Packs.qml
 singleton Projects Projects.qml
 singleton Focus Focus.qml
 singleton Hyprfocus Hyprfocus.qml

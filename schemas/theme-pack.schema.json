@@ -17,6 +17,15 @@
       "additionalProperties": { "$ref": "#/$defs/slot" },
       "minProperties": 7
     },
+    "names": {
+      "description": "The pack's own vocabulary, adapter-translated into the slot set: a source word (rosewater, sky, maroon…) and which slot or ramp step answers it. Widgets never see source words — the derivation applies names when it renders a whole table — so this section can be as ecosystems speak without leaking into widgets. A name pointing at a slot the variant does not carry is an install-time rejection.",
+      "type": "object",
+      "additionalProperties": {
+        "description": "A base24 slot name (lowercase) or a ramp step name.",
+        "type": "string",
+        "pattern": "^(base(0[0-9a-f]|1[0-7])|subtext[01]|overlay[0-2])$"
+      }
+    },
     "variants": {
       "type": "object",
       "minProperties": 1,
