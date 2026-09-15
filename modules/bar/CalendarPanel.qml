@@ -62,6 +62,31 @@ Scope {
     // (services/Focus.qml's `set(mode, minutes)`), open-ended (0 minutes) —
     // this is "switch the desk into this mood now", not a timer.
     Process { id: adoptProc }
+
+    // Weather context (LEO-225), LOCAL SOURCE FIRST: the desk's own store
+    // (QF_STORE/weather.json — provisioning's task to fill, never the panel's
+    // network call). A missing or unreadable store renders quietly — the
+    // same empty-is-not-an-error rule the calendar entries keep.
+    property var weatherReport: ({})
+    FileView {
+        id: weatherFile
+        path: Quickshell.env("QF_STORE") || (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/quantum-store/weather.json"
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const parsed = JSON.parse((text() || "{}"));
+                scope.weatherReport = (parsed && parsed.temp_c !== undefined && parsed.observed_at) ? parsed : {};
+            } catch (e) { scope.weatherReport = {}; }
+        }
+        onLoadFailed: () => { scope.weatherReport = {}; }
+    }
+    function weatherLine() {
+        const w = scope.weatherReport;
+        if (!w || w.temp_c === undefined) return "";
+        return "weather: " + w.temp_c + "°C" + (w.summary ? " · " + w.summary : "")
+            + " · sensor " + Math.max(0, Math.floor((Date.now() / 1000 - w.observed_at) / 60)) + "m ago";
+    }
     function adopt(modeId) {
         adoptProc.command = ["qs", "-c", "quantumfate", "ipc", "call", "--", "focus", "set", modeId, "0"];
         adoptProc.running = true;
@@ -166,6 +191,15 @@ Scope {
                         text: Qt.formatDate(scope._clock.date, "dddd, d MMMM").toLowerCase()
                         color: Theme.accent
                         font { family: Theme.fontFamily; pixelSize: Theme.fs.xl; weight: Font.Bold }
+                    }
+                    // -- weather (LEO-225): quiet when the local store is
+                    // missing; the line names its sensor age, so staleness is
+                    // legible rather than assumed fresh.
+                    Text {
+                        visible: (scope.weatherLine()) !== ""
+                        text: scope.weatherLine()
+                        color: Theme.subtext
+                        font.pixelSize: Theme.fs.xs
                     }
 
                     Item {
