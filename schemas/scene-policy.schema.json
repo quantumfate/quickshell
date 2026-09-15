@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/quantumfate/quickshell/schemas/scene-policy.schema.json",
+  "title": "scene-policy",
+  "description": "The scene-policy logging workspace (LEO-241): every reconcile decision and outcome, written by bin/,scene-apply.sh (the enforced seam) and read by the shell, `,hyprfocus explain` and the modes' Veto surface. Three files and one log: log.jsonl appends one decision row per line; applied.json holds the last applied state so the next transition knows what to hand back; last.json is the once-per-apply reader surface (vetoes and outcomes), watched live like theme.result.json. Everything here is an observation — a timestamped diary of a day's transitions; state directory only, never committed in plaintext, bounded retention (the log keeps its last 2000 rows, LEO-241's stated bound).",
+  "classification": "observation",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {},
+  "$defs": {
+    "logRow": {
+      "description": "One decision the seam appended to log.jsonl. `action` is the verb (stop/start/skip/units gate), `outcome` what actually happened, `unit` or a gate summary names what it decided about.",
+      "type": "object",
+      "required": ["ts", "mood", "action", "unit", "outcome"],
+      "additionalProperties": false,
+      "properties": {
+        "ts": { "type": "integer", "description": "Unix seconds at the decision." },
+        "mood": { "type": "string", "description": "The active mode at decision time." },
+        "action": { "type": "string", "description": "stop | start | units (the gate verb)." },
+        "unit": { "type": "string", "description": "The unit (or 'gate' when the row is a gate summary)." },
+        "outcome": {
+          "type": "string",
+          "description": "What actually happened: stopped, started, would-stop, vetoed, skip-protected, failed, or not-installed."
+        }
+      }
+    },
+    "applied": {
+      "description": "applied.json — the last transition's outcome. Only units ACTUALLY stopped are recorded: a vetoed unit keeps running (LEO-256), and a later mood must not 'hand back' a start it never lost.",
+      "type": "object",
+      "required": ["mode", "stopped"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "type": "string" },
+        "stopped": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "last": {
+      "description": "last.json — what the last apply held back and honoured; watched by the shell (SceneVeto) once per apply.",
+      "type": "object",
+      "required": ["ts", "mode", "vetoes"],
+      "additionalProperties": false,
+      "properties": {
+        "ts": { "type": "integer" },
+        "mode": { "type": "string" },
+        "vetoes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["unit", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "unit": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
