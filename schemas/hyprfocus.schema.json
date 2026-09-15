@@ -287,12 +287,17 @@
           }
         },
         "presentation": {
-          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.\n\n`palette` is a LEASE, not a write (LEO-288): while the mode runs the desk shows this palette, and when it ends the baseline (the sun's, or the user's pick) comes back untouched. Omit it and the mode tints nothing — `accent_role` already picks a role within whatever palette is active, and this optional field is for the rare mode that must pick a different palette altogether.",
+          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.\n\n`palette` is a LEASE, not a write (LEO-288): while the mode runs the desk shows this palette, and when it ends the baseline (the sun's, or the user's pick) comes back untouched. Omit it and the mode tints nothing — `accent_role` already picks a role within whatever palette is active, and this optional field is for the rare mode that must pick a different palette altogether.\n\n`wallpaper` leases by the same rule (LEO-289): a mode that needs a specific look behind it names the file; the mood's own binding still wins, and an absent name leases nothing.",
           "type": "object",
           "properties": {
             "palette": {
               "description": "The palette leased while this mode holds. Must name a variant the shell carries (Theme.qml / a theme pack); an unknown name reads as no lease — resolution never fails.",
               "$ref": "#/$defs/id"
+            },
+            "wallpaper": {
+              "description": "The image bound while this mode holds. Names a file in the wallpaper directory (absolute paths and the mood/palette bindings remain the broader contract); an unknown name reads as no lease.",
+              "type": "string",
+              "maxLength": 256
             }
           }
         }

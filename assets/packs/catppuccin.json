@@ -37,6 +37,16 @@
     "teal": "base0c",
     "blue": "base0d"
   },
+  "surfaces": {
+    "kitty": "{variant}",
+    "gtk": "catppuccin-{variant}-{accent}-standard+default",
+    "qt": "catppuccin-{variant}-{accent}",
+    "btop": "catppuccin_{variant}",
+    "zathura": "catppuccin-{variant}",
+    "rofi": "catppuccin-{variant}",
+    "wlogout": "{variant}",
+    "cursor": "catppuccin-{variant}-{accent}-cursors"
+  },
   "variants": {
     "frappe": {
       "kind": "dark",

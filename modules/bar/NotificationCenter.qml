@@ -12,6 +12,7 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Notify, Theme
+import "../../services/NotifyCards.js" as NotifyCards
 import "../common"        // Surface
 
 Scope {
@@ -117,8 +118,11 @@ Scope {
                     delegate: Rectangle {
                         id: histCard
                         required property var modelData
-                        readonly property color accent: modelData.level === "success" ? Theme.success
-                            : modelData.level === "error" ? Theme.error : Theme.accent
+                        readonly property string role: NotifyCards.verdictRole(modelData.route, modelData.level)
+                        readonly property color accent: role === "success" ? Theme.success
+                            : role === "error" ? Theme.error
+                            : role === "pending" ? Theme.pending
+                            : role === "info" ? Theme.info : Theme.accent
                         width: ListView.view.width
                         implicitHeight: entry.implicitHeight + 16
                         radius: Theme.radiusSmall
@@ -134,11 +138,19 @@ Scope {
                                 spacing: Theme.space.md
                                 Rectangle { implicitWidth: 6; implicitHeight: 6; radius: 3; color: histCard.accent; Layout.alignment: Qt.AlignVCenter }
                                 Text {
-                                    text: histCard.modelData.appName || "notification"
+                                    // The sender is the resolved source — what routing
+                                    // keyed on — not the app's own claim about itself.
+                                    text: NotifyCards.sender(histCard.modelData)
                                     color: histCard.accent
                                     font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Font.Bold; capitalization: Font.AllUppercase }
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
+                                }
+                                Text {
+                                    visible: !!histCard.modelData.tier && histCard.modelData.trusted !== false
+                                    text: NotifyCards.tierLine(histCard.modelData)
+                                    color: Theme.overlay
+                                    font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                                 }
                                 Text {
                                     text: scope._ago(histCard.modelData.time)
@@ -163,6 +175,17 @@ Scope {
                                 Layout.fillWidth: true
                                 wrapMode: Text.Wrap
                                 maximumLineCount: 3
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                // History is never conditional: the card reads the
+                                // verdict the mode applied and the rule that decided,
+                                // so a mode that hid something shows what it hid.
+                                visible: NotifyCards.routeLine(histCard.modelData) !== "shown"
+                                text: NotifyCards.routeLine(histCard.modelData)
+                                color: histCard.accent
+                                font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
+                                Layout.fillWidth: true
                                 elide: Text.ElideRight
                             }
                         }

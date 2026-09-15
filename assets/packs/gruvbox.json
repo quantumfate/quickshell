@@ -32,6 +32,7 @@
     "surface1": "base03",
     "surface2": "base04"
   },
+  "surfaces": {},
   "variants": {
     "dark": {
       "kind": "dark",

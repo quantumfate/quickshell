@@ -26,6 +26,20 @@
         "pattern": "^(base(0[0-9a-f]|1[0-7])|subtext[01]|overlay[0-2])$"
       }
     },
+    "surfaces": {
+      "description": "The leasable registry (LEO-210's harder half): what a variant is called on each surface it ports to, as a template over `{variant}`, `{kind}` (light/dark) and `{accent}` (the pack accent the surface names use). A surface the pack does not name is PARTIAL COVERAGE, normal by design: the surface keeps its own shape and records the gap — a scheme porting to fewer surfaces than another is not a failure. The templates let the same desk apply a non-Catppuccin lease without the appliers hardcoding one ecosystem's name shape.",
+      "type": "object",
+      "additionalProperties": {
+        "description": "A name template, with {{variant}}, {{kind}} and {{accent}} placeholders.",
+        "type": "string",
+        "maxLength": 128
+      },
+      "propertyNames": {
+        "description": "A surface id the desk's appliers know: kitty, gtk, qt, btop, zathura, rofi, wlogout, cursor.",
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      }
+    },
     "variants": {
       "type": "object",
       "minProperties": 1,
