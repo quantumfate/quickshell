@@ -85,3 +85,25 @@ test("rowsFor tolerates missing or empty nodes and drops undescribed rows", () =
         { desc: "No key" },
     ] }), [{ key: "y", combo: "y", desc: "Keep me", group: false, child: "" }]);
 });
+// The snap chain (LEO-300): appearance dwells, dismissal is instant.
+//
+// The perceived snap is two numbers: how long until the menu is USABLE while
+// dwelling (the render is pure — instant), and how long the lingering tail
+// runs after you leave. The former is the fade the mode's motion contract
+// names; the latter must be ZERO: `close()` unmaps in the same tick, no
+// Timer, no LEO-302-timeout in the chain. Rendered as pure model words the
+// QML reads, so the QML has no number left to invent.
+const { fadeFor, snapAfterLeave } = loadLibrary("modules/whichkey/WhichKey.js");
+
+test("the entrance read gives an instant mode its instrument: 30ms, base is a dwell", () => {
+    assert.equal(fadeFor("instant", 30, 90), 30);
+    assert.equal(fadeFor("base", 30, 90), 90);
+    assert.equal(fadeFor(undefined, 30, 90), 90, "base is the fallback");
+});
+
+test("the lingering tail of a dismissal is zero, by contract", () => {
+    // The overlay unmaps in the same tick the submap leaves: a Timer anywhere
+    // in this path would both swallow input and break on the dead timer
+    // runtime (LEO-302). The model pins the answer so the contract survives.
+    assert.equal(snapAfterLeave(), 0);
+});

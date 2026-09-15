@@ -1,21 +1,28 @@
-// Shared cheatsheet bind parsing. Stateless: turns `hyprctl binds -j` output
-// into balanced, categorized columns. Used by both the full CheatSheet overlay
-// and the passive CheatSheetPeek panel so they always agree on grouping.
+// Shared cheatsheet rendering. Stateless: turns a which-key registry node —
+// the same document the overlay and the full panel both read — into balanced,
+// categorized columns. Used by both the full CheatSheet overlay and the
+// passive CheatSheetPeek panel so they always agree on grouping.
+//
+// The data plane is the dump (LEO-268): the Lua registry records every
+// described bind at load, and each mode's converge narrows it to the trees
+// its declaration admits — so what both panels render IS the enabled set.
+// The old `hyprctl binds` parse and the context filter it needed (LEO-223)
+// are replaced by admission: a row that would do nothing is not in the dump.
 .pragma library
 
-// Hyprland modmask bit flags -> readable names.
-var MOD_NAMES = { 1: "SHIFT", 4: "CTRL", 8: "ALT", 64: "SUPER" };
-
-function combo(modmask, key) {
-    var parts = [];
-    for (var bit in MOD_NAMES)
-        if ((modmask & bit) === Number(bit)) parts.push(MOD_NAMES[bit]);
+/**
+ * A registry item's literal combo: mods in the order the tree recorded them,
+ * key last — already the words the key pill reads.
+ */
+function combo(mods, key) {
+    var parts = mods ? mods.slice() : [];
     parts.push(key);
     return parts.join(" + ");
 }
 
 // Derive a category + tidy label from a bind description. A "Cat: label" prefix
-// wins (e.g. "Workspace: Focus 5"); otherwise bucket by keywords.
+// wins (e.g. "Workspace: Focus 5"); otherwise bucket by keywords. Undescribed
+// rows are dropped by the parse — the one hard rule.
 function categorize(desc) {
     var m = desc.match(/^([A-Za-z][\w &/'-]*?):\s*(.+)$/);
     if (m) return { cat: m[1], label: m[2] };
@@ -31,51 +38,25 @@ function categorize(desc) {
     return { cat: "General", label: desc };
 }
 
-// Binds carry no context field — only `description` and `submap` — so a
-// bind's relevance to the live desk (workspace/group) has to be inferred from
-// the same text `categorize()` already buckets on. This is deliberately the
-// fuzzy, no-hypr-change option: a bind is "gaming-scoped" if it landed in the
-// Dofus category (the category itself is keyword-derived from the
-// description), and "group-scoped" if its description mentions a group
-// literally. Precise would mean tagging binds at the source (a convention like
-// a trailing "[gaming]"/"[group]" marker in the Lua description, enforced by
-// hypr/hypr/lib/submap.lua) — a hypr-repo change, out of reach here.
-function contextTag(cat, desc) {
-    if (cat === "Dofus") return "gaming";
-    if (/\bgroup(ed|s)?\b/i.test(desc)) return "group";
-    return null;
-}
-
-// Does a bind belong in the current desk context? `ctx.gaming` is true only
-// on the gaming workspace; `ctx.grouped` only while a Hyprland group is
-// focused. Anything untagged is context-free and always shown.
-function matchesContext(tag, ctx) {
-    ctx = ctx || {};
-    if (tag === "gaming") return !!ctx.gaming;
-    if (tag === "group") return !!ctx.grouped;
-    return true;
-}
-
-// Parse `hyprctl binds -j` for a given submap ("" = root) into ordered
-// categories: [{ name, rows: [{ combo, desc }] }]. `ctx` (optional) filters
-// out binds whose inferred context doesn't match the live desk — they are
-// dropped entirely, not greyed, so a hidden row never costs a read.
-function parse(jsonText, submap, categoryOrder, ctx) {
-    var binds;
-    try { binds = JSON.parse(jsonText); } catch (e) { return []; }
+/**
+ * One registry node (the shape `hypr/lib/whichkey.lua` dumps: the tree's
+ * items carry key, mods, desc) into ordered categories. The node is what the
+ * mode's own admission loaded: the rows are what works, with no scan, probe
+ * or filter left to disagree with the compositor.
+ */
+function parseNode(node, categoryOrder) {
+    var items = node && Array.isArray(node.items) ? node.items : [];
     var seen = {};
-    var groups = {};   // category -> [{ combo, desc }]
-    for (var i = 0; i < binds.length; i++) {
-        var b = binds[i];
-        if (!b.description) continue;
-        if ((b.submap || "") !== submap) continue;
-        var c = combo(b.modmask || 0, b.key);
-        var parts = categorize(b.description);
-        if (!matchesContext(contextTag(parts.cat, parts.label), ctx)) continue;
-        var dedup = parts.cat + "|" + c + "|" + parts.label;
+    var groups = {};
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (!item || !item.desc) continue;
+        var parts = categorize(item.desc);
+        var combo = (item.mods || []).concat([item.key]).join(" + ");
+        var dedup = parts.cat + "|" + combo + "|" + parts.label;
         if (seen[dedup]) continue;
         seen[dedup] = true;
-        (groups[parts.cat] || (groups[parts.cat] = [])).push({ combo: c, desc: parts.label });
+        (groups[parts.cat] || (groups[parts.cat] = [])).push({ combo: combo, desc: parts.label });
     }
     var rank = function (n) { var i = categoryOrder.indexOf(n); return i === -1 ? categoryOrder.length : i; };
     return Object.keys(groups)
@@ -88,26 +69,20 @@ function parse(jsonText, submap, categoryOrder, ctx) {
         });
 }
 
-// Render the four-tuple context as a breadcrumb. Any missing piece (no
-// focused window, no group, layout not yet probed) reads as "—" rather than
-// disappearing, so the shape of the tuple stays legible at a glance.
-function breadcrumb(ctx) {
-    ctx = ctx || {};
-    var dash = "—";
-    var group = ctx.grouped ? "grouped" : dash;
-    return [ctx.workspace || dash, ctx.windowClass || dash, group, ctx.layout || dash].join(" › ");
+/**
+ * The node the sheet's current context shows: the entered submap's registry
+ * node, or the root's at rest. A submap no longer registered (withheld, or a
+ * stale name) degrades to the root — the sheet cannot show a context it has
+ * no truth for.
+ */
+function nodeAs(nodes, submap) {
+    var t = nodes || {};
+    if (!submap || submap === "reset") return t["reset"] || { parent: "", items: [] };
+    return t[submap] || t["reset"] || { parent: "", items: [] };
 }
 
-// Greedily balance categories across two columns by total height (rows+header).
-function splitColumns(list) {
-    var left = [], right = [];
-    var lh = 0, rh = 0;
-    var arr = list || [];
-    for (var i = 0; i < arr.length; i++) {
-        var c = arr[i];
-        var h = c.rows.length + 1;
-        if (lh <= rh) { left.push(c); lh += h; }
-        else { right.push(c); rh += h; }
-    }
-    return [left, right];
+function splitColumns(cats) {
+    var sorted = cats.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var half = Math.ceil(sorted.length / 2);
+    return [sorted.slice(0, half), sorted.slice(half)];
 }

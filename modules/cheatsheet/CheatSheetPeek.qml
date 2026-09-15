@@ -5,9 +5,9 @@
 // window underneath.
 //
 // Driven entirely by Hyprland's submap event system (hypr/events/peek.lua):
-//   qs -c quantumfate ipc call cheatsheetPeek show|hide|toggle
+//   qs -c quantumfate ipc call cheatsheetPeek close
 // The Lua side arms a delay on submap entry and hides on the next transition;
-// this surface only renders whatever the current submap's binds are.
+// this surface only renders what the registry's own document holds for it.
 pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
@@ -24,20 +24,18 @@ Scope {
 
     property bool shown: false
     property string submap: ""          // "" = root/default
-    property var cats: []               // [{ name, rows: [{ combo, desc }] }]
-    readonly property var columns: CheatParse.splitColumns(cats)  // [leftCats, rightCats]
+    readonly property var columns: CheatParse.splitColumns(scope.cats)  // [leftCats, rightCats]
 
-    // Same live context as CheatSheet.qml, its sibling — see there for why the
-    // probe is event-driven rather than timer- or show()-driven.
-    property var ctx: ({ workspace: "", windowClass: "", grouped: false, gaming: false, layout: "" })
-    readonly property string breadcrumb: CheatParse.breadcrumb(ctx)
+    // The registry document, the same plane its sibling reads — the peek is
+    // the glanceable render of the same truth (LEO-268).
+    readonly property var tree: store.data
+    readonly property var cats: CheatParse.parseNode(CheatParse.nodeAs(scope.tree, scope.submap), scope.categoryOrder)
 
-    // Raw `hyprctl binds -j` text, cached across opens/submap changes — see
-    // CheatSheet.qml, its sibling, for why (the bind table only changes on a
-    // config reload, so re-shelling out on every dwell/traversal is pure
-    // latency for no new information).
-    property string bindsJson: ""
-    property bool bindsValid: false
+    Store {
+        id: store
+        name: "whichkey"
+        defaults: ({})
+    }
 
     // Preferred category ordering; unlisted categories sort alphabetically after.
     readonly property var categoryOrder: [
@@ -54,84 +52,16 @@ Scope {
         function close(): void { scope.close(); }
     }
 
-    function open() {
-        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder, scope.ctx);
-        else refresh.running = true;
-        scope.shown = true;
-    }
+    function open() { scope.shown = true; }
     function close() { scope.shown = false; }
 
-    // Track the active submap so a show renders the right context. Also drives
-    // live follow-along if the submap changes while the peek is visible.
-    // `configreloaded` invalidates the cache above — the Lua side
-    // (hypr/events/peek.lua) already closes the panel on reload so it can
-    // never be orphaned; this only keeps the bind table itself fresh.
+    // Follow the submap events so a re-show renders the context the desk is
+    // in; there is no stale-cache concept — the document is the truth, and a
+    // config reload re-dumps it.
     Connections {
         target: Hyprland
         function onRawEvent(event) {
             if (event.name === "submap") scope.submap = event.data; // "" at root
-            else if (event.name === "configreloaded") scope.bindsValid = false;
-            // Same event set as CheatSheet.qml's ctxProbe trigger — see there.
-            else if (event.name === "activewindow" || event.name === "activewindowv2"
-                || event.name === "workspace" || event.name === "workspacev2"
-                || event.name === "changefloatingmode" || event.name === "fullscreen")
-                ctxProbe.running = true;
-        }
-    }
-    Component.onCompleted: ctxProbe.running = true
-    onSubmapChanged: if (scope.shown) {
-        if (scope.bindsValid) scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder, scope.ctx);
-        else refresh.running = true;
-    }
-    onCtxChanged: if (scope.shown && scope.bindsValid)
-        scope.cats = CheatParse.parse(scope.bindsJson, scope.submap, scope.categoryOrder, scope.ctx);
-
-    Process {
-        id: refresh
-        command: ["hyprctl", "binds", "-j"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                scope.bindsJson = text;
-                scope.bindsValid = true;
-                scope.cats = CheatParse.parse(text, scope.submap, scope.categoryOrder, scope.ctx);
-            }
-        }
-    }
-
-    // Probes `activewindow` then `activeworkspace` — see CheatSheet.qml's
-    // ctxProbe/layoutProbe pair for the full rationale (event-driven, chained,
-    // never on the open path).
-    Process {
-        id: ctxProbe
-        command: ["hyprctl", "-j", "activewindow"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var w;
-                try { w = JSON.parse(text); } catch (e) { return; }
-                if (!w || Object.keys(w).length === 0) {
-                    scope.ctx = Object.assign({}, scope.ctx, { windowClass: "", grouped: false });
-                } else {
-                    var wsName = (w.workspace && w.workspace.name) || "";
-                    scope.ctx = Object.assign({}, scope.ctx, {
-                        windowClass: w.class || "",
-                        grouped: Array.isArray(w.grouped) && w.grouped.length > 0,
-                        workspace: wsName,
-                        gaming: wsName === "gaming"
-                    });
-                }
-                layoutProbe.running = true;
-            }
-        }
-    }
-    Process {
-        id: layoutProbe
-        command: ["hyprctl", "-j", "activeworkspace"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var ws;
-                try { ws = JSON.parse(text); } catch (e) { return; }
-                scope.ctx = Object.assign({}, scope.ctx, { layout: (ws && ws.tiledLayout) || "" });
-            }
         }
     }
 
@@ -157,7 +87,7 @@ Scope {
             // have no intrinsic width, so the card must define it (content-sizing
             // would collapse). Height still follows content.
             implicitWidth: 600
-            implicitHeight: Math.min(header.implicitHeight + contextLine.implicitHeight
+            implicitHeight: Math.min(header.implicitHeight
                 + cols.implicitHeight + 3 * Theme.pad, 900)
             elevation: "peek"
             radius: Theme.radius
@@ -179,13 +109,6 @@ Scope {
                     text: scope.submap === "" ? "Keybinds" : "Keybinds · " + scope.submap
                     color: Theme.accent
                     font { pixelSize: Theme.fs.lg; bold: true }
-                }
-
-                Text {
-                    id: contextLine
-                    text: scope.breadcrumb
-                    color: Theme.subtextAlt
-                    font.pixelSize: Theme.fs.xs
                 }
 
                 Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.border }

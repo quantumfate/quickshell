@@ -55,3 +55,29 @@ function rowsFor(node) {
     }
     return rows;
 }
+
+/**
+ * The entrance/exit fade the mode's motion contract names (LEO-227): an
+ * `instant` mode gets what is effectively an instant swap — the overlay
+ * tracks the submap stack at keyboard speed. A `base` mode gets the gentle
+ * fade. THE LINGERING TAIL IS NOT THIS NUMBER: the exit fade animates
+ * opacity while the surface is already logically gone (unmapped on close()),
+ * so no exit fade can hold input a keystroke meant for the base map.
+ *
+ * @param motionEnergy "base"|"instant" — Focus.motionEnergy
+ * @param instantMs millisecond value an instant mode's contract means (30)
+ * @param baseMs the felt-which-key dwell (90)
+ */
+function fadeFor(motionEnergy, instantMs, baseMs) {
+    return motionEnergy === "instant" ? (instantMs || 30) : (baseMs || 90);
+}
+
+/**
+ * The tail of a dismissal: ZERO by contract. The close path unmaps the
+ * surface in the same tick the key leaves the submap — there is no linger
+ * timer to mis-order with the submap reset, and no number the mode can
+ * stretch. Kept as a named constant so the model answers the question.
+ */
+function snapAfterLeave() {
+    return 0;
+}

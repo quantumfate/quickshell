@@ -38,12 +38,11 @@ Scope {
     readonly property var path: WK.pathFromRoot(tree, submap)
 
     // Entrance/exit fade, owned here so the layerrule's `popin` never fights
-    // it. The duration reads the mode's motion contract: `instant` modes
-    // (work/study/gaming) get what is effectively an instant swap, both
-    // directions — the overlay tracks the submap stack at keyboard speed, and
-    // a fade is motion the mode did not ask for.
+    // it. The duration is the mode's motion contract WORD (LEO-227/300): the
+    // model already names the two numbers, and the lingering tail is zero by
+    // its own definition — close() unmaps in the same tick the key leaves.
     property real cardOpacity: 0
-    readonly property int cardFades: Focus.motionEnergy === "instant" ? 30 : 90
+    readonly property int cardFades: WK.fadeFor(Focus.motionEnergy, 30, 90)
     Behavior on cardOpacity { NumberAnimation { duration: scope.cardFades; easing.type: Easing.OutCubic } }
 
     function open() {
