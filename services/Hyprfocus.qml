@@ -65,6 +65,12 @@ Singleton {
 
     Component.onCompleted: root._refresh()
 
+    // Force the read side now. Both singletons watch the same focus.json
+    // write and their refresh order is not guaranteed, so the announce seam
+    // (LEO-242) calls this before it reads `current` — the declaration then
+    // answers for the mode the transition is ENTERING, not the one that was.
+    function refresh() { root._refresh(); }
+
     function _refresh() {
         root.modes = declaration.get("modes") ?? ({});
         root.current = root.modes[root.mode] ?? ({});

@@ -39,7 +39,8 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import "."   // Theme
+import "."   // Theme, Hyprfocus
+import "ModeAnnounce.js" as ModeAnnounce
 
 Singleton {
     id: root
@@ -257,17 +258,40 @@ Singleton {
         converge.running = true;
     }
 
+    // The announce phase of the reconcile contract (LEO-242): before the
+    // enforced half fires, a transition that TAKES something away says what
+    // it will take — naming the resources, not just the mode, so "entering
+    // gaming" also reads as "stopping linear-sync". The dwell is then the
+    // grace window: long enough to interrupt, not so long it reads as a
+    // dialog to dismiss reflexively. A transition that takes nothing enforces
+    // immediately.
+    //
+    // The fire time re-reads the pointer rather than trusting what was set
+    // when the dwell started — two mode boundaries inside one dwell land on
+    // the second one's plan.
+    readonly property int graceMs: 800
+    function _beginTransition() {
+        const name = root.active ? root.mode : "neutral";
+        const spec = (Hyprfocus.refresh(), Hyprfocus.current);
+        const a = ModeAnnounce.announce(spec, Hyprfocus.label(name));
+        if (a) Notify.send(a.title, a.body, "info", true);   // transient: no history entry
+        if (!a) { root._enforce(); return; }                 // nothing taken: no grace owed
+        grace.restart();
+    }
+    function _enforce() {
+        root._applyScene();
+        root.runConverge(root.active ? root.mode : "neutral");
+        // The palette a mode leases (LEO-288): entry and exit both fan
+        // every external surface out through `,theme.sh apply` — the
+        // effective palette moved. The shell-side roles recolour on their
+        // own binding; this is the external half.
+        Theme.noteLease();
+    }
+    Timer { id: grace; interval: root.graceMs; onTriggered: root._enforce() }
+
     Connections {
         target: root
-        function onModeChanged() {
-            root._applyScene();
-            root.runConverge(root.active ? root.mode : "neutral");
-            // The palette a mode leases (LEO-288): entry and exit both fan
-            // every external surface out through `,theme.sh apply` — the
-            // effective palette moved. The shell-side roles recolour on their
-            // own binding; this is the external half.
-            Theme.noteLease();
-        }
+        function onModeChanged() { root._beginTransition(); }
     }
 
     // ipc: qs -c quantumfate ipc call focus <fn>
