@@ -109,7 +109,7 @@ Scope {
             // needed so far and only grows into a taller one, smoothly; it
             // never shrinks back while open, so descending never moves
             // anything under the pointer.
-            readonly property real contentHeight: header.implicitHeight
+            readonly property real contentHeight: headerCol.implicitHeight
                 + divider.implicitHeight + cols.implicitHeight + footer.implicitHeight + 4 * body.spacing
             property real reservedHeight: contentHeight
             // Set by show() on a fresh open, so this session starts from its
@@ -138,11 +138,26 @@ Scope {
                 anchors { fill: parent; margins: Theme.pad }
                 spacing: Theme.gap
 
+                ColumnLayout {
+                    id: headerCol
+                    spacing: Theme.space.xs
+
+                // The context path is visually FIRST and distinct from the list
+                // below (LEO-306): a smaller, quieter line states where these
+                // binds apply, separated from the content with real space.
                 Text {
-                    id: header
+                    text: scope.submap === "" ? "root map"
+                        : CheatParse.nodeAs(scope.tree, scope.submap).parent
+                    color: Theme.subtext
+                    font { pixelSize: Theme.fs.xs; weight: Font.DemiBold }
+                    Layout.topMargin: Theme.space.xs
+                }
+                Text {
                     text: scope.submap === "" ? "Keybinds" : "Keybinds · " + scope.submap
                     color: Theme.accent
                     font { pixelSize: Theme.fs.lg; bold: true }
+                    Layout.bottomMargin: Theme.space.sm
+                }
                 }
 
                 Rectangle { id: divider; Layout.fillWidth: true; implicitHeight: 1; color: Theme.border }

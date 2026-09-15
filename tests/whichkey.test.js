@@ -63,8 +63,8 @@ test("rowsFor keeps registry order and comoses key combinations", () => {
         key: "1", combo: "1", desc: "Team one", group: false, child: "",
     });
     assert.deepEqual(rows[1], {
-        key: "t", combo: "ALT+t", desc: "Switch team", group: false, child: "",
-    });
+        key: "t", combo: "alt+t", desc: "Switch team", group: false, child: "",
+    }, "the label reads the glyph set the keyboard shows");
 });
 
 test("rowsFor flags groups and carries their child submap", () => {

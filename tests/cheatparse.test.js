@@ -67,9 +67,9 @@ test("rows sort by combo within their category", () => {
     ] };
     const media = parseNode(reset, ORDER).find(c => c.name === "Media");
     assert.deepEqual(media.rows.map(r => r.combo), [
-        "SUPER + k",
-        "SUPER + SHIFT + b",
-    ]);
+        "super + k",
+        "super + shift + b",
+    ], "the chord reads the keyboard's own glyphs and case (LEO-306)");
 });
 
 test("a bind without a description is never rendered", () => {

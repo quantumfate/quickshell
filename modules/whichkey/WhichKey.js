@@ -43,7 +43,8 @@ function rowsFor(node) {
     const rows = [];
     for (const it of node.items) {
         const mods = Array.isArray(it.mods) ? it.mods : [];
-        const combo = mods.concat([it.key]).join("+");
+        const combo = mods.concat([it.key]).map(
+            p => keyGlyph(String(p || "").toLowerCase())).join("+");
         if (!it.key || !it.desc) continue;
         rows.push({
             key: it.key,
@@ -81,3 +82,33 @@ function fadeFor(motionEnergy, instantMs, baseMs) {
 function snapAfterLeave() {
     return 0;
 }
+
+/**
+ * The human-readable key label (LEO-306): the same table the cheat sheet's
+ * model uses (a ".pragma library" cannot import another), so both surfaces
+ * spell a chord the same way. A glyph table for xkb words plus the named
+ * special keys; everything else passes through unmolested.
+ */
+var KEY_GLYPHS = {
+    ampersand: "&", apostrophe: "'", asterisk: "*", at: "@", backslash: "\\",
+    braceleft: "{", braceright: "}", comma: ",", degree: "°", dollar: "$",
+    equal: "=", exclam: "!", grave: "`", greater: ">", less: "<", minus: "-",
+    numbersign: "#", parenleft: "(", parenright: ")", percent: "%",
+    period: ".", plus: "+", plusminus: "±", question: "?", quotedbl: "\"",
+    semicolon: ";", slash: "/", underscore: "_", division: "÷",
+    multiply: "×", euro: "€", sterling: "£", asciitilde: "~",
+    asciicircum: "^", section: "§", mu: "µ",
+};
+var NAMED_KEYS = {
+    space: "Space", escape: "Esc", return_: "Return", Return: "Return",
+    Tab: "Tab", BackSpace: "Backspace", prior: "PgUp", next: "PgDn",
+    Delete: "Del", Insert: "Ins", Home: "Home", End: "End"
+};
+
+function keyGlyph(key) {
+    if (key === undefined || key === null) return "";
+    if (Object.prototype.hasOwnProperty.call(KEY_GLYPHS, key)) return KEY_GLYPHS[key];
+    if (Object.prototype.hasOwnProperty.call(NAMED_KEYS, key)) return NAMED_KEYS[key];
+    return key;
+}
+

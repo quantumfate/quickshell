@@ -38,11 +38,12 @@ function categorize(desc) {
     return { cat: "General", label: desc };
 }
 
+
 /**
- * One registry node (the shape `hypr/lib/whichkey.lua` dumps: the tree's
- * items carry key, mods, desc) into ordered categories. The node is what the
- * mode's own admission loaded: the rows are what works, with no scan, probe
- * or filter left to disagree with the compositor.
+ * Parse a registry node (the shape `hypr/lib/whichkey.lua` dumps: the tree's
+ * items carry key, mods, desc) into ordered categories, where each row's combo
+ * reads in human glyphs (LEO-306): the chord the desk speaks in xkb words
+ * ("ampersand", "braceleft", "slash") renders as what the keyboard shows.
  */
 function parseNode(node, categoryOrder) {
     var items = node && Array.isArray(node.items) ? node.items : [];
@@ -52,7 +53,10 @@ function parseNode(node, categoryOrder) {
         var item = items[i];
         if (!item || !item.desc) continue;
         var parts = categorize(item.desc);
-        var combo = (item.mods || []).concat([item.key]).join(" + ");
+        var combo = (item.mods || [])
+            .concat([item.key]).map(function (part) {
+                return keyGlyph(String(part || "").toLowerCase());
+            }).join(" + ");
         var dedup = parts.cat + "|" + combo + "|" + parts.label;
         if (seen[dedup]) continue;
         seen[dedup] = true;
@@ -85,4 +89,32 @@ function splitColumns(cats) {
     var sorted = cats.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
     var half = Math.ceil(sorted.length / 2);
     return [sorted.slice(0, half), sorted.slice(half)];
+}
+
+// Human-readable key labels (LEO-306): a chord the desk speaks in xkb words
+// ("ampersand", "braceleft") renders as the glyph the keyboard shows, so the
+// sheet reads at a glance instead of sending the reader to a key-symbol
+// table. Xf86/scrollwheel keys carry no glyph and keep their names.
+var KEY_GLYPHS = {
+    ampersand: "&", apostrophe: "'", asterisk: "*", at: "@", backslash: "\\",
+    braceleft: "{", braceright: "}", comma: ",",
+    degree: "°", dollar: "$", equal: "=", exclam: "!", grave: "`",
+    greater: ">", less: "<", minus: "-", numbersign: "#", parenleft: "(",
+    parenright: ")", percent: "%", period: ".", plus: "+", plusminus: "±",
+    question: "?", quotedbl: "\"", semicolon: ";", slash: "/",
+    underscore: "_", division: "÷", multiply: "×", euro: "€",
+    sterlingicon: "£", sterling: "£", asciitilde: "~", asciicircum: "^",
+    section: "§", mu: "µ", eta: "η",
+};
+var NAMED_KEYS = {
+    space: "Space", escape: "Esc", return_: "Return", Return: "Return",
+    Tab: "Tab", BackSpace: "Backspace", prior: "PgUp", next: "PgDn",
+    Delete: "Del", Insert: "Ins", Home: "Home", End: "End"
+};
+
+function keyGlyph(key) {
+    if (key === undefined || key === null) return "";
+    if (Object.prototype.hasOwnProperty.call(KEY_GLYPHS, key)) return KEY_GLYPHS[key];
+    if (Object.prototype.hasOwnProperty.call(NAMED_KEYS, key)) return NAMED_KEYS[key];
+    return key;
 }
