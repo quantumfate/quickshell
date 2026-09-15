@@ -1,0 +1,161 @@
+{
+  "pack": "catppuccin",
+  "accents": {
+    "lavender": "base07",
+    "blue": "base0d",
+    "peach": "base09",
+    "mauve": "base0e",
+    "green": "base0b",
+    "pink": "base17",
+    "teal": "base0c"
+  },
+  "variants": {
+    "frappe": {
+      "kind": "dark",
+      "slots": {
+        "base00": "#303446",
+        "base01": "#292c3c",
+        "base02": "#414559",
+        "base03": "#51576d",
+        "base04": "#626880",
+        "base05": "#c6d0f5",
+        "base06": "#f2d5cf",
+        "base07": "#babbf1",
+        "base08": "#e78284",
+        "base09": "#ef9f76",
+        "base0a": "#e5c890",
+        "base0b": "#a6d189",
+        "base0c": "#81c8be",
+        "base0d": "#8caaee",
+        "base0e": "#ca9ee6",
+        "base0f": "#eebebe",
+        "base10": "#292c3c",
+        "base11": "#232634",
+        "base12": "#ea999c",
+        "base13": "#f2d5cf",
+        "base14": "#a6d189",
+        "base15": "#99d1db",
+        "base16": "#85c1dc",
+        "base17": "#f4b8e4"
+      },
+      "light-counterpart": "latte",
+      "ramp": {
+        "subtext0": "#a5adce",
+        "subtext1": "#b5bfe2",
+        "overlay0": "#737994",
+        "overlay1": "#838ba7",
+        "overlay2": "#949cbb"
+      }
+    },
+    "macchiato": {
+      "kind": "dark",
+      "slots": {
+        "base00": "#24273a",
+        "base01": "#1e2030",
+        "base02": "#363a4f",
+        "base03": "#494d64",
+        "base04": "#5b6078",
+        "base05": "#cad3f5",
+        "base06": "#f4dbd6",
+        "base07": "#b7bdf8",
+        "base08": "#ed8796",
+        "base09": "#f5a97f",
+        "base0a": "#eed49f",
+        "base0b": "#a6da95",
+        "base0c": "#8bd5ca",
+        "base0d": "#8aadf4",
+        "base0e": "#c6a0f6",
+        "base0f": "#f0c6c6",
+        "base10": "#1e2030",
+        "base11": "#181926",
+        "base12": "#ee99a0",
+        "base13": "#f4dbd6",
+        "base14": "#a6da95",
+        "base15": "#91d7e3",
+        "base16": "#7dc4e4",
+        "base17": "#f5bde6"
+      },
+      "light-counterpart": "latte",
+      "ramp": {
+        "subtext0": "#a5adcb",
+        "subtext1": "#b8c0e0",
+        "overlay0": "#6e738d",
+        "overlay1": "#8087a2",
+        "overlay2": "#939ab7"
+      }
+    },
+    "mocha": {
+      "kind": "dark",
+      "slots": {
+        "base00": "#1e1e2e",
+        "base01": "#181825",
+        "base02": "#313244",
+        "base03": "#45475a",
+        "base04": "#585b70",
+        "base05": "#cdd6f4",
+        "base06": "#f5e0dc",
+        "base07": "#b4befe",
+        "base08": "#f38ba8",
+        "base09": "#fab387",
+        "base0a": "#f9e2af",
+        "base0b": "#a6e3a1",
+        "base0c": "#94e2d5",
+        "base0d": "#89b4fa",
+        "base0e": "#cba6f7",
+        "base0f": "#f2cdcd",
+        "base10": "#181825",
+        "base11": "#11111b",
+        "base12": "#eba0ac",
+        "base13": "#f5e0dc",
+        "base14": "#a6e3a1",
+        "base15": "#89dceb",
+        "base16": "#74c7ec",
+        "base17": "#f5c2e7"
+      },
+      "light-counterpart": "latte",
+      "ramp": {
+        "subtext0": "#a6adc8",
+        "subtext1": "#bac2de",
+        "overlay0": "#6c7086",
+        "overlay1": "#7f849c",
+        "overlay2": "#9399b2"
+      }
+    },
+    "latte": {
+      "kind": "light",
+      "slots": {
+        "base00": "#eff1f5",
+        "base01": "#e6e9ef",
+        "base02": "#ccd0da",
+        "base03": "#bcc0cc",
+        "base04": "#acb0be",
+        "base05": "#4c4f69",
+        "base06": "#dc8a78",
+        "base07": "#7287fd",
+        "base08": "#d20f39",
+        "base09": "#fe640b",
+        "base0a": "#df8e1d",
+        "base0b": "#40a02b",
+        "base0c": "#179299",
+        "base0d": "#1e66f5",
+        "base0e": "#8839ef",
+        "base0f": "#dd7878",
+        "base10": "#e6e9ef",
+        "base11": "#dce0e8",
+        "base12": "#e64553",
+        "base13": "#dc8a78",
+        "base14": "#40a02b",
+        "base15": "#04a5e5",
+        "base16": "#209fb5",
+        "base17": "#ea76cb"
+      },
+      "ramp": {
+        "subtext0": "#6c6f85",
+        "subtext1": "#5c5f77",
+        "overlay0": "#9ca0b0",
+        "overlay1": "#8c8fa1",
+        "overlay2": "#7c7f93"
+      }
+    }
+  }
+}
