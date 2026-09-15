@@ -1,7 +1,7 @@
 // Shared cheatsheet rendering. Stateless: turns a which-key registry node —
 // the same document the overlay and the full panel both read — into balanced,
-// categorized columns. Used by both the full CheatSheet overlay and the
-// passive CheatSheetPeek panel so they always agree on grouping.
+// categorized columns. Used by the full CheatSheet overlay (SUPER+/) so the
+// reference view agrees with the live which-key overlay on grouping.
 //
 // The data plane is the dump (LEO-268): the Lua registry records every
 // described bind at load, and each mode's converge narrows it to the trees

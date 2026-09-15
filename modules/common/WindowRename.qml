@@ -80,13 +80,8 @@ Scope {
 
         onVisibleChanged: if (visible) input.forceActiveFocus();
 
-        Surface {
-            anchors.fill: parent
-            elevation: "backdrop"
-            radius: 0
-            border.width: 0
-            MouseArea { anchors.fill: parent; onClicked: scope.shown = false }
-        }
+        // Click outside the card dismisses, but there is no dim backdrop.
+        MouseArea { anchors.fill: parent; onClicked: scope.shown = false }
 
         Surface {
             anchors.centerIn: parent

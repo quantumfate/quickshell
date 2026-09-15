@@ -110,16 +110,10 @@ Scope {
 
         onVisibleChanged: if (visible) titleInput.forceActiveFocus();
 
-        Surface {
-            anchors.fill: parent
-            elevation: "backdrop"
-            radius: 0
-            border.width: 0
-            // Outside clicks must NOT close (the bind/Esc does, and closes while
-            // busy aborts the create). Swallow clicks so they don't fall through
-            // to the bar behind the dimmer.
-            MouseArea { anchors.fill: parent }
-        }
+        // No dim backdrop: the panel is a form, not a modal. Outside clicks
+        // must NOT close (the bind/Esc does, and closing while busy aborts the
+        // create), so swallow them so they don't fall through to the bar.
+        MouseArea { anchors.fill: parent }
 
         Surface {
             id: card

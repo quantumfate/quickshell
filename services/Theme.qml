@@ -31,7 +31,6 @@ Singleton {
             transparency: 1.0,      // global window-transparency dial (0 = opaque)
             wallpaper: "",          // "" = the palette's default, resolved by ,theme.sh
             wallpapers: ({}),       // palette -> wallpaper; `wallpaper` is the fallback
-            cheatsheet_linger_ms: 400
         })
     }
 

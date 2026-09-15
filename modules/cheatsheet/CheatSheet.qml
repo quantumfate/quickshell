@@ -87,14 +87,8 @@ Scope {
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "quickshell-cheatsheet"   // targeted by hypr layerrules
 
-        // Dim backdrop; click to dismiss.
-        Surface {
-            anchors.fill: parent
-            elevation: "backdrop"
-            radius: 0
-            border.width: 0
-            MouseArea { anchors.fill: parent; onClicked: scope.hide() }
-        }
+        // Click outside the card dismisses, but there is no dim backdrop.
+        MouseArea { anchors.fill: parent; onClicked: scope.hide() }
 
         Surface {
             id: card

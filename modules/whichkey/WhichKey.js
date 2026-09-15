@@ -70,7 +70,7 @@ function rowsFor(node) {
  * @param baseMs the felt-which-key dwell (90)
  */
 function fadeFor(motionEnergy, instantMs, baseMs) {
-    return motionEnergy === "instant" ? (instantMs || 30) : (baseMs || 90);
+    return motionEnergy === "instant" ? 0 : (baseMs || 90);
 }
 
 /**

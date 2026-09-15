@@ -1,10 +1,12 @@
-// Which-key overlay (LEO-222): the SUPER-Space leader's renderer.
+// Which-key overlay (LEO-222 / LEO-300 / LEO-324 / LEO-327): a recursive
+// submap HUD.
 //
 // Hyprland owns navigation entirely — hypr/lib/submap.lua owns the stack,
 // binds each submap's entries, and unconditionally binds escape to one-level
-// back — so this overlay is a pure mirror of the submap event: it draws the
-// registered tree node for the submap currently entered, in place, with all
-// geometry fixed so replacing the list never moves the cursor's target.
+// back — so this overlay mirrors the submap stack recursively: it appears when
+// you dwell in any submap, stays open while you move from submap to submap, and
+// disappears the moment you return to the root map. There is no dim backdrop;
+// the panel is information, not a modal.
 //
 // The tree itself comes from hypr/lib/whichkey.lua, which records every
 // submap.tree node at config load and dumps it to $QF_STORE/whichkey.json, the
@@ -25,29 +27,32 @@ import "../common"        // Surface
 import "WhichKey.js" as WK
 
 // Which-key opens automatically on any submap enter, so it runs in its own
-// layer namespace (quickshell-whichkey) for a dedicated hypr layerrule —
-// distinct from the passive cheatsheet's, since the two never stack.
+// layer namespace (quickshell-whichkey) for a dedicated hypr layerrule.
 Scope {
     id: scope
 
     property bool shown: false
-    property string submap: ""          // from rawEvent; "" at root
+    property string submap: ""          // from rawEvent; "" or "reset" at root
+    readonly property bool inSubmap: scope.submap !== "" && scope.submap !== "reset"
     readonly property var tree: store.data
     readonly property var node: WK.nodeFor(tree, submap)
     property var rows: WK.rowsFor(node)
     readonly property var path: WK.pathFromRoot(tree, submap)
 
     // Entrance/exit fade, owned here so the layerrule's `popin` never fights
-    // it. The duration is the mode's motion contract WORD (LEO-227/300): the
-    // model already names the two numbers, and the lingering tail is zero by
-    // its own definition — close() unmaps in the same tick the key leaves.
+    // it. The duration is the mode's motion contract WORD (LEO-227/300): an
+    // `instant` mode gets zero fade so the menu snaps with the key; a `base`
+    // mode keeps a gentle fade. The lingering tail is zero by contract —
+    // close() unmaps in the same tick the submap leaves.
     property real cardOpacity: 0
     readonly property int cardFades: WK.fadeFor(Focus.motionEnergy, 30, 90)
     Behavior on cardOpacity { NumberAnimation { duration: scope.cardFades; easing.type: Easing.OutCubic } }
 
     function open() {
+        if (!scope.inSubmap || !scope.node) return;
         scope.shown = true;
         scope.cardOpacity = 1;
+        if (list) list.contentY = 0;   // replacing the list starts from the top
     }
     function close() {
         // Unmap immediately: dismissal happens ahead of the submap reset (see
@@ -55,6 +60,13 @@ Scope {
         // a keystroke meant for the base map.
         scope.shown = false;
         scope.cardOpacity = 0;
+    }
+
+    Timer {
+        id: dwell
+        interval: 350
+        repeat: false
+        onTriggered: scope.open()
     }
 
     Store {
@@ -71,9 +83,10 @@ Scope {
         function dismiss(): void { scope.close(); }
     }
 
-    // Follow the submap stack: entering any registered submap stages its node;
-    // "" or "reset" (or anything not in the tree) closes. A config reload
-    // closes too, so a stale overlay can never be orphaned on screen.
+    // Recursive submap follow: arm a dwell when the user enters any submap from
+    // root; keep the menu open while moving between submaps; dismiss the moment
+    // we return to root. A config reload closes too, so a stale overlay can
+    // never be orphaned on screen.
     Connections {
         target: Hyprland
         function onRawEvent(event) {
@@ -81,11 +94,16 @@ Scope {
             else if (event.name === "configreloaded") scope.close();
         }
     }
-    onSubmapChanged: {
-        if (scope.node) {
-            scope.open();
-            list.contentY = 0;   // replacing the list starts from the top
+    onInSubmapChanged: scope._syncSession()
+
+    function _syncSession() {
+        if (scope.inSubmap) {
+            // Entering or moving within the submap stack: if already shown,
+            // just stay; otherwise arm the dwell for a fresh entry.
+            if (!scope.shown && !dwell.running) dwell.start();
         } else {
+            // Back at root: stop any pending dwell and dismiss immediately.
+            dwell.stop();
             scope.close();
         }
     }
@@ -104,18 +122,16 @@ Scope {
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "quickshell-whichkey"   // targeted by hypr layerrules
 
-        // Dim backdrop; click to dismiss.
-        Surface {
-            anchors.fill: parent
-            elevation: "backdrop"
-            radius: 0
-            border.width: 0
-            MouseArea { anchors.fill: parent; onClicked: scope.close() }
-        }
+        // Click outside the card dismisses, but there is no dim backdrop.
+        MouseArea { anchors.fill: parent; onClicked: scope.close() }
 
         Surface {
             id: card
-            anchors.centerIn: parent
+            anchors {
+                horizontalCenter: parent.horizontalCenter
+                bottom: parent.bottom
+                bottomMargin: Theme.gap * 12
+            }
             // Fixed geometry, not content-sized: a nested node almost always
             // has fewer rows than its parent, so sizing to the live content
             // would shrink the card on every descent and grow it on every
@@ -126,6 +142,8 @@ Scope {
             elevation: "modal"
             radius: Theme.radius
             opacity: scope.cardOpacity
+            // Swallow clicks so they don't reach the dismiss backdrop.
+            MouseArea { anchors.fill: parent }
 
             ColumnLayout {
                 id: body

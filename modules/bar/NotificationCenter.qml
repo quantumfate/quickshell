@@ -3,15 +3,16 @@
 //
 //   qs -c quantumfate ipc call notifications toggle
 //
-// Reads Notify.history (metadata log) and exposes DND + clear controls. A focus
-// popup with a dim, click-to-dismiss backdrop (same pattern as the cheatsheet).
+// Reads Notify.history (metadata log) and exposes DND + clear controls. Opens
+// on the monitor the bell or PanelBus names, with no dim backdrop (LEO-240):
+// the panel is information, not a modal.
 pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Notify, Theme
+import "../../services"   // Notify, PanelBus, Theme
 import "../../services/NotifyCards.js" as NotifyCards
 import "../common"        // Surface
 
@@ -45,20 +46,16 @@ Scope {
 
     PanelWindow {
         visible: scope.shown
+        screen: Quickshell.screens.find(s => s.name === PanelBus.anchorScreen) ?? null
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "quickshell-notifications"
 
-        // Dim backdrop; click outside the panel to dismiss.
-        Surface {
-            anchors.fill: parent
-            elevation: "backdrop"
-            radius: 0
-            border.width: 0
-            MouseArea { anchors.fill: parent; onClicked: Notify.hideHistory() }
-        }
+        // No dim backdrop (LEO-240): the panel is information, not a modal.
+        // A click outside the panel still dismisses it.
+        MouseArea { anchors.fill: parent; onClicked: Notify.hideHistory() }
 
         Surface {
             id: panel

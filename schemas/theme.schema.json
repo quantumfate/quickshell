@@ -61,12 +61,6 @@
       "description": "Absolute path, or \"\" to let the palette decide.",
       "type": "string"
     },
-    "cheatsheet_linger_ms": {
-      "description": "How long the passive cheatsheet stays after you leave a submap.",
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 10000
-    },
     "transparency": {
       "description": "Global window-transparency dial. 0 is fully opaque (presentation mode); 1 gives each window role the transparency it was designed with.",
       "type": "number",

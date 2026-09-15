@@ -1,4 +1,4 @@
-// The which-key tree logic (LEO-222).
+// The which-key tree logic (LEO-222 / LEO-300).
 //
 // hypr/lib/whichkey.lua records every submap.tree node at config load and dumps
 // it to $XDG_STATE_HOME/whichkey.json, which WhichKey.qml consumes through a
@@ -9,7 +9,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { nodeFor, pathFromRoot, rowsFor } = loadLibrary("modules/whichkey/WhichKey.js");
+const { nodeFor, pathFromRoot, rowsFor, fadeFor, snapAfterLeave } = loadLibrary("modules/whichkey/WhichKey.js");
 
 // Shape mirroring what whichkey.lua dumps (items are registry order).
 const TREE = {
@@ -31,7 +31,7 @@ const TREE = {
         ],
     },
     "terminal": {
-        parent: "which",
+        parent: "",
         items: [],
     },
 };
@@ -85,19 +85,16 @@ test("rowsFor tolerates missing or empty nodes and drops undescribed rows", () =
         { desc: "No key" },
     ] }), [{ key: "y", combo: "y", desc: "Keep me", group: false, child: "" }]);
 });
-// The snap chain (LEO-300): appearance dwells, dismissal is instant.
-//
-// The perceived snap is two numbers: how long until the menu is USABLE while
-// dwelling (the render is pure — instant), and how long the lingering tail
-// runs after you leave. The former is the fade the mode's motion contract
-// names; the latter must be ZERO: `close()` unmaps in the same tick, no
-// Timer, no LEO-302-timeout in the chain. Rendered as pure model words the
-// QML reads, so the QML has no number left to invent.
-const { fadeFor, snapAfterLeave } = loadLibrary("modules/whichkey/WhichKey.js");
 
-test("the entrance read gives an instant mode its instrument: 30ms, base is a dwell", () => {
-    assert.equal(fadeFor("instant", 30, 90), 30);
-    assert.equal(fadeFor("base", 30, 90), 90);
+// The snap chain (LEO-300): the overlay tracks the submap stack at keyboard
+// speed. An instant motion mode gets zero entrance/exit fade so the menu
+// appears and disappears with the key; base keeps a gentle fade. In both cases
+// the lingering tail after leaving the submap is zero: `close()` unmaps in the
+// same tick, no Timer, no LEO-302-timeout in the chain.
+
+test("instant motion energy snaps the overlay to zero fade", () => {
+    assert.equal(fadeFor("instant", 30, 90), 0, "instant means no animation");
+    assert.equal(fadeFor("base", 30, 90), 90, "base keeps a readable dwell");
     assert.equal(fadeFor(undefined, 30, 90), 90, "base is the fallback");
 });
 

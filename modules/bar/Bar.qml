@@ -104,6 +104,7 @@ Scope {
                         leftMargin: Theme.barInset * 2
                     }
                     Workspaces { screen: bar.screen }
+                    SubmapIndicator {}
                     GroupChip {}
                     DofusRoster { screen: bar.screen }
                     HyprLayout { visible: !bar.deepMode }

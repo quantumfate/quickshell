@@ -45,11 +45,10 @@ ShellRoot {
     // Themed which-key keybind cheatsheet. Toggled via IPC.
     CheatSheet {}
 
-    // Passive peek variant: non-focus, non-dimming contextual panel driven by
-    // the Hyprland submap event system (hypr/events/peek.lua).
-    CheatSheetPeek {}
-
-    // Which-key overlay (LEO-222): the SUPER-Space leader's tree renderer. It
+    // Which-key overlay (LEO-222 / LEO-327): the SUPER-Space leader's tree
+    // renderer. It mirrors the submap stack automatically after a short dwell,
+    // so no binding action ever needs to open it — the Lua side only ever tells
+    // it to dismiss.
     // mirrors the submap stack automatically, so no binding action ever needs
     // to open it — the Lua side only ever tells it to dismiss.
     WhichKey {}

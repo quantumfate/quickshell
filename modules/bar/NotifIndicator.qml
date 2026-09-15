@@ -2,7 +2,7 @@
 // panel (NotificationCenter), right-click toggles do-not-disturb. The glyph
 // reflects DND; a count rides in the label when history is non-empty.
 import QtQuick
-import "../../services"   // Notify, Theme
+import "../../services"   // Notify, PanelBus, Theme
 
 Text {
     id: root
@@ -17,10 +17,18 @@ Text {
 
     // Left-click opens/closes the history panel, right-click toggles DND — both
     // drive Notify directly (its state is shared with the panel + keybinds).
+    // The panel opens on the monitor the bell lives on.
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: (m) => m.button === Qt.RightButton ? Notify.toggleDnd() : Notify.toggleHistory()
+        onClicked: (m) => {
+            if (m.button === Qt.RightButton) {
+                Notify.toggleDnd();
+            } else {
+                PanelBus.anchorScreen = root.screenName;
+                Notify.toggleHistory();
+            }
+        }
     }
 
     HoverHandler { id: hover }
