@@ -105,6 +105,8 @@ lint: qmllint tokens
 # CI/pre-commit gate: formatting + QML linting + the token rule + tests
 # (shellcheck/yamllint stay advisory)
 check: fmt-check qmllint tokens test smoke
+	@../hypr/bin/,privacy-check
+
 
 # Ansible playbook syntax check (cheap; part of the CI gate)
 ansible-syntax:
