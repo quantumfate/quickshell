@@ -11,7 +11,9 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Theme, PanelBus, Focus
+import "../../services"   // Theme, PanelBus, Focus, Hyprfocus, SceneVeto
+import "../../services/ModeExplain.js" as ModeExplain
+import "../../services/ModeAnnounce.js" as ModeAnnounce
 import "../common"        // Surface
 
 Scope {
@@ -80,6 +82,23 @@ Scope {
         const keys = Object.keys(scope.sceneMap);
         if (keys.length === 0) return "all scenes reachable";
         return keys.map(k => k + ": " + scope.sceneMap[k]).join(" · ");
+    }
+
+    // The explain half (LEO-280): the declaration as sentences. The pointer's
+    // provenance stands so the panel answers "why is my desk like this"
+    // without reading a file by hand; the rows read the ACTIVE mode's own
+    // record. Unknown-pointer states say so rather than showing nothing.
+    readonly property string provenance: ModeExplain.provenance(
+        { source: Hyprfocus.source, set_at: Hyprfocus.setAt }, Focus.until)
+    readonly property var explained: Hyprfocus.known ? ModeExplain.rows(Hyprfocus.current) : []
+
+    // The transition preview: what entering a chip would take, named before
+    // the mode is entered (the announce model's own line, not a rewrite).
+    property string _preview: ""
+    function hoverChip(id) {
+        const spec = Hyprfocus.modes[id];
+        const a = spec ? ModeAnnounce.announce(spec, Hyprfocus.label(id)) : null;
+        scope._preview = a ? a.body : "nothing taken away · enforces immediately";
     }
 
     // A row of option chips; exactly one is highlighted. `stretch` makes it
@@ -262,10 +281,35 @@ Scope {
                                     }
                                     MouseArea {
                                         anchors.fill: parent
+                                        hoverEnabled: true
+                                        onEntered: scope.hoverChip(chip.modelData)
+                                        onExited: scope._preview = ""
                                         onClicked: scope.adopt(chip.modelData)
                                     }
                                 }
                             }
+                        }
+
+                        // What entering the pointed-at chip takes, named before
+                        // it is entered (LEO-280's read half) — and the vetoes
+                        // the last transition honoured, so a refusal is
+                        // visible in the panel the desk runs it from.
+                        Text {
+                            visible: scope._preview !== ""
+                            Layout.fillWidth: true
+                            text: scope._preview
+                            color: Theme.subtextAlt
+                            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
+                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                        }
+                        Text {
+                            visible: (SceneVeto.last?.vetoes ?? []).length > 0
+                            Layout.fillWidth: true
+                            text: (SceneVeto.last?.vetoes ?? [])
+                                .map(v => v.unit + " refused: " + (v.reason || "no reason")).join(" · ")
+                            color: Theme.warning
+                            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
+                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         }
 
                         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
@@ -443,6 +487,59 @@ Scope {
                             Layout.fillWidth: true
                             text: "absence = reachable; \u201cblocked\u201d only stops dispatch into the scene, never a session already running"
                             color: Theme.subtextAlt
+                            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
+                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                        }
+
+                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
+
+                        // -- the declaration (LEO-280): the desk the compositor
+                        // -- and every other runtime converge on, as sentences.
+                        SectionTag { title: "the declaration" }
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: scope.mood === "neutral"
+                                ? "at rest - the scene secretary reads the neutral pointer"
+                                : "pointer: " + scope.mood + " \u00b7 " + scope.provenance
+                            color: Theme.subtext
+                            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
+                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.space.xs
+
+                            Repeater {
+                                model: scope.explained
+                                delegate: RowLayout {
+                                    id: explainRow
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    spacing: Theme.space.md
+                                    Text {
+                                        Layout.preferredWidth: Theme.fs.xl * 5
+                                        text: explainRow.modelData.label
+                                        color: Theme.subtext
+                                        font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: explainRow.modelData.value
+                                        color: Theme.text
+                                        font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
+                                        wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                                    }
+                                }
+                            }
+                        }
+
+                        Text {
+                            visible: !Hyprfocus.known
+                            Layout.fillWidth: true
+                            text: "the pointer names a mode the declaration does not carry \u2014 showing the policy, not a guess"
+                            color: Theme.warning
                             font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         }
