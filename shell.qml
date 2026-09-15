@@ -67,4 +67,5 @@ ShellRoot {
     // Control Centre: theme/appearance/wallpaper/sound/focus, one panel over
     // backends that otherwise have no UI. Toggled via IPC.
     ControlPanel {}
+    SystemCenter {}
 }

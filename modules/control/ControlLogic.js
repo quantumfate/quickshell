@@ -59,3 +59,19 @@ function moveGridIndex(index, key, count, columns) {
         default: return index;
     }
 }
+
+/**
+ * The selected row index moves with the keyboard (LEO-226 / LEO-244's
+ * keyboard parity): up/down move one row and clamp (a list is not a grid
+ * grid loop — the first and last entries do not wrap into each other);
+ * `pick` resets to the top. `index` returns reference: pass the moved
+ * value back down so restarts can find their row.
+ */
+function moveSelectionIndex(index, key, count) {
+    if (count <= 0) return 0;
+    var next = index;
+    if (key === "down" || key === "tab") next = index + 1;
+    else if (key === "up" || key === "backtab") next = index - 1;
+    next = clamp(next, 0, count - 1);
+    return next;
+}
