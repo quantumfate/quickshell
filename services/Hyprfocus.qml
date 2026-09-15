@@ -19,6 +19,7 @@ import Quickshell
 import QtQuick
 import "."   // Store
 import "HyprfocusRead.js" as Read
+import "DeclarationEdit.js" as Edit
 
 Singleton {
     id: root
@@ -87,4 +88,19 @@ Singleton {
     // mode's merged over them. Empty until a declaration is seeded, which the
     // daemon reads as "no routing declared" rather than as "drop everything".
     readonly property var routes: root.modes ? Read.routes(declaration.data, root.mode) : ({})
+
+    // The panel's edit half (LEO-280): one validated, live write into the
+    // declaration. Validation runs BEFORE the store is touched — a write
+    // that breaks the contract is refused, not stored; an edit that lands
+    // publishes through the same file both runtimes watch, no reload.
+    //
+    // Returns "" on success or the reason the write was refused.
+    function patchMode(mode, patch) {
+        const spec = (root.modes || {})[mode];
+        if (!spec) return "unknown mode '" + mode + "'";
+        const next = Edit.modePatch(spec, patch);
+        if (next === null) return "the edit breaks the declaration's contract";
+        root.declaration.set({ modes: Object.assign({}, root.modes, { [mode]: next }) });
+        return "";
+    }
 }

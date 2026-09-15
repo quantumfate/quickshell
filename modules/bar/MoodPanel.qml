@@ -535,6 +535,29 @@ Scope {
                             }
                         }
 
+                        // The palette lease is the one declared field the panel
+                        // edits (LEO-280's edit half): validated before the
+                        // write lands, live over the vocabulary every pack
+                        // carries. Vacating the lease gives the desk back to
+                        // the baseline with the same edit.
+                        FieldRow {
+                            label: "lease palette"
+                            options: ["none"].concat(Object.keys(Theme.palettes))
+                            value: (Hyprfocus.current.presentation || {}).palette || "none"
+                            onPick: (v) => {
+                                const result = Hyprfocus.patchMode(scope.mood, { palette: v === "none" ? "" : v });
+                                if (result !== "") {
+                                    // Refused, not stored: a typo never becomes a desk
+                                    // the compositor resolves into something else.
+                                    Notify.send("edit refused", result, "error", true);
+                                    return;
+                                }
+                                // Live on the external half too: the lease moved in
+                                // place, so the same fan-out a mode entry owes runs.
+                                Theme.noteLease();
+                            }
+                        }
+
                         Text {
                             visible: !Hyprfocus.known
                             Layout.fillWidth: true
