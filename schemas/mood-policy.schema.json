@@ -3,6 +3,7 @@
   "$id": "https://github.com/quantumfate/quickshell/schemas/mood-policy.schema.json",
   "title": "mood-policy.json",
   "description": "The mood-mode policy store (LEO-236). One definitional store, keyed by the mood ids the focus store enumerates, recording what each mood allows, changes, or suppresses across notifications, launches, background work, and the reachability of named workspace scenes. `focus.json` stays the *active* state ({ mode, until }); this file is what a mode *means*, so both runtimes \u2014 Quickshell's Focus/Notify, Hyprland Lua's event manager, and the launcher scripts on $PATH \u2014 read one policy instead of each re-inventing one. The defaults deliberately reproduce today's behavior (the firm focus gate, per-mood notification policies from Focus.qml) so adopting the store changes nothing until LEO-237 exposes it and LEO-238 enforces it.",
+  "classification": "declaration",
   "type": "object",
   "additionalProperties": false,
   "required": [

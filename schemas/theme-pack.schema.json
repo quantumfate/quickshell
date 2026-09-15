@@ -1,9 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Theme pack",
-  "description": "The interchange language between theme ecosystems and this desk (LEO-289). A pack is a family; a variant is one palette in it. Each variant carries the base24 slot set — the terminal-compatible core, verified against tinted-theming/base24/styling.md: base00-base0F identical to base16, base10/base11 darker background runs, base12-base17 the brights (red, yellow, green, cyan, blue, magenta) — plus an optional `ramp` of the intermediate surface steps the shell reads but base24 does not carry (the ramp is what keeps a source palette's full depth; without it the derivation falls back to the nearest slot). A variant declares kind (`light`|`dark`); a dark one may name its light counterpart, and several may share one. Resolution of a counterpart never fails: a desk with a theme it cannot pair beats a desk with no theme.",
+  "description": "The interchange language between theme ecosystems and this desk (LEO-289). A pack is a family; a variant is one palette in it. Each variant carries the base24 slot set \u2014 the terminal-compatible core, verified against tinted-theming/base24/styling.md: base00-base0F identical to base16, base10/base11 darker background runs, base12-base17 the brights (red, yellow, green, cyan, blue, magenta) \u2014 plus an optional `ramp` of the intermediate surface steps the shell reads but base24 does not carry (the ramp is what keeps a source palette's full depth; without it the derivation falls back to the nearest slot). A variant declares kind (`light`|`dark`); a dark one may name its light counterpart, and several may share one. Resolution of a counterpart never fails: a desk with a theme it cannot pair beats a desk with no theme.",
+  "classification": "declaration",
   "type": "object",
-  "required": ["pack", "accents", "variants"],
+  "required": [
+    "pack",
+    "accents",
+    "variants"
+  ],
   "additionalProperties": false,
   "properties": {
     "pack": {
@@ -11,14 +16,24 @@
       "$ref": "#/$defs/id"
     },
     "accents": {
-      "description": "Which slot answers each accent role the shell's modes may lease (Focus.accentRole names one of these; the shell's set is lavender, blue, peach, mauve, green, pink, teal). A pack must name all seven and each must resolve to a slot its variants carry — two roles landing on one slot would render two modes identically, which is the failure the lease exists to prevent.",
+      "description": "Which slot answers each accent role the shell's modes may lease (Focus.accentRole names one of these; the shell's set is lavender, blue, peach, mauve, green, pink, teal). A pack must name all seven and each must resolve to a slot its variants carry \u2014 two roles landing on one slot would render two modes identically, which is the failure the lease exists to prevent.",
       "type": "object",
-      "required": ["lavender", "blue", "peach", "mauve", "green", "pink", "teal"],
-      "additionalProperties": { "$ref": "#/$defs/slot" },
+      "required": [
+        "lavender",
+        "blue",
+        "peach",
+        "mauve",
+        "green",
+        "pink",
+        "teal"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/slot"
+      },
       "minProperties": 7
     },
     "names": {
-      "description": "The pack's own vocabulary, adapter-translated into the slot set: a source word (rosewater, sky, maroon…) and which slot or ramp step answers it. Widgets never see source words — the derivation applies names when it renders a whole table — so this section can be as ecosystems speak without leaking into widgets. A name pointing at a slot the variant does not carry is an install-time rejection.",
+      "description": "The pack's own vocabulary, adapter-translated into the slot set: a source word (rosewater, sky, maroon\u2026) and which slot or ramp step answers it. Widgets never see source words \u2014 the derivation applies names when it renders a whole table \u2014 so this section can be as ecosystems speak without leaking into widgets. A name pointing at a slot the variant does not carry is an install-time rejection.",
       "type": "object",
       "additionalProperties": {
         "description": "A base24 slot name (lowercase) or a ramp step name.",
@@ -27,7 +42,7 @@
       }
     },
     "surfaces": {
-      "description": "The leasable registry (LEO-210's harder half): what a variant is called on each surface it ports to, as a template over `{variant}`, `{kind}` (light/dark) and `{accent}` (the pack accent the surface names use). A surface the pack does not name is PARTIAL COVERAGE, normal by design: the surface keeps its own shape and records the gap — a scheme porting to fewer surfaces than another is not a failure. The templates let the same desk apply a non-Catppuccin lease without the appliers hardcoding one ecosystem's name shape.",
+      "description": "The leasable registry (LEO-210's harder half): what a variant is called on each surface it ports to, as a template over `{variant}`, `{kind}` (light/dark) and `{accent}` (the pack accent the surface names use). A surface the pack does not name is PARTIAL COVERAGE, normal by design: the surface keeps its own shape and records the gap \u2014 a scheme porting to fewer surfaces than another is not a failure. The templates let the same desk apply a non-Catppuccin lease without the appliers hardcoding one ecosystem's name shape.",
       "type": "object",
       "additionalProperties": {
         "description": "A name template, with {{variant}}, {{kind}} and {{accent}} placeholders.",
@@ -43,7 +58,9 @@
     "variants": {
       "type": "object",
       "minProperties": 1,
-      "additionalProperties": { "$ref": "#/$defs/variant" }
+      "additionalProperties": {
+        "$ref": "#/$defs/variant"
+      }
     }
   },
   "$defs": {
@@ -66,30 +83,59 @@
     "variant": {
       "description": "One palette in the family.",
       "type": "object",
-      "required": ["kind", "slots"],
+      "required": [
+        "kind",
+        "slots"
+      ],
       "additionalProperties": false,
       "properties": {
         "kind": {
           "description": "Which half of the day/night cycle this variant belongs to. The cycle picks between the kinds; the counterpart names how a dark one pairs to a light one.",
-          "enum": ["light", "dark"]
+          "enum": [
+            "light",
+            "dark"
+          ]
         },
         "light-counterpart": {
-          "description": "The variant that reads as the same look in daylight. Optional and only meaningful on a dark variant; several dark variants may name the same light one, which is Catppuccin's shape — three darks over one light — rather than a defect.",
+          "description": "The variant that reads as the same look in daylight. Optional and only meaningful on a dark variant; several dark variants may name the same light one, which is Catppuccin's shape \u2014 three darks over one light \u2014 rather than a defect.",
           "$ref": "#/$defs/id"
         },
-        "slots": { "$ref": "#/$defs/base24" },
-        "ramp": { "$ref": "#/$defs/ramp" }
+        "slots": {
+          "$ref": "#/$defs/base24"
+        },
+        "ramp": {
+          "$ref": "#/$defs/ramp"
+        }
       }
     },
     "base24": {
-      "description": "The base24 slot set, complete. Meanings (per tinted-theming/base24): base00-07 the background ramp, dark-to-light on a dark kind; base08-0F the hues (red, orange, yellow, green, cyan, blue, magenta, plus base0F's 'dark red or brown'); base10/11 the darker background variants (the depth mantles and crusts live on); base12-17 the brights of red, yellow, green, cyan, blue and magenta — where a scheme's extra hues land without colliding with the terminal eight.",
+      "description": "The base24 slot set, complete. Meanings (per tinted-theming/base24): base00-07 the background ramp, dark-to-light on a dark kind; base08-0F the hues (red, orange, yellow, green, cyan, blue, magenta, plus base0F's 'dark red or brown'); base10/11 the darker background variants (the depth mantles and crusts live on); base12-17 the brights of red, yellow, green, cyan, blue and magenta \u2014 where a scheme's extra hues land without colliding with the terminal eight.",
       "type": "object",
       "required": [
-        "base00", "base01", "base02", "base03", "base04", "base05",
-        "base06", "base07", "base08", "base09", "base0A", "base0B",
-        "base0C", "base0D", "base0E", "base0F",
-        "base10", "base11", "base12", "base13", "base14", "base15",
-        "base16", "base17"
+        "base00",
+        "base01",
+        "base02",
+        "base03",
+        "base04",
+        "base05",
+        "base06",
+        "base07",
+        "base08",
+        "base09",
+        "base0A",
+        "base0B",
+        "base0C",
+        "base0D",
+        "base0E",
+        "base0F",
+        "base10",
+        "base11",
+        "base12",
+        "base13",
+        "base14",
+        "base15",
+        "base16",
+        "base17"
       ],
       "additionalProperties": false,
       "propertyNames": {
@@ -97,12 +143,20 @@
       }
     },
     "ramp": {
-      "description": "The ramp steps base24's surface slots skip but the derivation needs to stay faithful: the subtexts and overlays between surface2 and text. Absent means the derivation inherits from the nearest base24 slot — a degraded palette, never an error.",
+      "description": "The ramp steps base24's surface slots skip but the derivation needs to stay faithful: the subtexts and overlays between surface2 and text. Absent means the derivation inherits from the nearest base24 slot \u2014 a degraded palette, never an error.",
       "type": "object",
       "propertyNames": {
-        "enum": ["subtext0", "subtext1", "overlay0", "overlay1", "overlay2"]
+        "enum": [
+          "subtext0",
+          "subtext1",
+          "overlay0",
+          "overlay1",
+          "overlay2"
+        ]
       },
-      "additionalProperties": { "$ref": "#/$defs/hex" }
+      "additionalProperties": {
+        "$ref": "#/$defs/hex"
+      }
     }
   }
 }

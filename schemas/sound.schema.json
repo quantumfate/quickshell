@@ -3,23 +3,39 @@
   "$id": "https://github.com/quantumfate/quickshell/schemas/sound.schema.json",
   "title": "sound.json",
   "description": "State for the rain/lofi ambience player. Read and written by the Sound singleton; the audio itself is a long-lived local mpv, driven over its own IPC socket, not through this file.",
+  "classification": "declaration",
   "type": "object",
   "additionalProperties": false,
-  "required": ["mode", "track", "volume", "pools"],
+  "required": [
+    "mode",
+    "track",
+    "volume",
+    "pools"
+  ],
   "properties": {
     "pools": {
       "description": "Which local directory backs each playable mode, as declared data. Keys are the mode enum minus \"off\" (pinned in lockstep by sound.test.js); \"$HOME/...\" is resolved by Sound.qml, since JSON cannot expand environment.",
       "type": "object",
-      "additionalProperties": { "type": "string", "pattern": "^\\$HOME/" }
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^\\$HOME/"
+      }
     },
     "mode": {
       "description": "Which local playlist is loaded. \"off\" means mpv is idle/stopped.",
       "type": "string",
-      "enum": ["off", "rain", "lofi"]
+      "enum": [
+        "off",
+        "rain",
+        "lofi"
+      ]
     },
     "track": {
       "description": "Absolute path of the currently loaded file, or null when mode is \"off\".",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "volume": {
       "description": "mpv volume, 0 (silent) to 1 (mpv's 100).",

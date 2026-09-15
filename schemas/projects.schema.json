@@ -3,9 +3,12 @@
   "$id": "https://github.com/quantumfate/quickshell/schemas/projects.schema.json",
   "title": "projects.json",
   "description": "Per-project dashboard metadata, keyed by project name. Deliberately does NOT carry `path`: the project's existence and location are `,proj.sh`'s alone (scraped from the tms config), so this file cannot disagree with it about where a project lives. `,proj.sh drift` flags a name here that `,proj.sh list` no longer knows.",
+  "classification": "observation",
   "type": "object",
   "additionalProperties": false,
-  "required": ["projects"],
+  "required": [
+    "projects"
+  ],
   "properties": {
     "projects": {
       "type": "object",
@@ -13,17 +16,29 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["kind", "windows", "study", "priority"],
+        "required": [
+          "kind",
+          "windows",
+          "study",
+          "priority"
+        ],
         "properties": {
           "kind": {
             "description": "What the dashboard shows this project as.",
             "type": "string",
-            "enum": ["repo", "vault", "scratch", "docs"]
+            "enum": [
+              "repo",
+              "vault",
+              "scratch",
+              "docs"
+            ]
           },
           "windows": {
             "description": "Tmux window template. Mirrors `,proj.sh`'s own default order unless a project overrides it here; `.proj.toml`/tms `windows =` still wins for the tmux session itself. This copy is for the dashboard to render without shelling out.",
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "minItems": 1
           },
           "study": {

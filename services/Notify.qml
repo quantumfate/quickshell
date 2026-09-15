@@ -52,16 +52,35 @@ Singleton {
     property var _queued: []
     property string _queueMood: ""
 
-    // Persisted DND + history, shared file so it survives config reloads/restarts.
+    // Two stores, one distinction (LEO-281): `notifications` holds the
+    // history — an observation, capped and erasable — and `notify-prefs`
+    // holds the DND choice — a declaration, the desk saying what it should
+    // do. A file that is half config and half history could be handled
+    // correctly by neither rule.
+    // Persisted DND, a declaration the prefs file owns. The notification
+    // store's old `dnd` key is adopted once, so a desk mid-upgrade keeps its
+    // choice without a hand edit.
+    Store {
+        id: prefs
+        name: "notify-prefs"
+        defaults: ({ dnd: false })
+    }
+    // The persisted, capped history. Owned by its own store so a Clear is an
+    // erasure of exactly that diary and nothing else.
     Store {
         id: store
         name: "notifications"
-        defaults: ({ dnd: false, history: [] })
+        defaults: ({ history: [] })
         onChanged: root._hydrate()
     }
     Component.onCompleted: root._hydrate()
     function _hydrate() {
-        root.dnd = !!store.get("dnd");
+        root.dnd = !!prefs.get("dnd");
+        // One-step adopt for the mixed file: the old dnd reads forward.
+        if (prefs.get("dnd") === undefined && store.data && store.data.dnd !== undefined) {
+            prefs.put({ dnd: !!store.get("dnd") });
+            root.dnd = !!(store.get("dnd"));
+        }
         root.history = store.get("history") || [];
     }
 
@@ -266,7 +285,9 @@ Singleton {
         root._queueMood = "";
     }
 
-    function _persist() { store.set({ dnd: root.dnd, history: root.history }); }
+    // Each store keeps its own kind: the diary to the observation file, the
+    // DND switch to the declaration.
+    function _persist() { store.set({ history: root.history }); prefs.set({ dnd: root.dnd }); }
 
     // Remove a toast from the queue (no client-side close). The `closed` signal
     // and our own dismiss both funnel here.

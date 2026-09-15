@@ -3,8 +3,13 @@
   "$id": "https://github.com/quantumfate/quickshell/schemas/hyprfocus.schema.json",
   "title": "hyprfocus.json",
   "description": "The hyprfocus declaration: what may exist on the desk, per mode. One `base` declares the whole desk; each mode states only its difference from it. This is a materialisation model, not a permission model \u2014 a resource a mode does not admit is not loaded, so there is nothing to ask permission about. Deltas are a writing convenience with no runtime existence: a resolver folds base + mode into one complete desk BEFORE anything acts on it, because applying deltas incrementally against a running system would make the result depend on the order they were applied. Read by the compositor, the shell and the CLI; written by the shell's mode panel.",
+  "classification": "declaration",
   "type": "object",
-  "required": ["version", "base", "modes"],
+  "required": [
+    "version",
+    "base",
+    "modes"
+  ],
   "additionalProperties": false,
   "properties": {
     "version": {
@@ -17,7 +22,9 @@
     "modes": {
       "description": "Every mode, keyed by id. `neutral` is the resting state and must exist.",
       "type": "object",
-      "required": ["neutral"],
+      "required": [
+        "neutral"
+      ],
       "propertyNames": {
         "$ref": "#/$defs/id"
       },
@@ -129,11 +136,19 @@
     },
     "verdict": {
       "description": "What a notification does on screen. History records every notification with the verdict applied to it regardless \u2014 suppression governs what interrupts, never what is knowable afterwards.",
-      "enum": ["show", "queue", "digest", "drop"]
+      "enum": [
+        "show",
+        "queue",
+        "digest",
+        "drop"
+      ]
     },
     "revocation": {
       "description": "What happens to a resource a mode stops admitting. `hold` parks it out of sight and restores it when the mode ends; `retire` stops it and does not bring it back. Holding buys attention, retiring buys capacity \u2014 so windows usually hold and services usually retire.",
-      "enum": ["hold", "retire"]
+      "enum": [
+        "hold",
+        "retire"
+      ]
     },
     "scene": {
       "type": "object",
@@ -157,7 +172,10 @@
     },
     "block": {
       "type": "object",
-      "required": ["classes", "order"],
+      "required": [
+        "classes",
+        "order"
+      ],
       "additionalProperties": false,
       "properties": {
         "classes": {
@@ -191,7 +209,10 @@
         },
         "guard": {
           "description": "How a non-group block resists being grouped. `deny` also refuses a deliberate toggle, for a tile whose job is to be a fixed region beside a group.",
-          "enum": ["barred", "deny"],
+          "enum": [
+            "barred",
+            "deny"
+          ],
           "default": "barred"
         },
         "revoke": {
@@ -230,17 +251,25 @@
       "not": {
         "anyOf": [
           {
-            "required": ["only", "add"]
+            "required": [
+              "only",
+              "add"
+            ]
           },
           {
-            "required": ["only", "remove"]
+            "required": [
+              "only",
+              "remove"
+            ]
           }
         ]
       }
     },
     "mode": {
       "type": "object",
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -287,11 +316,11 @@
           }
         },
         "presentation": {
-          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.\n\n`palette` is a LEASE, not a write (LEO-288): while the mode runs the desk shows this palette, and when it ends the baseline (the sun's, or the user's pick) comes back untouched. Omit it and the mode tints nothing — `accent_role` already picks a role within whatever palette is active, and this optional field is for the rare mode that must pick a different palette altogether.\n\n`wallpaper` leases by the same rule (LEO-289): a mode that needs a specific look behind it names the file; the mood's own binding still wins, and an absent name leases nothing.",
+          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.\n\n`palette` is a LEASE, not a write (LEO-288): while the mode runs the desk shows this palette, and when it ends the baseline (the sun's, or the user's pick) comes back untouched. Omit it and the mode tints nothing \u2014 `accent_role` already picks a role within whatever palette is active, and this optional field is for the rare mode that must pick a different palette altogether.\n\n`wallpaper` leases by the same rule (LEO-289): a mode that needs a specific look behind it names the file; the mood's own binding still wins, and an absent name leases nothing.",
           "type": "object",
           "properties": {
             "palette": {
-              "description": "The palette leased while this mode holds. Must name a variant the shell carries (Theme.qml / a theme pack); an unknown name reads as no lease — resolution never fails.",
+              "description": "The palette leased while this mode holds. Must name a variant the shell carries (Theme.qml / a theme pack); an unknown name reads as no lease \u2014 resolution never fails.",
               "$ref": "#/$defs/id"
             },
             "wallpaper": {

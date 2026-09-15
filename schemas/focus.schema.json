@@ -2,29 +2,52 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/quantumfate/quickshell/schemas/focus.schema.json",
   "title": "focus.json",
-  "description": "The current mood: a visual operating state, not just a notification switch. `neutral` is the resting state; the other five each carry their own accent role, surface alpha, density, motion energy and notification policy (see Focus.qml's `moods` table — not duplicated here, same as theme.json naming a palette rather than embedding one). Also the firm-focus contract: read by the media browser and game launchers (refuse-to-start, with a reason) and by do-not-disturb; never by anything that would kill an already-running session.",
+  "description": "The current mood: a visual operating state, not just a notification switch. `neutral` is the resting state; the other five each carry their own accent role, surface alpha, density, motion energy and notification policy (see Focus.qml's `moods` table \u2014 not duplicated here, same as theme.json naming a palette rather than embedding one). Also the firm-focus contract: read by the media browser and game launchers (refuse-to-start, with a reason) and by do-not-disturb; never by anything that would kill an already-running session.",
+  "classification": "observation",
   "type": "object",
   "additionalProperties": false,
-  "required": ["mode", "until"],
+  "required": [
+    "mode",
+    "until"
+  ],
   "properties": {
     "mode": {
       "description": "The active mood. `neutral` is the default, unrestricted state; every other mood blocks the launches enforce.md lists (except launching into itself) until `until`, or forever if `until` is null.",
       "type": "string",
-      "enum": ["neutral", "work", "study", "gaming"]
+      "enum": [
+        "neutral",
+        "work",
+        "study",
+        "gaming"
+      ]
     },
     "until": {
       "description": "ISO-8601 timestamp the mood lapses back to `neutral` at, or null for an open-ended session that only an explicit `stop`/`set` ends.",
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "format": "date-time"
     },
     "source": {
-      "description": "Who last wrote this pointer. Absent/null means an existing store written before this field existed, or a write nothing bothered to attribute — treat that as `manual` for precedence purposes, since a pointer of unknown origin is safest treated as a deliberate choice rather than something a schedule may casually overwrite. Once a schedule can write this file alongside a keybind and a timer, the desk needs to say why it changed, not just what it changed to.",
-      "type": ["string", "null"],
-      "enum": ["manual", "timer", "schedule", null]
+      "description": "Who last wrote this pointer. Absent/null means an existing store written before this field existed, or a write nothing bothered to attribute \u2014 treat that as `manual` for precedence purposes, since a pointer of unknown origin is safest treated as a deliberate choice rather than something a schedule may casually overwrite. Once a schedule can write this file alongside a keybind and a timer, the desk needs to say why it changed, not just what it changed to.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "manual",
+        "timer",
+        "schedule",
+        null
+      ]
     },
     "set_at": {
-      "description": "ISO-8601 timestamp of the write that produced this state. Absent/null is the same backward-compatible case as a missing `source` — an older store, or one written before provenance existed. Exists so a precedence rule (and a human looking at the file) can tell a fresh manual choice from a stale one instead of guessing from `until` alone.",
-      "type": ["string", "null"],
+      "description": "ISO-8601 timestamp of the write that produced this state. Absent/null is the same backward-compatible case as a missing `source` \u2014 an older store, or one written before provenance existed. Exists so a precedence rule (and a human looking at the file) can tell a fresh manual choice from a stale one instead of guessing from `until` alone.",
+      "type": [
+        "string",
+        "null"
+      ],
       "format": "date-time"
     }
   }

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/quantumfate/quickshell/schemas/notify-prefs.schema.json",
+  "title": "notify-prefs.json",
+  "description": "The notification preferences the desk declares: the DND choice. Split from notifications.json (LEO-281) so a file is never half config and half history — the history is the observation, this is the desk saying what it should do.",
+  "classification": "declaration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["dnd"],
+  "properties": {
+    "dnd": {
+      "description": "Do-not-disturb: toasts are suppressed (the history still records everything). Toggled from the panel or the bar bell; criticals break through unless the mode's routes say otherwise.",
+      "type": "boolean"
+    }
+  }
+}
