@@ -197,18 +197,26 @@ Singleton {
     }
 
     // Enter a mood. `minutes` <= 0 (or omitted) means open-ended (only
-    // `stop()`, or another `set()`, ends it).
+    // `stop()`, or another `set()`, ends it). Every writer records provenance
+    // (LEO-276): "who set this" is a question the desk must answer — the
+    // shell's own writes carry `"manual"`, and an automated proposal goes
+    // through ModePrecedence.decide before it may land.
     function set(mode, minutes) {
         if (!root.policyData[mode]) return;
         const until = (minutes && minutes > 0)
             ? new Date(Date.now() + minutes * 60000).toISOString()
             : null;
-        stateStore.set({ mode: mode, until: until });
+        stateStore.set({ mode: mode, until: until, source: "manual", set_at: new Date().toISOString() });
     }
 
     // The explicit override: back to the resting state. Also what a lapsed
-    // timed mood settles to on its own via `active`.
-    function stop() { stateStore.set({ mode: "neutral", until: null }); }
+    // timed mood settles to on its own via `active`. Provenance too — a stop
+    // is a deliberate write like any other.
+    function stop() {
+        stateStore.set({
+            mode: "neutral", until: null, source: "manual", set_at: new Date().toISOString()
+        });
+    }
 
     // Deep-merge a policy patch into one mood and persist to the store file —
     // the one writer the mood UI and any later editor funnel through, so a UI
