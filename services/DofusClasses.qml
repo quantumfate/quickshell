@@ -48,13 +48,13 @@ Singleton {
 
     function nameFor(key) { return root._byKey[key] ? root._byKey[key].name : ""; }
 
-    // Icon directory URL, resolved here (in this singleton's own context) so it
-    // is stable regardless of which component calls iconFor — services/ -> ../assets.
-    readonly property url _iconDir: Qt.resolvedUrl("../assets/dofus/classes/")
-
     // file:// URL of a class icon, or "" when the key is empty/unknown so an
-    // Image bound to it simply renders nothing.
+    // Image bound to it simply renders nothing. The URL is resolved here, in
+    // the singleton's own context (services/ -> ../assets), so callers in
+    // modules/common/ or modules/bar/ cannot accidentally resolve a relative
+    // path against their own directory.
     function iconFor(key) {
-        return root.has(key) ? root._iconDir + key + ".png" : "";
+        if (!root.has(key)) return "";
+        return Qt.resolvedUrl("../assets/dofus/classes/" + key + ".png");
     }
 }

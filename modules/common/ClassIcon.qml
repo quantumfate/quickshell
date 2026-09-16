@@ -23,8 +23,14 @@ Item {
         sourceSize.width: root.size * 2
         sourceSize.height: root.size * 2
         fillMode: Image.PreserveAspectFit
+        asynchronous: true
         // Hidden only while an overlay recolours it; otherwise this is the icon.
         visible: !root._tinted
+        onStatusChanged: {
+            if (status === Image.Error && source.toString() !== "") {
+                console.warn("ClassIcon failed to load:", source, "for class", root.cls);
+            }
+        }
     }
     ColorOverlay {
         anchors.fill: src
