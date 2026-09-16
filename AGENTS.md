@@ -237,7 +237,7 @@ New to the repo, read in this order — each layer points at the next:
 
 1. [README.md](README.md) — run/install, the Store pattern, IPC surface.
 2. [ARCHITECTURE.md](ARCHITECTURE.md) — the Store contract, the policy stores
-   (`focus.json`, `mood-policy.json`, `scenes.json`), the enforcement seam, and
+   (`focus.json`, `mood-policy.json`, `hyprfocus.json`), the enforcement seam, and
    the "where this is going" (mode → declaration).
 3. Cross-repo: hypr `AGENTS.md` (the scene contract + compositor half of the
    same stores) and `system-config/docs/hyprfocus.md` (the full engine).
@@ -269,7 +269,7 @@ New to the repo, read in this order — each layer points at the next:
 ## Contract
 
 - **The declaration is edited here.** Mode policy (`mood-policy.json`), the
-  focus pointer (`focus.json`) and scenes (`scenes.json`) live in
+  focus pointer (`focus.json`) and scenes (`hyprfocus.json` `base.scenes`) live in
   `$XDG_STATE_HOME`; `Focus`'s `policyDefaults` literal is the definitional
   table and `assets/*.default.json` is its exact serialization — the lockstep
   tests pin them; change both or change neither.

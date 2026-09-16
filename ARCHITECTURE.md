@@ -65,8 +65,7 @@ Three consequences for the code below:
 The naming is settled: the engine is hyprfocus, a state is a **mode**, and
 "mood" retires.
 
-Two stores define _policy_ rather than current state. [`scenes.json`](schemas/scenes.schema.json) (workspace scenes, LEO-235) is read by the event
-manager and the scene editor but owned by no singleton yet. [`mood-policy.json`](schemas/mood-policy.schema.json)
+Two stores define _policy_ rather than current state. Workspace scenes live in the hyprfocus declaration's `base.scenes` (`assets/hyprfocus.default.json`), the one scene table hypr reads. [`mood-policy.json`](schemas/mood-policy.schema.json)
 (per-mood policy, LEO-236) is owned by `Focus` since LEO-237: Focus's
 `policyDefaults` literal is the definitional table, the asset under `assets/`
 is its exact serialization, and `Focus.patchMood` is the one writer the mood

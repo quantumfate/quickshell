@@ -32,7 +32,11 @@
             "order": 1,
             "group": true,
             "share": 0.67,
-            "collect": true
+            "collect": true,
+            "spawn": {
+              "class": "zen-gaming-media",
+              "command": "zen-twilight -P GamingMedia --name zen-gaming-media"
+            }
           },
           {
             "classes": [

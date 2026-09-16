@@ -5,7 +5,7 @@
 // truth for the shell — Focus.qml's `policyDefaults` literal seeds it, and the
 // shipped asset must be that literal's exact serialization. The load-bearing
 // invariants, all pinned with no JSON Schema validator in the toolchain (same
-// constraint as focus.test.js and scenes.test.js):
+// constraint as focus.test.js):
 //
 //   1. Focus.qml's `policyDefaults` literal and assets/mood-policy.default.json
 //      are identical — the shell seeds from one and hypr/scripts read the
