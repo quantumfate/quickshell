@@ -24,6 +24,7 @@ import QtQuick
 import QtQuick.Layouts
 import "../../services"   // AdapterResult, PanelBus, Theme, Focus
 import "../common"        // Surface
+import "ControlLogic.js" as ControlLogic
 
 Scope {
     id: scope
@@ -58,7 +59,7 @@ Scope {
     ]
     // scene-policy's own reader surface (LEO-241): watched like
     // theme.result.json is, once per apply.
-    property var sceneLast: (sceneFile.text() || "{}")
+    property var sceneLast: (sceneLastFile.text() || "{}")
     FileView {
         id: sceneLastFile
         path: Quickshell.env("QF_STORE") || (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/quantum-store/scene-policy/last.json"
@@ -82,7 +83,6 @@ Scope {
     function open() {
         if (scope.shown) return;
         scope.shown = true;
-        scope.keys.forceActiveFocus();
     }
     function close() { scope.shown = false; scope.selected = 0; }
 
@@ -103,8 +103,14 @@ Scope {
 
     PanelWindow {
         visible: scope.shown
+        screen: PanelBus.screenObject(PanelBus.activeScreen)
         color: "transparent"
         anchors { top: true; bottom: true; right: true }
+        // Explicit size hint: with only a right edge anchored, the window would
+        // otherwise size to its content, and the content's width reads the
+        // window width — a cycle that collapses the dock to a sliver. The
+        // anchoring engine sizes the window from this hint.
+        implicitWidth: screen ? Math.min(screen.width * 0.34, 480) : 480
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "quickshell-systemcenter"
@@ -114,20 +120,22 @@ Scope {
         // that never dims.
         MouseArea { anchors.fill: parent; onClicked: scope.close() }
 
-        Surface {
-            id: card
-            anchors { top: parent.top; bottom: parent.bottom; right: parent.right }
-            width: Math.min(parent.width * 0.34, 480)
-            elevation: "modal"
-            radius: 0
+        onVisibleChanged: if (visible) keys.forceActiveFocus()
 
-            FocusScope {
-                focus: scope.shown
-                Keys.onEscapePressed: scope.close()
-                Keys.onDownPressed: scope.selected = ControlLogic.moveSelectionIndex(scope.selected, "down", scope.rows.length)
-                Keys.onUpPressed: scope.selected = ControlLogic.moveSelectionIndex(scope.selected, "up", scope.rows.length)
-                Keys.onReturnPressed: scope.restartSelected()
-                Keys.onEnterPressed: scope.restartSelected()
+        FocusScope {
+            id: keys
+            anchors.fill: parent
+            focus: true
+            Keys.onEscapePressed: scope.close()
+            Keys.onDownPressed: scope.selected = ControlLogic.moveSelectionIndex(scope.selected, "down", scope.rows.length)
+            Keys.onUpPressed: scope.selected = ControlLogic.moveSelectionIndex(scope.selected, "up", scope.rows.length)
+            Keys.onReturnPressed: scope.restartSelected()
+            Keys.onEnterPressed: scope.restartSelected()
+
+            Surface {
+                anchors.fill: parent
+                elevation: "modal"
+                radius: 0
 
                 ColumnLayout {
                     anchors { fill: parent; margins: Theme.pad }

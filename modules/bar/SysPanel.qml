@@ -23,7 +23,7 @@ Scope {
 
     PanelWindow {
         visible: SysMon.shown
-        screen: Quickshell.screens.find(s => s.name === SysMon.activeScreen) ?? null
+        screen: PanelBus.screenObject(SysMon.activeScreen)
         color: "transparent"
 
         anchors { top: true; left: true; right: true }

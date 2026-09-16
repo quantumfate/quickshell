@@ -46,7 +46,7 @@ Scope {
 
     PanelWindow {
         visible: scope.shown
-        screen: Quickshell.screens.find(s => s.name === PanelBus.anchorScreen) ?? null
+        screen: PanelBus.screenObject(PanelBus.anchorScreen)
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
         WlrLayershell.layer: WlrLayer.Overlay

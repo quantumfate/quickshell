@@ -81,6 +81,7 @@ Scope {
 
     PanelWindow {
         visible: scope.shown
+        screen: PanelBus.screenObject(PanelBus.activeScreen)
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
         WlrLayershell.layer: WlrLayer.Overlay

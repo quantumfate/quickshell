@@ -117,7 +117,7 @@ Scope {
     PanelWindow {
         id: win
         visible: PanelBus.open === "calendar"
-        screen: Quickshell.screens.find(s => s.name === PanelBus.anchorScreen) ?? null
+        screen: PanelBus.screenObject(PanelBus.anchorScreen)
         color: "transparent"
 
         anchors { top: true; left: true; right: true }

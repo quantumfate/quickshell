@@ -16,6 +16,7 @@ PanelWindow {
     id: win
     color: "transparent"
     visible: Notify.items.length > 0
+    screen: PanelBus.screenObject(PanelBus.activeScreen)
 
     readonly property bool stickyBottom: Focus.notifications.position === "bottom-right"
     anchors { top: !win.stickyBottom; bottom: win.stickyBottom; left: true; right: true }

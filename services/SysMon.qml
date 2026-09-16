@@ -9,6 +9,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import "."
 
 Singleton {
     id: root
@@ -37,10 +38,12 @@ Singleton {
         }
     }
 
+    // IPC/keybind toggles route to the active monitor (LEO-328), not the
+    // static home screen, so the panel follows the user's focus.
     IpcHandler {
         target: "sysmon"
-        function toggle(): void { root.togglePin(root.homeScreen); }
-        function show(): void { root.pinned = true; root.pinnedScreen = root.homeScreen; }
+        function toggle(): void { root.togglePin(PanelBus.activeScreen); }
+        function show(): void { root.pinned = true; root.pinnedScreen = PanelBus.activeScreen; }
         function hide(): void { root.pinned = false; root.pinnedScreen = ""; }
     }
 }
