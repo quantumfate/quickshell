@@ -17,6 +17,7 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Theme, Focus
+import "../../services/BarGaps.js" as BarGaps
 import "../common"        // Surface
 
 Scope {
@@ -24,6 +25,12 @@ Scope {
 
     // Monitors that must NOT carry the bar (the small portrait panel).
     readonly property var excludedScreens: ["HDMI-A-1"]
+
+    // LEO-340: per-monitor base left/right outer gap, published by conf/host.lua
+    // (hypr repo) so the bar's side insets line up with the tiled gap instead of
+    // a constant. One shared Store instance: FileView.watchChanges means every
+    // bar re-reads live (e.g. pulling the laptop's external monitor), no restart.
+    Store { id: geometryStore; name: "geometry" }
 
     // Bumped by the IPC `reveal` call below (bound to a SUPER-tap keybind in
     // the hypr repo) so every bar instance drops out of autohide at once.
@@ -96,13 +103,17 @@ Scope {
 
                 HoverHandler { onHoveredChanged: if (hovered) bar.wake() }
 
+                // LEO-340: this screen's tiled outer gap, falling back to the
+                // bar's own default inset when the store has no entry for it.
+                readonly property var edgeInset: BarGaps.insetFor(geometryStore.data, bar.screen.name, Theme.barInset * 2)
+
                 // left island: where am I.
                 Island {
                     id: leftIsland
                     anchors {
                         left: parent.left
                         verticalCenter: parent.verticalCenter
-                        leftMargin: Theme.barInset * 2
+                        leftMargin: content.edgeInset.left
                     }
                     Workspaces { screen: bar.screen }
                     SubmapIndicator {}
@@ -138,7 +149,7 @@ Scope {
                     anchors {
                         right: parent.right
                         verticalCenter: parent.verticalCenter
-                        rightMargin: Theme.barInset * 2
+                        rightMargin: content.edgeInset.right
                     }
                     Clock {}
                     // The mood pill stays even in autohide/deep mode: it
