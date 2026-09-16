@@ -330,7 +330,7 @@
         },
         {
           "name": "obsidian-linear",
-          "monitor": "primary"
+          "monitor": "secondary"
         },
         {
           "name": "proton",
@@ -366,6 +366,10 @@
         },
         {
           "name": "steam-games",
+          "monitor": "primary"
+        },
+        {
+          "name": "proton",
           "monitor": "primary"
         },
         {

@@ -36,7 +36,7 @@ test("lists every user-facing mode, sorted, without the hidden fallback", () => 
 test("reads a mode's scene set with its monitor roles", () => {
     assert.deepEqual(scenes(shipped, "study"), [
         { name: "code", monitor: "primary" },
-        { name: "obsidian-linear", monitor: "primary" },
+        { name: "obsidian-linear", monitor: "secondary" },
         { name: "proton", monitor: "primary" },
     ]);
     assert.deepEqual(scenes(shipped, "ghost"), []);
