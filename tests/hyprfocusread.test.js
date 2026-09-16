@@ -39,7 +39,7 @@ test("survives a declaration that is not there yet", () => {
 
 test("names what a mode explicitly removes", () => {
     const gone = withholds(shipped, "work");
-    assert.ok(gone.includes("gaming"), "a withdrawn workspace");
+    assert.ok(gone.includes("pokemon"), "a withdrawn workspace");
     assert.ok(gone.includes("dofus"), "a withheld binding tree");
     // Named rather than implied: `remove` says the same as an empty `only`
     // here, and only one of them can be reported back to the user.

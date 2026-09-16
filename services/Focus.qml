@@ -3,8 +3,8 @@ pragma Singleton
 //
 // Two stores live here. `focus.json` is the ACTIVE state — `{ mode, until }` —
 // the pointer to the mood the desk is in right now. `mood-policy.json` is the
-// DEFINITIONAL store: what each of the six moods *means* (accent role, surface
-// alpha, notifications, launches, background work, scene reachability). The
+// DEFINITIONAL store: what each of the six moods *means* (surface alpha,
+// notifications, launches, background work, scene reachability). The
 // policy store is the source of truth this singleton reads and writes through
 // `patchMood`; the shipped default (assets/mood-policy.default.json) is pinned
 // identical to the `policyDefaults` literal below by the lockstep test, and the
@@ -12,13 +12,19 @@ pragma Singleton
 // launcher scripts read. A mood is therefore one edit away in a JSON file, and
 // every runtime reads the same policy.
 //
+// The accent is NOT part of that policy (LEO-334 item 12, LEO-339): a focus
+// mode owns its theme as one of its four controlled things, so the accent
+// role lives on the hyprfocus declaration (`modes.*.presentation.accent_role`,
+// read through `Hyprfocus`) — the one store both the compositor and the shell
+// read. `accentRole` below mirrors that rather than keeping a second copy.
+//
 // `mode` names one of the declared moods (see `policyDefaults`); `neutral` is the resting
 // state every desk starts in. Switching moods is a single `set()` — exactly like
 // Theme's palette switch — and everything that reads `Focus.mode` /
 // `Focus.current` reacts on its own: Theme.qml binds its `accent` and
 // `surfaceAlpha` to `Focus.accentRole`/`Focus.surfaceAlpha`, which are plain
-// bindings over the store, so an edit to mood-policy.json repaints the shell
-// and re-gates Notify with no reload.
+// bindings over the stores, so an edit to the hyprfocus declaration or
+// mood-policy.json repaints the shell and re-gates Notify with no reload.
 //
 // Firm semantics carry over unchanged from the old off/focus binary: refuse,
 // with an explicit override, never tear down a session already running.
@@ -63,16 +69,17 @@ Singleton {
     // The definitional per-mood policy, in the store's snake_case shape. This
     // literal IS assets/mood-policy.default.json (the lockstep test pins them
     // identical) and it seeds the state file on first run — so a fresh machine
-    // and a hand-migrated one agree on what "deep work" means. The palette
-    // accent is named as a *role* on the active palette (Theme.c.<role>), never
-    // a literal colour; `surface_alpha` is the one dial each mood turns on the
-    // shared card material (see Theme.qml's `surfaceAlpha` map) — paper, not
-    // glass. Wallpaper is deliberately absent: `,theme.sh mood-wallpaper`
-    // resolves mood -> wallpaper on its own so this table does not duplicate it.
+    // and a hand-migrated one agree on what "deep work" means. `surface_alpha`
+    // is the one dial each mood turns on the shared card material (see
+    // Theme.qml's `surfaceAlpha` map) — paper, not glass. The accent is NOT
+    // here (LEO-339): it lives on the hyprfocus declaration and is read
+    // through `Hyprfocus` below. Wallpaper is deliberately absent too:
+    // `,theme.sh mood-wallpaper` resolves mood -> wallpaper on its own so this
+    // table does not duplicate it.
     readonly property var policyDefaults: ({
         moods: {
             neutral: {
-                name: "Neutral", accent_role: "lavender", surface_alpha: 0.84,
+                name: "Neutral", surface_alpha: 0.84,
                 density: "comfortable", motion_energy: "base", bar_autohide: false,
                 notifications: { policy: "all", position: "top-right", timeout: 6000, queue: false, digest_on_exit: false },
                 launches: { aggression: "soft", block: [], override: false },
@@ -80,7 +87,7 @@ Singleton {
                 scenes: {}
             },
             work: {
-                name: "Work", accent_role: "blue", surface_alpha: 0.94,
+                name: "Work", surface_alpha: 0.94,
                 density: "compact", motion_energy: "instant", bar_autohide: true,
                 notifications: { policy: "critical-only", position: "top-right", timeout: 0, queue: true, digest_on_exit: true },
                 launches: { aggression: "firm", block: ["media", "game"], override: true },
@@ -88,7 +95,7 @@ Singleton {
                 scenes: { gaming: "blocked", media: "blocked" }
             },
             study: {
-                name: "Study", accent_role: "mauve", surface_alpha: 0.94,
+                name: "Study", surface_alpha: 0.94,
                 density: "compact", motion_energy: "instant", bar_autohide: true,
                 notifications: { policy: "critical-only", position: "top-right", timeout: 0, queue: true, digest_on_exit: true },
                 launches: { aggression: "firm", block: ["media", "game"], override: true },
@@ -96,7 +103,7 @@ Singleton {
                 scenes: { gaming: "blocked", media: "blocked" }
             },
             gaming: {
-                name: "Gaming", accent_role: "green", surface_alpha: 0.96,
+                name: "Gaming", surface_alpha: 0.96,
                 density: "compact", motion_energy: "instant", bar_autohide: false,
                 notifications: { policy: "none", position: "top-right", timeout: 0, queue: true, digest_on_exit: false },
                 launches: { aggression: "firm", block: [], override: true },
@@ -118,14 +125,21 @@ Singleton {
 
     // The active mood's full policy record (snake_case). Falls back to neutral
     // so a bad/stale `mode` in the file (or mid-migration) never leaves a
-    // reader with `undefined.accent_role`.
+    // reader with `undefined.surface_alpha`.
     readonly property var current: (root.policyData[root.mode] ?? root.policyData.neutral)
         ?? root.policyDefaults.moods.neutral
 
     // Convenience accessors in the shape the rest of the shell already reads.
     // Theme.qml binds accent/surfaceAlpha to these; Notify reads
     // `Focus.notifications.policy`; Bar reads `Focus.mode`.
-    readonly property string accentRole: root.current.accent_role ?? "mauve"
+    //
+    // The accent role is the one accessor that does NOT read `current`: the
+    // owning store is the hyprfocus declaration (LEO-334 item 12, LEO-339),
+    // read through the same `Hyprfocus` singleton the compositor's
+    // declaration reader mirrors, not a second copy kept here. `Hyprfocus`
+    // tracks the same `focus` pointer this singleton does, so both agree on
+    // which mode's accent is active.
+    readonly property string accentRole: Hyprfocus.current.presentation?.accent_role ?? "mauve"
     readonly property real surfaceAlpha: root.current.surface_alpha ?? 0.84
     // `"base" | "instant"` — surfaces that animate read this rather than
     // hardcode durations, so a mode's motion contract is one place (which-key

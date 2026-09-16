@@ -2,7 +2,6 @@
   "moods": {
     "neutral": {
       "name": "Neutral",
-      "accent_role": "lavender",
       "surface_alpha": 0.84,
       "density": "comfortable",
       "motion_energy": "base",
@@ -27,7 +26,6 @@
     },
     "work": {
       "name": "Work",
-      "accent_role": "blue",
       "surface_alpha": 0.94,
       "density": "compact",
       "motion_energy": "instant",
@@ -58,7 +56,6 @@
     },
     "study": {
       "name": "Study",
-      "accent_role": "mauve",
       "surface_alpha": 0.94,
       "density": "compact",
       "motion_energy": "instant",
@@ -89,7 +86,6 @@
     },
     "gaming": {
       "name": "Gaming",
-      "accent_role": "green",
       "surface_alpha": 0.96,
       "density": "compact",
       "motion_energy": "instant",

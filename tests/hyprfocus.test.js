@@ -145,24 +145,37 @@ test("dependency strengths mean different things and the schema says so", () => 
 });
 
 test("a mode that withholds a workspace also withholds the binds that need it", () => {
-    // `binding:dofus` requires `workspace:gaming`, so a mode without gaming
+    // `binding:dofus` requires `workspace:dofus` (the scene workspaces were
+    // renamed off the old `gaming` name), so a mode without that workspace
     // must not be left offering keys that act on a workspace that is gone.
     assert.deepEqual(declaration.base.requires["binding:dofus"], [
-        "workspace:gaming",
+        "workspace:dofus",
     ]);
     for (const [mode, spec] of Object.entries(declaration.modes)) {
         const only = spec.workspaces?.only;
         const removed = new Set(spec.workspaces?.remove ?? []);
-        const hasGaming = only ? only.includes("gaming") : !removed.has("gaming");
+        const hasDofus = only ? only.includes("dofus") : !removed.has("dofus");
         const dropsDofus = (spec.bindings?.remove ?? []).includes("dofus");
         const keepsDofus = spec.bindings?.only
             ? spec.bindings.only.includes("dofus")
             : !dropsDofus;
-        if (!hasGaming) {
+        if (!hasDofus) {
             assert.ok(
                 !keepsDofus,
-                `${mode} withholds gaming but keeps the dofus binds`,
+                `${mode} withholds dofus but keeps the dofus binds`,
             );
         }
     }
+});
+
+test("every mode declares a distinct accent role (LEO-330's four)", () => {
+    // This declaration is the single accent store (LEO-334 item 12, LEO-339):
+    // the compositor's colors.lua and the shell's Focus.accentRole both read
+    // `modes.*.presentation.accent_role` here, so a study/work collision here
+    // is a study/work collision on the desk.
+    const roles = Object.fromEntries(
+        Object.entries(declaration.modes).map(([mode, spec]) => [mode, spec.presentation?.accent_role]),
+    );
+    assert.deepEqual(roles, { neutral: "peach", work: "blue", study: "red", gaming: "lavender" });
+    assert.equal(new Set(Object.values(roles)).size, 4, "two modes share an accent role");
 });

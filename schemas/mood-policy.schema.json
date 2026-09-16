@@ -12,7 +12,7 @@
   "properties": {
     "moods": {
       "type": "object",
-      "description": "Per-mood policy. Keys are the mood ids the focus store enumerates (neutral, work, study, gaming). Visual knobs live here too: a mood is a visual operating state \u2014 a palette accent role and a surface alpha \u2014 not just a notification switch, and Focus.qml already) owns that table. Palette/policy divergence between this file and Focus.qml is a deployment bug; the lockstep test pins it, and LEO-237 makes this store the source Focus.qml mirrors.",
+      "description": "Per-mood policy. Keys are the mood ids the focus store enumerates (neutral, work, study, gaming). A visual knob lives here too: a mood's surface alpha, not just a notification switch, and Focus.qml owns that table. The accent role is NOT here (LEO-334 item 12, LEO-339 retired it from this store) \u2014 a focus mode owns its theme, so the accent lives on the hyprfocus declaration instead. Palette/policy divergence between this file and Focus.qml is a deployment bug; the lockstep test pins it, and LEO-237 makes this store the source Focus.qml mirrors.",
       "additionalProperties": {
         "$ref": "#/definitions/mood"
       }
@@ -31,10 +31,6 @@
       "properties": {
         "name": {
           "description": "Human name, e.g. \"Deep work\".",
-          "type": "string"
-        },
-        "accent_role": {
-          "description": "A semantic role on the active palette (Theme.c.<role>), never a literal colour \u2014 the palette stays the source of truth and a mood only picks which of its roles takes the spotlight.",
           "type": "string"
         },
         "surface_alpha": {

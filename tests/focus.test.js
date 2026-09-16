@@ -2,15 +2,15 @@
 // on: enforcement reads `mode`/`until` at dispatch time, so a bad shape here
 // is a launcher that silently never blocks (or never unblocks). Also covers
 // the mood table itself (LEO-227), which since LEO-237 lives in Focus.qml's
-// `policyDefaults` literal in the store's snake_case shape: every mood needs an
-// accent role that resolves against every palette, since a literal colour here
-// would be the one the `tokens` gate exists to catch.
+// `policyDefaults` literal in the store's snake_case shape. The accent role is
+// NOT part of this table (LEO-339 moved it to the hyprfocus declaration,
+// pinned in hyprfocus.test.js) — this file only covers what's left: surface
+// alpha, density, notifications, launches, background, scenes.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { loadTheme } from "./qml.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = p => JSON.parse(readFileSync(join(root, p), "utf8"));
@@ -18,7 +18,6 @@ const read = p => JSON.parse(readFileSync(join(root, p), "utf8"));
 const schema = read("schemas/focus.schema.json");
 const defaults = read("assets/focus.default.json");
 const focusSrc = readFileSync(join(root, "services/Focus.qml"), "utf8");
-const { palettes } = loadTheme();
 
 /** Parses Focus.qml's `policyDefaults` literal the same way qml.js parses `palettes`. */
 function loadPolicy() {
@@ -82,17 +81,6 @@ test("every mood the schema allows has an entry in Focus.qml's table, and vice v
     assert.deepEqual(Object.keys(moods).sort(), [...moodEnum].sort());
 });
 
-test("every mood's accent_role resolves against every palette", () => {
-    for (const [id, mood] of Object.entries(moods)) {
-        for (const palette of Object.keys(palettes)) {
-            assert.ok(
-                mood.accent_role in palettes[palette],
-                `mood "${id}" names accent role "${mood.accent_role}", missing from palette "${palette}"`
-            );
-        }
-    }
-});
-
 test("every mood's surface_alpha is a fraction, not a literal colour or a size", () => {
     for (const [id, mood] of Object.entries(moods)) {
         assert.equal(typeof mood.surface_alpha, "number");
@@ -122,11 +110,10 @@ test("work and study queue notifications and deliver a digest on exit", () => {
 test("work and study are distinct entries, not aliases of one object", () => {
     // Sanity check that a copy did not fold two moods into a shared reference,
     // which would make "unaffected by every mood except one" impossible to
-    // guarantee.
+    // guarantee. Accent distinctness moved to hyprfocus.test.js (LEO-339):
+    // the accent role is no longer part of this policy.
     assert.notEqual(moods.work, moods.study);
-    assert.notEqual(moods.work.accent_role, moods.study.accent_role);
     assert.notEqual(moods.gaming, moods.work);
-    assert.notEqual(moods.gaming.accent_role, moods.work.accent_role);
 });
 
 test("the focus IPC exposes scene reachability and background verdicts for dispatchers", () => {
