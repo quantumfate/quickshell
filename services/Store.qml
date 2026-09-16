@@ -63,16 +63,61 @@ Item {
         onFileChanged: reload()
         onLoaded: {
             const raw = (text() || "").trim();
-            if ((raw === "" || raw === "{}") && root._hasDefaults()) {
-                root.put(root.defaults); // seed an empty/blank file
-                return;
+            // Empty file: prefer a legacy document over seeding defaults, so a
+            // store that was created before the quantum-store directory exists
+            // still migrates forward.
+            if (raw === "" || raw === "{}") {
+                const legacyRaw = (legacy.text() || "").trim();
+                if (legacyRaw !== "" && legacyRaw !== "{}") {
+                    try {
+                        root.put(JSON.parse(legacyRaw));
+                        return;
+                    } catch (e) {
+                        console.warn("Store(" + root.name + "): legacy JSON unreadable", e);
+                    }
+                }
+                if (root._hasDefaults()) {
+                    root.put(root.defaults);
+                    return;
+                }
             }
+            let parsed;
             try {
-                root.data = JSON.parse(raw || "{}");
-                root.changed();
+                parsed = JSON.parse(raw || "{}");
             } catch (e) {
                 console.warn("Store(" + root.name + "): bad JSON", e);
+                return;
             }
+            root.data = parsed;
+            // Defensive migration: if the current file only contains default
+            // keys and the legacy file has additional keys, copy the missing
+            // keys forward. This fixes the race where defaults were seeded
+            // before the legacy location could be adopted.
+            const legacyRaw = (legacy.text() || "").trim();
+            if (legacyRaw !== "" && legacyRaw !== "{}") {
+                try {
+                    const legacyData = JSON.parse(legacyRaw);
+                    const defaultKeys = root._hasDefaults() ? Object.keys(root.defaults) : [];
+                    const currentKeys = Object.keys(parsed);
+                    const currentIsDefaultShaped = currentKeys.every(k => defaultKeys.includes(k));
+                    if (currentIsDefaultShaped) {
+                        let merged = false;
+                        for (const k in legacyData) {
+                            if (!(k in parsed)) {
+                                parsed[k] = legacyData[k];
+                                merged = true;
+                            }
+                        }
+                        if (merged) {
+                            console.log("Store(" + root.name + "): migrating missing keys from legacy");
+                            root.put(parsed);
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Store(" + root.name + "): legacy JSON unreadable", e);
+                }
+            }
+            root.changed();
         }
         // Missing file: adopt the legacy location if it still holds the
         // document (writing it forward relocates it), else seed defaults.
