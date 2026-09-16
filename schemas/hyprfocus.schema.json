@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/quantumfate/quickshell/schemas/hyprfocus.schema.json",
   "title": "hyprfocus.json",
-  "description": "The hyprfocus declaration: what may exist on the desk, per mode. One `base` declares the whole desk; each mode states only its difference from it. This is a materialisation model, not a permission model \u2014 a resource a mode does not admit is not loaded, so there is nothing to ask permission about. Deltas are a writing convenience with no runtime existence: a resolver folds base + mode into one complete desk BEFORE anything acts on it, because applying deltas incrementally against a running system would make the result depend on the order they were applied. Read by the compositor, the shell and the CLI; written by the shell's mode panel.",
+  "description": "The hyprfocus declaration: what may exist on the desk, per mode. `base` declares the scene catalog and every other resource; each mode names its active scene SET (with a monitor role per scene) and states the rest as deltas from the base. This is a materialisation model, not a permission model \u2014 a scene a mode does not list is not admitted, so there is nothing to ask permission about. A resolver folds base + mode into one complete desk BEFORE anything acts on it, and refuses a mode whose scene set is invalid (unknown scene or monitor role, a scene listed twice, two active scenes claiming the same class). Read by the compositor, the shell and the CLI; written by the shell's mode panel.",
   "classification": "declaration",
   "type": "object",
   "required": [
@@ -13,14 +13,14 @@
   "additionalProperties": false,
   "properties": {
     "version": {
-      "description": "Declaration format version. Bumped when the grammar changes incompatibly, or when the shipped content changes enough that a stored declaration should be re-seeded (LEO-337) — the CLI (`,hyprfocus seed`) reseeds a store whose version is lower than this one, once, without --force.",
-      "const": 2
+      "description": "Declaration format version. Bumped when the grammar changes incompatibly, or when the shipped content changes enough that a stored declaration should be re-seeded (LEO-337) \u2014 the CLI (`,hyprfocus seed`) reseeds a store whose version is lower than this one, once, without --force.",
+      "const": 3
     },
     "base": {
       "$ref": "#/$defs/desk"
     },
     "modes": {
-      "description": "Every mode, keyed by id. `neutral` is the resting state and must exist.",
+      "description": "Every mode, keyed by id. `neutral` is the hidden recovery fallback and must exist with `hidden: true`: it is reached from a submap, never listed as a peer of the user-facing modes.",
       "type": "object",
       "required": [
         "neutral"
@@ -30,6 +30,18 @@
       },
       "additionalProperties": {
         "$ref": "#/$defs/mode"
+      },
+      "properties": {
+        "neutral": {
+          "required": [
+            "hidden"
+          ],
+          "properties": {
+            "hidden": {
+              "const": true
+            }
+          }
+        }
       }
     }
   },
@@ -45,14 +57,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "workspaces": {
-          "description": "Workspaces that exist and are reachable. Admitted by enabling their workspace rule; withdrawn by disabling it, with any windows on them held.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "uniqueItems": true
-        },
         "bindings": {
           "description": "Binding trees UNDER MODE CONTROL \u2014 the ones a mode may withhold. A tree not named here is always available and no mode can remove it.\n\nThe default is deliberately 'available', because the two mistakes cost wildly different amounts. A tree missing from this list means a mode does not take away as much as it meant to. A tree wrongly removed means a desk with no terminal and no way back to another mode, which is a reboot. So a mode names what it takes, never what it keeps.\n\n`root` and the modes tree are refused whatever a declaration says: root carries the leader key, and the modes tree is the only way into another mode.",
           "type": "array",
@@ -78,7 +82,7 @@
           "uniqueItems": true
         },
         "scenes": {
-          "description": "Scene definitions, keyed by the workspace name they arrange. Geometry only \u2014 a scene never decides whether its workspace exists. A scene is admitted implicitly with its workspace; per-mode scene substitution is deliberately not in version 1.",
+          "description": "The scene catalog, keyed by scene name (which is also the workspace name the scene arranges). A scene is active only while the running mode lists it in `scenes`; the catalog itself admits nothing.",
           "type": "object",
           "propertyNames": {
             "$ref": "#/$defs/id"
@@ -176,13 +180,13 @@
           },
           "uniqueItems": true
         },
-        "moods": {
-          "description": "Mood tags this scene matches. Lets the active mood select a scene without naming it directly in the mode declaration.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "uniqueItems": true
+        "strays": {
+          "description": "What happens to a window matching no block: `slot` gives it a tile, `float` floats it above the declared split so the split never shifts.",
+          "enum": [
+            "slot",
+            "float"
+          ],
+          "default": "slot"
         }
       }
     },
@@ -195,7 +199,7 @@
       "additionalProperties": false,
       "properties": {
         "classes": {
-          "description": "Literal class or Lua pattern, matched literal-first so a hyphenated class does not trip on `-` being a quantifier.",
+          "description": "Literal class or Lua pattern, matched literal-first so a hyphenated class does not trip on `-` being a quantifier. Also the scene's CLAIM: two scenes active in one mode may not list the same string (compared textually). A `slot:<scene>/<role>` string claims a launch-identity tag rather than a class (interim, until launch identity stamping lands) and matches no window yet.",
           "type": "array",
           "items": {
             "type": "string"
@@ -234,6 +238,23 @@
         "revoke": {
           "$ref": "#/$defs/revocation",
           "default": "hold"
+        },
+        "spawn": {
+          "description": "The companion this block's presence keeps alive: launched when the block has no window. Not a claim.",
+          "type": "object",
+          "required": [
+            "class",
+            "command"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "class": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -284,7 +305,8 @@
     "mode": {
       "type": "object",
       "required": [
-        "name"
+        "name",
+        "scenes"
       ],
       "additionalProperties": false,
       "properties": {
@@ -292,8 +314,17 @@
           "description": "Human-readable label for the shell.",
           "type": "string"
         },
-        "workspaces": {
-          "$ref": "#/$defs/delta"
+        "hidden": {
+          "description": "Kept out of every user-facing mode listing (CLI `modes`, the shell's pickers, the which-key modes tree). Reachable only as a fallback.",
+          "type": "boolean",
+          "default": false
+        },
+        "scenes": {
+          "description": "The active scene set, in declaration order. Workspaces are derived from it: a mode admits exactly the workspaces its scenes arrange.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scene_placement"
+          }
         },
         "bindings": {
           "$ref": "#/$defs/delta"
@@ -349,9 +380,31 @@
       }
     },
     "ref": {
-      "description": "A resource reference, `kind:name` \u2014 `workspace:`, `binding:`, `service:`, `project:`. Singular, and qualified because requirements cross kinds: opening a project pulls in the background work it needs.",
+      "description": "A resource reference, `kind:name` \u2014 `scene:`, `binding:`, `service:`, `project:`. Singular, and qualified because requirements cross kinds. A `scene:` reference is CHECKED, never added: a mode that admits something requiring a scene it does not list is refused.",
       "type": "string",
-      "pattern": "^(workspace|binding|service|project):[a-z0-9][a-z0-9-]*$"
+      "pattern": "^(scene|binding|service|project):[a-z0-9][a-z0-9-]*$"
+    },
+    "scene_placement": {
+      "description": "One active scene of a mode and the monitor role it is placed on.",
+      "type": "object",
+      "required": [
+        "name",
+        "monitor"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "A scene in `base.scenes`.",
+          "$ref": "#/$defs/id"
+        },
+        "monitor": {
+          "description": "A host monitor ROLE (conf/hosts/*.lua `primary_monitor`/`secondary_monitor`), never a raw output name. The mode's role wins over the host file's workspace pin; a role whose output is missing falls back to primary, and the scene moves back when it returns.",
+          "enum": [
+            "primary",
+            "secondary"
+          ]
+        }
+      }
     }
   }
 }
