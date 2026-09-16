@@ -14,7 +14,7 @@ const gaming = {
     name: "Gaming",
     services: { remove: ["obsidian", "obsidian-index", "linear-sync"] },
     bindings: { remove: ["dofus"] },
-    workspaces: { only: ["gaming", "comms"] }
+    scenes: [{ name: "dofus", monitor: "primary" }]
 };
 
 test("the announcement names what the mode takes away, not the mode alone", () => {
@@ -32,17 +32,16 @@ test("a transition that takes nothing has nothing to announce", () => {
     assert.equal(announce(undefined, "Neutral"), null);
 });
 
-test("the verb reads kind: services stop, trees and workspaces withdraw", () => {
+test("the verb reads kind: services stop, trees withdraw", () => {
     const list = taken(gaming);
     const sync = list.find(t => t.id === "linear-sync");
     assert.equal(sync.kind, "services");
     assert.equal(sync.verb, "stopping");
     const binds = list.filter(t => t.kind === "bindings");
     assert.deepEqual(binds.map(t => t.id), ["dofus"]);
-    // gaming narrows with `only`, not `remove` — `withholds` knows the rest
-    // of the story; the announce line names only what the same word says,
+    // A scene set is not a taking: the announce line names only removals,
     // so the announcement never claims more than the declaration does.
-    assert.deepEqual(taken(gaming).filter(t => t.kind === "workspaces"), []);
+    assert.deepEqual(taken(gaming).filter(t => t.kind === "scenes"), []);
 });
 
 test("several kinds read as one line, separated so each is greppable", () => {

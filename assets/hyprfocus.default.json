@@ -1,22 +1,6 @@
 {
-  "version": 2,
+  "version": 3,
   "base": {
-    "workspaces": [
-      "code",
-      "creative",
-      "proton",
-      "dofus",
-      "pokemon",
-      "steam-games",
-      "communication",
-      "obsidian-linear",
-      "lutris",
-      "steam",
-      "media",
-      "logs",
-      "misc",
-      "ankama-launcher"
-    ],
     "bindings": [
       "dofus"
     ],
@@ -32,7 +16,7 @@
     "projects": [],
     "requires": {
       "binding:dofus": [
-        "workspace:dofus"
+        "scene:dofus"
       ]
     },
     "notify": {
@@ -42,159 +26,198 @@
       "dofus": {
         "blocks": [
           {
-            "classes": ["Dofus.x64"],
+            "classes": [
+              "Dofus.x64"
+            ],
             "order": 1,
             "group": true,
             "share": 0.67,
             "collect": true
           },
           {
-            "classes": ["zen-gaming-media"],
+            "classes": [
+              "zen-gaming-media"
+            ],
             "order": 2,
             "share": 0.33,
             "guard": "deny"
           }
         ],
-        "barred": ["steam_app_default", "steam_app_\\d+", "Ankama Launcher"],
+        "barred": [
+          "steam_app_default",
+          "steam_app_\\d+",
+          "Ankama Launcher"
+        ],
         "strays": "float",
-        "bindings": [],
-        "moods": ["gaming"]
+        "bindings": []
       },
       "pokemon": {
         "blocks": [
           {
-            "classes": ["com.libretro.RetroArch"],
+            "classes": [
+              "com.libretro.RetroArch"
+            ],
             "order": 1,
             "share": 0.3
           },
           {
-            "classes": ["zen-gaming-media"],
+            "classes": [
+              "slot:pokemon/chat"
+            ],
             "order": 2,
+            "share": 0.35,
+            "guard": "deny"
+          },
+          {
+            "classes": [
+              "slot:pokemon/stream"
+            ],
+            "order": 3,
             "share": 0.35,
             "guard": "deny"
           }
         ],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["gaming"]
+        "bindings": []
       },
       "steam-games": {
         "blocks": [
           {
-            "classes": ["steam_app", "steam_app_\\d+"],
+            "classes": [
+              "steam_app",
+              "steam_app_\\d+"
+            ],
             "order": 1,
             "share": 1.0
           }
         ],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["gaming"]
+        "bindings": []
       },
       "communication": {
         "blocks": [
           {
-            "classes": ["signal"],
+            "classes": [
+              "signal"
+            ],
             "order": 1,
             "share": 0.5
           },
           {
-            "classes": ["vesktop"],
+            "classes": [
+              "vesktop"
+            ],
             "order": 2,
             "share": 0.5
           }
         ],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["gaming"]
+        "bindings": []
       },
       "lutris": {
         "blocks": [
           {
-            "classes": ["net.lutris.Lutris"],
+            "classes": [
+              "net.lutris.Lutris"
+            ],
             "order": 1,
             "share": 1.0
           }
         ],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["gaming"]
+        "bindings": []
       },
       "steam": {
         "blocks": [
           {
-            "classes": ["steam"],
+            "classes": [
+              "steam"
+            ],
             "order": 1,
             "share": 1.0
           }
         ],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["gaming"]
+        "bindings": []
       },
       "media": {
         "blocks": [
           {
-            "classes": ["mpv", "firefox"],
+            "classes": [
+              "mpv",
+              "firefox"
+            ],
             "order": 1,
             "share": 1.0
           }
         ],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["gaming"]
+        "bindings": []
       },
       "code": {
         "blocks": [
           {
-            "classes": ["Kitty-Main", "Proj-[A-Za-z0-9_-]+"],
+            "classes": [
+              "Kitty-Main",
+              "Proj-[A-Za-z0-9_-]+"
+            ],
             "order": 1,
             "group": true,
             "share": 0.67
           },
           {
-            "classes": ["zen-twilight", "firefox-developer-edition"],
+            "classes": [
+              "zen-twilight",
+              "firefox-developer-edition"
+            ],
             "order": 2,
             "share": 0.33
           }
         ],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["work", "study"]
+        "bindings": []
       },
       "obsidian-linear": {
         "blocks": [
           {
-            "classes": ["md.obsidian.Obsidian"],
+            "classes": [
+              "md.obsidian.Obsidian"
+            ],
             "order": 1,
             "share": 0.5
           },
           {
-            "classes": ["linear"],
+            "classes": [
+              "linear"
+            ],
             "order": 2,
             "share": 0.5
           }
         ],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["work", "study"]
+        "bindings": []
       },
       "proton": {
         "blocks": [
           {
-            "classes": ["proton-mail"],
+            "classes": [
+              "proton-mail"
+            ],
             "order": 1,
             "share": 0.5
           },
           {
-            "classes": ["Proton Pass"],
+            "classes": [
+              "Proton Pass"
+            ],
             "order": 2,
             "share": 0.5,
             "spawn": {
@@ -205,15 +228,19 @@
         ],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["work", "study", "gaming"]
+        "bindings": []
       },
       "logs": {
         "blocks": [],
         "barred": [],
         "strays": "float",
-        "bindings": [],
-        "moods": ["work"]
+        "bindings": []
+      },
+      "ankama-launcher": {
+        "blocks": [],
+        "barred": [],
+        "strays": "float",
+        "bindings": []
       }
     },
     "wants": {
@@ -226,24 +253,62 @@
   "modes": {
     "neutral": {
       "name": "Neutral",
+      "hidden": true,
+      "scenes": [
+        {
+          "name": "code",
+          "monitor": "primary"
+        },
+        {
+          "name": "proton",
+          "monitor": "primary"
+        },
+        {
+          "name": "communication",
+          "monitor": "secondary"
+        },
+        {
+          "name": "logs",
+          "monitor": "secondary"
+        }
+      ],
+      "bindings": {
+        "remove": [
+          "dofus"
+        ]
+      },
       "presentation": {
         "accent_role": "peach",
         "surface_alpha": 0.84,
         "density": "comfortable",
         "motion_energy": "base",
         "bar_autohide": false
-      },
-      "bindings": {
-        "remove": ["dofus"]
       }
     },
     "work": {
       "name": "Work",
-      "workspaces": {
-        "remove": ["dofus", "pokemon", "steam-games", "communication", "lutris", "steam", "media", "ankama-launcher", "creative", "misc"]
-      },
+      "scenes": [
+        {
+          "name": "code",
+          "monitor": "primary"
+        },
+        {
+          "name": "obsidian-linear",
+          "monitor": "primary"
+        },
+        {
+          "name": "proton",
+          "monitor": "primary"
+        },
+        {
+          "name": "logs",
+          "monitor": "secondary"
+        }
+      ],
       "bindings": {
-        "remove": ["dofus"]
+        "remove": [
+          "dofus"
+        ]
       },
       "notify": {
         "default": "queue"
@@ -258,11 +323,24 @@
     },
     "study": {
       "name": "Study",
-      "workspaces": {
-        "remove": ["dofus", "pokemon", "steam-games", "communication", "lutris", "steam", "media", "ankama-launcher", "creative", "misc", "logs"]
-      },
+      "scenes": [
+        {
+          "name": "code",
+          "monitor": "primary"
+        },
+        {
+          "name": "obsidian-linear",
+          "monitor": "primary"
+        },
+        {
+          "name": "proton",
+          "monitor": "primary"
+        }
+      ],
       "bindings": {
-        "remove": ["dofus"]
+        "remove": [
+          "dofus"
+        ]
       },
       "notify": {
         "default": "queue"
@@ -277,11 +355,46 @@
     },
     "gaming": {
       "name": "Gaming",
-      "workspaces": {
-        "only": ["dofus", "pokemon", "steam-games", "communication", "lutris", "steam", "media", "ankama-launcher"]
-      },
+      "scenes": [
+        {
+          "name": "dofus",
+          "monitor": "primary"
+        },
+        {
+          "name": "pokemon",
+          "monitor": "primary"
+        },
+        {
+          "name": "steam-games",
+          "monitor": "primary"
+        },
+        {
+          "name": "communication",
+          "monitor": "secondary"
+        },
+        {
+          "name": "lutris",
+          "monitor": "secondary"
+        },
+        {
+          "name": "steam",
+          "monitor": "secondary"
+        },
+        {
+          "name": "media",
+          "monitor": "secondary"
+        },
+        {
+          "name": "ankama-launcher",
+          "monitor": "secondary"
+        }
+      ],
       "services": {
-        "remove": ["obsidian", "obsidian-index", "linear-sync"]
+        "remove": [
+          "obsidian",
+          "obsidian-index",
+          "linear-sync"
+        ]
       },
       "notify": {
         "default": "drop",

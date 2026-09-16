@@ -10,8 +10,11 @@
 // So this only reports what the declaration says in as many words. Anything
 // needing the resolved truth asks `,hyprfocus resolve`.
 
-/** Resource kinds carrying the only/add/remove delta grammar. */
-var KINDS = ["workspaces", "bindings", "services", "projects"];
+/**
+ * Resource kinds carrying the only/add/remove delta grammar. Workspaces are
+ * not among them: a mode names its scene set outright (`scenes`).
+ */
+var KINDS = ["bindings", "services", "projects"];
 
 function _modes(declaration) {
     return (declaration && declaration.modes) || {};
@@ -23,9 +26,21 @@ function label(declaration, id) {
     return spec && spec.name ? spec.name : id;
 }
 
-/** Every declared mode id, sorted, for a picker. */
+/**
+ * Every user-facing mode id, sorted, for a picker. Hidden modes (`neutral`,
+ * the recovery fallback) are never offered as a peer.
+ */
 function ids(declaration) {
-    return Object.keys(_modes(declaration)).sort();
+    var modes = _modes(declaration);
+    return Object.keys(modes).filter(function (id) {
+        return !(modes[id] && modes[id].hidden);
+    }).sort();
+}
+
+/** A mode's active scene set as declared: [{ name, monitor }], in order. */
+function scenes(declaration, id) {
+    var spec = _modes(declaration)[id];
+    return (spec && spec.scenes) || [];
 }
 
 /** Whether the declaration actually has this mode. */

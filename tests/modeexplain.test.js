@@ -25,11 +25,11 @@ test("absent provenance reads as manual, never as blank", () => {
 test("gaming's declaration reads what it withholds and leases", () => {
     const r = rows({
         name: "Gaming",
-        workspaces: { only: ["gaming", "comms", "ankama", "logs"] },
+        scenes: [{ name: "dofus", monitor: "primary" }, { name: "communication", monitor: "secondary" }],
         services: { remove: ["obsidian", "obsidian-index", "linear-sync"] },
         presentation: { palette: "macchiato", wallpaper: "gaming.jpg" }
     });
-    assert.deepEqual(r.filter(x => x.label === "workspaces").map(x => x.value), ["only gaming, comms, ankama, logs"]);
+    assert.deepEqual(r.filter(x => x.label === "scenes").map(x => x.value), ["dofus (primary), communication (secondary)"]);
     assert.deepEqual(r.filter(x => x.label === "services").map(x => x.value), ["stops obsidian, obsidian-index, linear-sync"]);
     assert.deepEqual(r.filter(x => x.label === "leases").map(x => x.value), ["palette macchiato · wallpaper gaming.jpg"]);
 });
@@ -37,8 +37,8 @@ test("gaming's declaration reads what it withholds and leases", () => {
 test("`remove` is a taking, `only` is the list it names", () => {
     // The announce line's honesty carries over: work mode's remove lists
     // read as withdrawals; nothing is claimed beyond the declaration.
-    const r = rows({ workspaces: { remove: ["gaming", "media"] } });
-    assert.deepEqual(r.map(x => x.value), ["withdraws gaming, media"]);
+    const r = rows({ bindings: { remove: ["dofus"] } });
+    assert.deepEqual(r.map(x => x.value), ["withdraws dofus"]);
 });
 
 test("an undeclared mode reads as no rows, not as nothing", () => {

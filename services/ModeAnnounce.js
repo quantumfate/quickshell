@@ -8,17 +8,17 @@
 // says.
 //
 // The declaration is the source of the taking: a mode revokes what it
-// `remove`s — services stop, binding trees and workspaces withdraw. Forms and
+// `remove`s — services stop, binding trees withdraw. Scene sets, forms and
 // leases change, they do not take away, so they are not announced.
 
 /** The resource kinds a transition can take away, in announcement order. */
-var KINDS = ["services", "bindings", "workspaces"];
+var KINDS = ["services", "bindings"];
 
 /** The human verb each kind names. */
-var VERBS = { services: "stopping", bindings: "withdrawing", workspaces: "withdrawing" };
+var VERBS = { services: "stopping", bindings: "withdrawing" };
 
 /** Same in the plural the bar can speak. */
-var PLURAL = { services: "services", bindings: "keybinds", workspaces: "workspaces" };
+var PLURAL = { services: "services", bindings: "keybinds" };
 
 /**
  * What a mode's declaration takes away: [{ kind, id, verb }].

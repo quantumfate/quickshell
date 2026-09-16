@@ -20,19 +20,22 @@ const schema = read("schemas/hyprfocus.schema.json");
 const declaration = read("assets/hyprfocus.default.json");
 
 /** Resource kinds carrying the only/add/remove delta grammar. */
-const KINDS = ["workspaces", "bindings", "services", "projects"];
+const KINDS = ["bindings", "services", "projects"];
 /** A `requires`/`wants` reference is singular and qualified: `service:obsidian`. */
 const REF_KIND = {
-    workspace: "workspaces",
+    scene: "scenes",
     binding: "bindings",
     service: "services",
     project: "projects",
 };
+/** Monitor roles a scene placement may name (the host files' roles). */
+const ROLES = new Set(schema.$defs.scene_placement.properties.monitor.enum);
 
 /** Every problem with the declaration, as readable lines. */
 function lint(doc) {
     const base = doc.base;
     const known = Object.fromEntries(KINDS.map(k => [k, new Set(base[k] ?? [])]));
+    known.scenes = new Set(Object.keys(base.scenes ?? {}));
     const errors = [];
     const say = (where, msg) => errors.push(`${where}: ${msg}`);
 
@@ -47,6 +50,24 @@ function lint(doc) {
                 for (const name of delta[field] ?? []) {
                     if (!known[kind].has(name))
                         say(`${mode}.${kind}.${field}`, `unknown ${kind} '${name}'`);
+                }
+            }
+        }
+
+        // The scene set: known scenes on known roles, each once, no shared claim.
+        const listed = new Set();
+        const claims = new Map();
+        for (const { name, monitor } of spec.scenes ?? []) {
+            if (!known.scenes.has(name)) say(`${mode}.scenes`, `unknown scene '${name}'`);
+            if (!ROLES.has(monitor)) say(`${mode}.scenes`, `unknown monitor '${monitor}'`);
+            if (listed.has(name)) say(`${mode}.scenes`, `duplicate scene '${name}'`);
+            listed.add(name);
+            for (const block of base.scenes?.[name]?.blocks ?? []) {
+                for (const cls of block.classes) {
+                    const owner = claims.get(cls);
+                    if (owner && owner !== name)
+                        say(`${mode}.scenes`, `class '${cls}' claimed by ${owner} and ${name}`);
+                    else claims.set(cls, name);
                 }
             }
         }
@@ -65,12 +86,6 @@ function lint(doc) {
         }
     }
 
-    for (const workspace of Object.keys(base.scenes ?? {})) {
-        if (!known.workspaces.has(workspace)) {
-            say("base.scenes", `'${workspace}' is not a declared workspace`);
-        }
-    }
-
     return errors;
 }
 
@@ -78,24 +93,48 @@ test("the shipped declaration is internally consistent", () => {
     assert.deepEqual(lint(declaration), []);
 });
 
-test("neutral exists, because it is the resting state", () => {
+test("neutral exists and is hidden, because it is the recovery fallback", () => {
     assert.ok(declaration.modes.neutral, "no neutral mode");
     assert.equal(schema.properties.modes.required[0], "neutral");
-});
-
-test("every mode carries a human-readable name", () => {
+    assert.equal(declaration.modes.neutral.hidden, true);
     for (const [mode, spec] of Object.entries(declaration.modes)) {
-        assert.equal(typeof spec.name, "string", `${mode} has no name`);
-        assert.ok(spec.name.length > 0, `${mode} has an empty name`);
+        if (mode !== "neutral") assert.ok(!spec.hidden, `${mode} is hidden`);
     }
 });
 
-test("the lint catches an unknown name rather than letting it resolve to nothing", () => {
+test("every mode carries a human-readable name and a scene set", () => {
+    for (const [mode, spec] of Object.entries(declaration.modes)) {
+        assert.equal(typeof spec.name, "string", `${mode} has no name`);
+        assert.ok(spec.name.length > 0, `${mode} has an empty name`);
+        assert.ok(Array.isArray(spec.scenes), `${mode} has no scene set`);
+        assert.equal(spec.workspaces, undefined, `${mode} still names workspaces`);
+    }
+});
+
+test("the lint catches an unknown scene rather than letting it resolve to nothing", () => {
     // A typo must fail here, not silently produce a desk missing a workspace.
     const broken = structuredClone(declaration);
-    broken.modes.gaming.workspaces = { only: ["gamming"] };
+    broken.modes.gaming.scenes = [{ name: "gamming", monitor: "primary" }];
+    assert.deepEqual(lint(broken), ["gaming.scenes: unknown scene 'gamming'"]);
+});
+
+test("the lint catches an unknown monitor role and a duplicate scene", () => {
+    const broken = structuredClone(declaration);
+    broken.modes.study.scenes = [
+        { name: "code", monitor: "DP-1" },
+        { name: "code", monitor: "primary" },
+    ];
     assert.deepEqual(lint(broken), [
-        "gaming.workspaces.only: unknown workspaces 'gamming'",
+        "study.scenes: unknown monitor 'DP-1'",
+        "study.scenes: duplicate scene 'code'",
+    ]);
+});
+
+test("the lint catches two active scenes claiming one class", () => {
+    const broken = structuredClone(declaration);
+    broken.base.scenes.pokemon.blocks[1].classes = ["zen-gaming-media"];
+    assert.deepEqual(lint(broken), [
+        "gaming.scenes: class 'zen-gaming-media' claimed by dofus and pokemon",
     ]);
 });
 
@@ -119,16 +158,6 @@ test("the lint catches a dependency on something the base never declares", () =>
     );
 });
 
-test("a scene is keyed by a workspace that exists", () => {
-    // A scene arranges a workspace. One keyed by a workspace nothing declares
-    // is geometry with nowhere to apply.
-    const broken = structuredClone(declaration);
-    broken.base.scenes.nowhere = { blocks: [] };
-    assert.ok(
-        lint(broken).some((e) => e.includes("is not a declared workspace")),
-    );
-});
-
 test("dependency strengths mean different things and the schema says so", () => {
     // `requires` reports a conflict when a mode removes it; `wants` yields.
     // Collapsing them would make shipping behaviour inexpressible: the media
@@ -144,17 +173,13 @@ test("dependency strengths mean different things and the schema says so", () => 
     assert.equal(declaration.base.requires["service:obsidian"], undefined);
 });
 
-test("a mode that withholds a workspace also withholds the binds that need it", () => {
-    // `binding:dofus` requires `workspace:dofus` (the scene workspaces were
-    // renamed off the old `gaming` name), so a mode without that workspace
-    // must not be left offering keys that act on a workspace that is gone.
-    assert.deepEqual(declaration.base.requires["binding:dofus"], [
-        "workspace:dofus",
-    ]);
+test("a mode without the dofus scene also withholds the binds that need it", () => {
+    // `binding:dofus` requires `scene:dofus`. The resolver checks scene
+    // references rather than adding scenes, so a mode that kept the binds
+    // without the scene would be refused.
+    assert.deepEqual(declaration.base.requires["binding:dofus"], ["scene:dofus"]);
     for (const [mode, spec] of Object.entries(declaration.modes)) {
-        const only = spec.workspaces?.only;
-        const removed = new Set(spec.workspaces?.remove ?? []);
-        const hasDofus = only ? only.includes("dofus") : !removed.has("dofus");
+        const hasDofus = (spec.scenes ?? []).some((s) => s.name === "dofus");
         const dropsDofus = (spec.bindings?.remove ?? []).includes("dofus");
         const keepsDofus = spec.bindings?.only
             ? spec.bindings.only.includes("dofus")

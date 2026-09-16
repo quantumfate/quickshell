@@ -12,7 +12,7 @@ import { dirname, join } from "node:path";
 import { loadLibrary } from "./qml.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const { label, ids, known, withholds, narrows } = loadLibrary("services/HyprfocusRead.js");
+const { label, ids, known, withholds, narrows, scenes } = loadLibrary("services/HyprfocusRead.js");
 const shipped = JSON.parse(readFileSync(join(root, "assets/hyprfocus.default.json"), "utf8"));
 
 test("names a mode from the declaration", () => {
@@ -26,8 +26,20 @@ test("falls back to the id so an unknown mode is still named", () => {
     assert.equal(known(shipped, "ghost"), false);
 });
 
-test("lists every declared mode, sorted", () => {
-    assert.deepEqual(ids(shipped), ["gaming", "neutral", "study", "work"]);
+test("lists every user-facing mode, sorted, without the hidden fallback", () => {
+    // neutral is the recovery fallback reached from a submap; offering it as
+    // a peer of the real modes would make it a choice rather than a floor.
+    assert.deepEqual(ids(shipped), ["gaming", "study", "work"]);
+    assert.equal(known(shipped, "neutral"), true, "hidden is not undeclared");
+});
+
+test("reads a mode's scene set with its monitor roles", () => {
+    assert.deepEqual(scenes(shipped, "study"), [
+        { name: "code", monitor: "primary" },
+        { name: "obsidian-linear", monitor: "primary" },
+        { name: "proton", monitor: "primary" },
+    ]);
+    assert.deepEqual(scenes(shipped, "ghost"), []);
 });
 
 test("survives a declaration that is not there yet", () => {
@@ -39,7 +51,6 @@ test("survives a declaration that is not there yet", () => {
 
 test("names what a mode explicitly removes", () => {
     const gone = withholds(shipped, "work");
-    assert.ok(gone.includes("pokemon"), "a withdrawn workspace");
     assert.ok(gone.includes("dofus"), "a withheld binding tree");
     // Named rather than implied: `remove` says the same as an empty `only`
     // here, and only one of them can be reported back to the user.
@@ -61,11 +72,11 @@ test("gaming is the mode that keeps the conditional trees", () => {
 });
 
 test("does not guess at what an exclusive set leaves out", () => {
-    // `game` names `only` for workspaces. Everything else is withheld just as
-    // surely, but knowing that needs the base and the resolver — so this
-    // reports what it can see rather than inventing an answer.
+    // A scene set is exclusive: `code` is absent from gaming without any
+    // `remove` naming it. Withholds reports deltas only, never the scenes a
+    // set leaves out; `narrows` flags an `only` delta when one is written.
     assert.deepEqual(withholds(shipped, "gaming").filter(n => n === "code"), []);
-    assert.equal(narrows(shipped, "gaming"), true, "and says the answer is partial");
+    assert.equal(narrows({ modes: { m: { services: { only: [] } } } }, "m"), true);
 });
 
 test("a mode using only removals is reported in full", () => {

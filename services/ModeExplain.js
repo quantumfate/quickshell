@@ -43,9 +43,12 @@ function rows(spec) {
     if ((svc.remove || []).length)
         out.push({ label: "services", value: "stops " + svc.remove.join(", ") });
 
-    // Binding trees and workspaces: what the mode takes away, and what
-    // narrows to stay.
-    for (const kind of ["bindings", "workspaces"]) {
+    // Scenes: the mode's active set, each on its monitor role.
+    const placed = (spec.scenes || []).map(s => s.name + " (" + s.monitor + ")");
+    if (placed.length) out.push({ label: "scenes", value: placed.join(", ") });
+
+    // Binding trees: what the mode takes away, and what narrows to stay.
+    for (const kind of ["bindings"]) {
         const delta = spec[kind] || {};
         if (delta.only) out.push({ label: kind, value: "only " + delta.only.join(", ") });
         if ((delta.add || []).length) out.push({ label: kind, value: "adds " + delta.add.join(", ") });
