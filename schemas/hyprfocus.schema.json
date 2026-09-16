@@ -167,6 +167,22 @@
           "items": {
             "type": "string"
           }
+        },
+        "bindings": {
+          "description": "Binding trees admitted while this scene is active. A tree is enabled if the mode admits it OR the active scene admits it; scene-admitted trees follow the workspace, not only the mode (LEO-266).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "moods": {
+          "description": "Mood tags this scene matches. Lets the active mood select a scene without naming it directly in the mode declaration.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
         }
       }
     },

@@ -59,7 +59,8 @@
           "steam_app_default",
           "steam_app_\\d+",
           "Ankama Launcher"
-        ]
+        ],
+        "bindings": []
       },
       "code": {
         "blocks": [
@@ -80,7 +81,8 @@
             "order": 2,
             "share": 0.33
           }
-        ]
+        ],
+        "bindings": []
       }
     },
     "wants": {
