@@ -98,6 +98,7 @@ Scope {
 
                 // left island: where am I.
                 Island {
+                    id: leftIsland
                     anchors {
                         left: parent.left
                         verticalCenter: parent.verticalCenter
@@ -106,8 +107,20 @@ Scope {
                     Workspaces { screen: bar.screen }
                     SubmapIndicator {}
                     GroupChip {}
-                    DofusRoster { screen: bar.screen }
                     HyprLayout { visible: !bar.deepMode }
+                }
+
+                // Dofus-only isle: appears only on the gaming workspace while
+                // Dofus clients are present. Kept separate from the left island
+                // so it can come and go without shifting the other controls.
+                DofusRoster {
+                    id: dofusIsle
+                    screen: bar.screen
+                    anchors {
+                        left: leftIsland.right
+                        verticalCenter: parent.verticalCenter
+                        leftMargin: Theme.barInset * 2
+                    }
                 }
 
                 // centre island: what's playing / what to adjust.
