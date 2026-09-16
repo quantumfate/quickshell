@@ -2,7 +2,10 @@
   "version": 3,
   "base": {
     "bindings": [
-      "dofus"
+      "dofus",
+      "shelf-ankama",
+      "shelf-steam",
+      "shelf-lutris"
     ],
     "services": [
       "theme-auto",
@@ -91,55 +94,6 @@
             "classes": [
               "steam_app",
               "steam_app_\\d+"
-            ],
-            "order": 1,
-            "share": 1.0
-          }
-        ],
-        "barred": [],
-        "strays": "float",
-        "bindings": []
-      },
-      "communication": {
-        "blocks": [
-          {
-            "classes": [
-              "signal"
-            ],
-            "order": 1,
-            "share": 0.5
-          },
-          {
-            "classes": [
-              "vesktop"
-            ],
-            "order": 2,
-            "share": 0.5
-          }
-        ],
-        "barred": [],
-        "strays": "float",
-        "bindings": []
-      },
-      "lutris": {
-        "blocks": [
-          {
-            "classes": [
-              "net.lutris.Lutris"
-            ],
-            "order": 1,
-            "share": 1.0
-          }
-        ],
-        "barred": [],
-        "strays": "float",
-        "bindings": []
-      },
-      "steam": {
-        "blocks": [
-          {
-            "classes": [
-              "steam"
             ],
             "order": 1,
             "share": 1.0
@@ -239,12 +193,6 @@
         "barred": [],
         "strays": "float",
         "bindings": []
-      },
-      "ankama-launcher": {
-        "blocks": [],
-        "barred": [],
-        "strays": "float",
-        "bindings": []
       }
     },
     "wants": {
@@ -268,17 +216,16 @@
           "monitor": "primary"
         },
         {
-          "name": "communication",
-          "monitor": "secondary"
-        },
-        {
           "name": "logs",
           "monitor": "secondary"
         }
       ],
       "bindings": {
         "remove": [
-          "dofus"
+          "dofus",
+          "shelf-ankama",
+          "shelf-steam",
+          "shelf-lutris"
         ]
       },
       "presentation": {
@@ -311,7 +258,10 @@
       ],
       "bindings": {
         "remove": [
-          "dofus"
+          "dofus",
+          "shelf-ankama",
+          "shelf-steam",
+          "shelf-lutris"
         ]
       },
       "notify": {
@@ -343,7 +293,10 @@
       ],
       "bindings": {
         "remove": [
-          "dofus"
+          "dofus",
+          "shelf-ankama",
+          "shelf-steam",
+          "shelf-lutris"
         ]
       },
       "notify": {
@@ -377,23 +330,7 @@
           "monitor": "primary"
         },
         {
-          "name": "communication",
-          "monitor": "secondary"
-        },
-        {
-          "name": "lutris",
-          "monitor": "secondary"
-        },
-        {
-          "name": "steam",
-          "monitor": "secondary"
-        },
-        {
           "name": "media",
-          "monitor": "secondary"
-        },
-        {
-          "name": "ankama-launcher",
           "monitor": "secondary"
         }
       ],

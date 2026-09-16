@@ -59,8 +59,8 @@ test("names what a mode explicitly removes", () => {
 test("the resting mode still withholds the gaming tree", () => {
     // Neutral is not "everything on". The Dofus submap is meaningful while a
     // Dofus group is on screen and noise otherwise, which is the whole reason
-    // binding trees are conditional.
-    assert.deepEqual(withholds(shipped, "neutral"), ["dofus"]);
+    // binding trees are conditional. The gaming shelves go with it.
+    assert.deepEqual(withholds(shipped, "neutral"), ["dofus", "shelf-ankama", "shelf-steam", "shelf-lutris"]);
 });
 
 test("gaming is the mode that keeps the conditional trees", () => {
