@@ -141,9 +141,9 @@ function reduceSession(session, event) {
         if (!inSubmap) {
             // Raced a leave that didn't stop the timer: never open on a node
             // already left.
-            return { ...session, dwellArmed: false };
+            return Object.assign({}, session, { dwellArmed: false });
         }
-        return { ...session, shown: true, dwellArmed: false };
+        return Object.assign({}, session, { shown: true, dwellArmed: false });
     }
     return session;
 }
