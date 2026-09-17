@@ -33,6 +33,23 @@ test("lists every user-facing mode, sorted, without the hidden fallback", () => 
     assert.equal(known(shipped, "neutral"), true, "hidden is not undeclared");
 });
 
+test("excludes any mode flagged hidden, not just neutral by name", () => {
+    // The picker contract is the flag, not the id: a second hidden mode must
+    // vanish from the list exactly like neutral does, and un-hiding neutral
+    // (hypothetically) must bring it back.
+    const declaration = {
+        modes: {
+            neutral: { name: "Neutral", hidden: true },
+            work: { name: "Work" },
+            ghost: { name: "Ghost Mode", hidden: true },
+        },
+    };
+    assert.deepEqual(ids(declaration), ["work"]);
+
+    const unhidden = { modes: { neutral: { name: "Neutral" }, work: { name: "Work" } } };
+    assert.deepEqual(ids(unhidden), ["neutral", "work"]);
+});
+
 test("reads a mode's scene set with its monitor roles", () => {
     assert.deepEqual(scenes(shipped, "study"), [
         { name: "code", monitor: "primary" },

@@ -33,7 +33,11 @@ One top bar per monitor (except the excluded portrait panel). Three isles:
   The mode pill (`ModePill.qml`) shows the active mode's declared name
   (`hyprfocus.json`'s `modes.<id>.name`; "Neutral" at rest) tinted by
   `Theme.accent`, which already tracks the mode's declared
-  `presentation.accent_role`.
+  `presentation.accent_role`. Clicking it opens `MoodPanel.qml`, whose mode
+  picker offers only the declaration's non-`hidden` modes
+  (`Hyprfocus.ids()`) — neutral stays reachable solely as the hypr modes
+  submap's recovery mode, never as a picker choice, so the resting pill can
+  say "Neutral" honestly without inviting anyone back to it.
 
 Autohide follows `Hyprfocus.current.presentation.bar_autohide` — the
 declaration's own per-mode flag, not the retired `deep`/`game` mode ids. A
