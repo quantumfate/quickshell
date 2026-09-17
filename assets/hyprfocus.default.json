@@ -1,9 +1,7 @@
 {
   "version": 3,
   "base": {
-    "bindings": [
-      "dofus"
-    ],
+    "bindings": [],
     "services": [
       "theme-auto",
       "obsidian",
@@ -14,11 +12,6 @@
       "audio-notify"
     ],
     "projects": [],
-    "requires": {
-      "binding:dofus": [
-        "scene:dofus"
-      ]
-    },
     "notify": {
       "default": "show"
     },
@@ -55,6 +48,7 @@
         "strays": "float",
         "icon": "",
         "bindings": [
+          "dofus",
           "shelf-ankama",
           "shelf-lutris"
         ]
@@ -230,11 +224,6 @@
           "monitor": "secondary"
         }
       ],
-      "bindings": {
-        "remove": [
-          "dofus"
-        ]
-      },
       "presentation": {
         "accent_role": "peach",
         "surface_alpha": 0.84,
@@ -263,11 +252,6 @@
           "monitor": "secondary"
         }
       ],
-      "bindings": {
-        "remove": [
-          "dofus"
-        ]
-      },
       "notify": {
         "default": "queue"
       },
@@ -299,11 +283,6 @@
           "monitor": "primary"
         }
       ],
-      "bindings": {
-        "remove": [
-          "dofus"
-        ]
-      },
       "notify": {
         "default": "queue"
       },

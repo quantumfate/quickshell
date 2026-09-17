@@ -16,10 +16,10 @@ test("imports the swap service", () => {
     assert.match(src, /DofusSwap/);
 });
 
-test("gates visibility on the gaming workspace with Dofus clients", () => {
-    assert.match(src, /_onGaming/);
+test("gates visibility on the dofus workspace with Dofus clients", () => {
+    assert.match(src, /_onDofus/);
     assert.match(src, /_hasDofus/);
-    assert.match(src, /activeWorkspace\?\.name === "gaming"/);
+    assert.match(src, /activeWorkspace\?\.name === "dofus"/);
     assert.match(src, /DofusWindows\.windows/);
 });
 

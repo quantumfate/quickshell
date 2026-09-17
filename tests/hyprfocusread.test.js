@@ -50,27 +50,21 @@ test("survives a declaration that is not there yet", () => {
 });
 
 test("names what a mode explicitly removes", () => {
-    const gone = withholds(shipped, "work");
-    assert.ok(gone.includes("dofus"), "a withheld binding tree");
+    const gone = withholds(shipped, "gaming");
+    assert.ok(gone.includes("linear-sync"), "a withheld service");
     // Named rather than implied: `remove` says the same as an empty `only`
     // here, and only one of them can be reported back to the user.
 });
 
-test("the resting mode still withholds the gaming tree", () => {
-    // Neutral is not "everything on". The Dofus submap is meaningful while a
-    // Dofus group is on screen and noise otherwise, which is the whole reason
-    // binding trees are conditional. The gaming shelves now travel with their
-    // owning scenes (dofus, steam-games) rather than base.bindings, so they
-    // are no longer a withheld base tree here.
-    assert.deepEqual(withholds(shipped, "neutral"), ["dofus"]);
-});
-
-test("gaming is the mode that keeps the conditional trees", () => {
-    // It still withholds background work — keeping the Dofus binds and
-    // stopping the sync are the same mode saying two different things.
-    const gone = withholds(shipped, "gaming");
-    assert.ok(!gone.includes("dofus"), "game withheld the tree it exists to provide");
-    assert.ok(gone.includes("linear-sync"), "gaming should still stop the sync");
+test("no mode withholds a base-level binding tree any more (LEO-376)", () => {
+    // The Dofus submap used to sit in base.bindings, withheld by work/study/
+    // neutral's own `remove`. It now lives in base.scenes.dofus.bindings
+    // (the same model as shelf-ankama/shelf-lutris) and is admitted only
+    // while that scene is focused — a scene-level admission `withholds`
+    // (mode-level deltas only) cannot see and does not need to report.
+    assert.deepEqual(withholds(shipped, "neutral"), []);
+    assert.deepEqual(withholds(shipped, "work"), []);
+    assert.deepEqual(withholds(shipped, "study"), []);
 });
 
 test("does not guess at what an exclusive set leaves out", () => {

@@ -170,26 +170,26 @@ test("dependency strengths mean different things and the schema says so", () => 
             "service:obsidian-index",
         ),
     );
-    assert.equal(declaration.base.requires["service:obsidian"], undefined);
+    assert.equal(declaration.base.requires?.["service:obsidian"], undefined);
 });
 
-test("a mode without the dofus scene also withholds the binds that need it", () => {
-    // `binding:dofus` requires `scene:dofus`. The resolver checks scene
-    // references rather than adding scenes, so a mode that kept the binds
-    // without the scene would be refused.
-    assert.deepEqual(declaration.base.requires["binding:dofus"], ["scene:dofus"]);
+test("the dofus tree is scene-scoped, not a base.requires dependency", () => {
+    // `dofus` used to sit in base.bindings with a `binding:dofus requires
+    // scene:dofus` edge (LEO-376: that let it stay admitted in modes, like
+    // gaming's non-dofus scenes, whose desk never lists the dofus scene). The
+    // tree now lives directly in base.scenes.dofus.bindings, the same model
+    // as shelf-ankama/shelf-lutris, so it is admitted only while that scene is
+    // focused — no base.bindings entry, no requires edge to check.
+    assert.ok(!(declaration.base.bindings ?? []).includes("dofus"));
+    assert.ok(declaration.base.scenes.dofus.bindings.includes("dofus"));
+    assert.equal(declaration.base.requires?.["binding:dofus"], undefined);
     for (const [mode, spec] of Object.entries(declaration.modes)) {
-        const hasDofus = (spec.scenes ?? []).some((s) => s.name === "dofus");
-        const dropsDofus = (spec.bindings?.remove ?? []).includes("dofus");
-        const keepsDofus = spec.bindings?.only
-            ? spec.bindings.only.includes("dofus")
-            : !dropsDofus;
-        if (!hasDofus) {
-            assert.ok(
-                !keepsDofus,
-                `${mode} withholds dofus but keeps the dofus binds`,
-            );
-        }
+        const addsDofus = (spec.bindings?.add ?? []).includes("dofus");
+        const onlyDofus = (spec.bindings?.only ?? []).includes("dofus");
+        assert.ok(
+            !addsDofus && !onlyDofus,
+            `${mode} names dofus in its own bindings delta; it should follow the scene instead`,
+        );
     }
 });
 
