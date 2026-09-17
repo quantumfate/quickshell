@@ -18,16 +18,26 @@ function validId(value) {
 }
 
 /**
+ * A palette lease value: "" (vacated), a plain id, or a `{ day, night }`
+ * pair (LEO-365) with both halves valid ids.
+ */
+function validPalette(value) {
+    if (value === "") return true;
+    if (typeof value === "string") return validId(value);
+    if (value && typeof value === "object")
+        return typeof value.day === "string" && typeof value.night === "string"
+            && validId(value.day) && validId(value.night);
+    return false;
+}
+
+/**
  * The presentation block a mode would carry after applying `patch`, or null
  * when it breaks the contract: the panel refuses the write rather than
  * storing a defect. An absent patch rides through untouched.
  */
 function presentation(edited, patch) {
     const out = Object.assign({}, edited || {}, patch || {});
-    if (out.palette !== undefined && out.palette !== "") {
-        if (!validId(out.palette)) return null;
-    }
-    if (out.wallpaper !== undefined && String(out.wallpaper).length > 256) return null;
+    if (out.palette !== undefined && !validPalette(out.palette)) return null;
     return out;
 }
 

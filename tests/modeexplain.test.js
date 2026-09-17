@@ -27,11 +27,16 @@ test("gaming's declaration reads what it withholds and leases", () => {
         name: "Gaming",
         scenes: [{ name: "dofus", monitor: "primary" }, { name: "communication", monitor: "secondary" }],
         services: { remove: ["obsidian", "obsidian-index", "linear-sync"] },
-        presentation: { palette: "macchiato", wallpaper: "gaming.jpg" }
+        presentation: { palette: { day: "latte", night: "mocha" } }
     });
     assert.deepEqual(r.filter(x => x.label === "scenes").map(x => x.value), ["dofus (primary), communication (secondary)"]);
     assert.deepEqual(r.filter(x => x.label === "services").map(x => x.value), ["stops obsidian, obsidian-index, linear-sync"]);
-    assert.deepEqual(r.filter(x => x.label === "leases").map(x => x.value), ["palette macchiato · wallpaper gaming.jpg"]);
+    assert.deepEqual(r.filter(x => x.label === "leases").map(x => x.value), ["palette latte / mocha"]);
+});
+
+test("a plain-string palette reads as one name, not a pair", () => {
+    const r = rows({ presentation: { palette: "macchiato" } });
+    assert.deepEqual(r.filter(x => x.label === "leases").map(x => x.value), ["palette macchiato"]);
 });
 
 test("`remove` is a taking, `only` is the list it names", () => {

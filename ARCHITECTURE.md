@@ -65,6 +65,19 @@ Three consequences for the code below:
 The naming is settled: the engine is hyprfocus, a state is a **mode**, and
 "mood" retires.
 
+A mode's `presentation.palette` is a LEASE (LEO-288), not a write: it names
+the palette while the mode runs and gives the baseline back untouched when it
+ends. Since LEO-365 it may be a day/night PAIR
+(`{ "day": "latte", "night": "mocha" }`) instead of one name — day is 07:00
+(inclusive) through 18:59, the same split hypr's `,theme.sh` `daytime()`
+uses — so a mode can lease latte by day and its own dark variant by night. A
+plain string still means both, unchanged. `services/PaletteLease.js` resolves
+a palette + hour to the leased name on the shell side; `Theme.qml` reads it
+off a `SystemClock` so the lease flips on its own at the hour boundary, no
+mode transition required. Wallpapers are NOT part of this lease — they belong
+to the palette, not the mode: `theme.json`'s per-palette `wallpapers` binding
+is what changes the image (`services/Theme.qml`'s `wallpaperFor`).
+
 Two stores define _policy_ rather than current state. Workspace scenes live in the hyprfocus declaration's `base.scenes` (`assets/hyprfocus.default.json`), the one scene table hypr reads. [`mood-policy.json`](schemas/mood-policy.schema.json)
 (per-mood policy, LEO-236) is owned by `Focus` since LEO-237: Focus's
 `policyDefaults` literal is the definitional table, the asset under `assets/`

@@ -539,11 +539,17 @@ Scope {
                         // edits (LEO-280's edit half): validated before the
                         // write lands, live over the vocabulary every pack
                         // carries. Vacating the lease gives the desk back to
-                        // the baseline with the same edit.
+                        // the baseline with the same edit. A day/night pair
+                        // (LEO-365) reads as "day / night" and has no single
+                        // segment to highlight; picking a segment still writes
+                        // a plain string, one palette for both halves.
                         FieldRow {
+                            id: paletteField
+                            readonly property var raw: (Hyprfocus.current.presentation || {}).palette
+                            readonly property bool isPair: raw && typeof raw === "object"
                             label: "lease palette"
                             options: ["none"].concat(Object.keys(Theme.palettes))
-                            value: (Hyprfocus.current.presentation || {}).palette || "none"
+                            value: isPair ? (raw.day + " / " + raw.night) : (raw || "none")
                             onPick: (v) => {
                                 const result = Hyprfocus.patchMode(scope.mood, { palette: v === "none" ? "" : v });
                                 if (result !== "") {

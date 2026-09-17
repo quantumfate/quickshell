@@ -11,9 +11,15 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import "."
+import "PaletteLease.js" as PaletteLease
 
 Singleton {
     id: root
+
+    // The clock a day/night palette pair (LEO-365) leases against: local
+    // hour is all `PaletteLease.leasedPalette` needs, so the shell flips its
+    // own lease at 07:00/19:00 with no help from the compositor.
+    SystemClock { id: clock; precision: SystemClock.Hours }
 
     Store {
         id: store
@@ -45,27 +51,34 @@ Singleton {
     // mood, and the lease is the ONE thing that changes on entry.
     readonly property string lease:
         (Hyprfocus.known && Focus.active)
-            ? (Hyprfocus.presentation.palette ?? "")
+            ? PaletteLease.leasedPalette(Hyprfocus.presentation.palette, clock.date.getHours())
             : ""
     function withLease(lease, baseline) {
         return (lease && root.palettes[lease]) ? lease : baseline;
     }
 
     // The one fan-out a lease owes. Called from Focus's mode-change seam
-    // (the same place the compositor converge and the scene apply fire),
-    // reading the whole composition explicitly rather than trusting that the
-    // `name` binding above has settled yet. Only a real move fans out: a lease
-    // naming the palette already showing runs nothing (the fan-out reloads
-    // Hyprland and resets every window border, which is noise when nothing
-    // recolours — the fan-out belongs to the palette, not to the mode switch).
+    // (the same place the compositor converge and the scene apply fire) AND
+    // on the clock's own hourly tick below, reading the whole composition
+    // explicitly rather than trusting that the `name` binding above has
+    // settled yet. Only a real move fans out: a lease naming the palette
+    // already showing runs nothing (the fan-out reloads Hyprland and resets
+    // every window border, which is noise when nothing recolours — the
+    // fan-out belongs to the palette, not to the mode switch).
     property string _applied: root.name
     function noteLease() {
         const held = (Hyprfocus.known && Focus.active)
-            ? (Hyprfocus.presentation.palette ?? "") : "";
+            ? PaletteLease.leasedPalette(Hyprfocus.presentation.palette, clock.date.getHours()) : "";
         const now = root.withLease(held, store.get("palette") ?? "macchiato");
         if (now === root._applied) return;
         root._applied = now;
         root.applyToSystem();
+    }
+    // A day/night pair (LEO-365) flips on its own at 07:00/19:00 with no
+    // mode transition involved, so the hourly tick owes the same fan-out.
+    Connections {
+        target: clock
+        function onDateChanged() { root.noteLease(); }
     }
     function applyToSystem() {
         root._applied = root.name;

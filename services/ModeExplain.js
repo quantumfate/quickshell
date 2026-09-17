@@ -55,11 +55,14 @@ function rows(spec) {
         if ((delta.remove || []).length) out.push({ label: kind, value: "withdraws " + delta.remove.join(", ") });
     }
 
-    // The leases: how the desk wants to look while this mode runs.
+    // The leases: how the desk wants to look while this mode runs. A pair
+    // (LEO-365) reads as its two halves, day first.
     const pres = spec.presentation || {};
     const leases = [];
-    if (pres.palette) leases.push("palette " + pres.palette);
-    if (pres.wallpaper) leases.push("wallpaper " + pres.wallpaper);
+    if (pres.palette) {
+        const p = pres.palette;
+        leases.push("palette " + (typeof p === "string" ? p : p.day + " / " + p.night));
+    }
     if (leases.length) out.push({ label: "leases", value: leases.join(" · ") });
 
     // Notification routing for the mode, keyed by source id: the default and

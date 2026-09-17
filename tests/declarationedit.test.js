@@ -8,7 +8,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { validId, presentation, modePatch } = loadLibrary("services/DeclarationEdit.js");
+const { validId, validPalette, presentation, modePatch } = loadLibrary("services/DeclarationEdit.js");
 
 test("ids read like the schema's $defs/id", () => {
     assert.ok(validId("macchiato"));
@@ -21,10 +21,10 @@ test("ids read like the schema's $defs/id", () => {
 
 test("a lease edit rides the whole presentation value", () => {
     const next = presentation(
-        { palette: "latte", wallpaper: "gaming.jpg" },
+        { palette: "latte" },
         { palette: "mocha" },
     );
-    assert.deepEqual(next, { palette: "mocha", wallpaper: "gaming.jpg" });
+    assert.deepEqual(next, { palette: "mocha" });
 });
 
 test("a lease may be vacated, and that reads as no lease", () => {
@@ -36,9 +36,22 @@ test("an id that is not an id is refused, not stored", () => {
     assert.equal(presentation({}, { palette: "Catppuccin Mocha" }), null);
 });
 
-test("the wallpaper keeps its length bound", () => {
-    assert.ok(presentation({}, { wallpaper: "w" }) !== null);
-    assert.equal(presentation({}, { wallpaper: "x".repeat(257) }), null);
+test("a day/night pair with both halves valid ids is accepted", () => {
+    const next = presentation({}, { palette: { day: "latte", night: "mocha" } });
+    assert.deepEqual(next.palette, { day: "latte", night: "mocha" });
+});
+
+test("a pair with an invalid half is refused, not stored", () => {
+    assert.equal(presentation({}, { palette: { day: "Latte", night: "mocha" } }), null);
+    assert.equal(presentation({}, { palette: { day: "latte" } }), null);
+});
+
+test("validPalette accepts the vacated, plain-id and pair forms", () => {
+    assert.ok(validPalette(""));
+    assert.ok(validPalette("mocha"));
+    assert.ok(validPalette({ day: "latte", night: "mocha" }));
+    assert.ok(!validPalette({ day: "latte" }));
+    assert.ok(!validPalette({ day: "Latte", night: "mocha" }));
 });
 
 test("the patch stays whole-field: rendered values, not fragments", () => {

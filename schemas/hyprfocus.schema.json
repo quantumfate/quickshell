@@ -363,17 +363,23 @@
           }
         },
         "presentation": {
-          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.\n\n`palette` is a LEASE, not a write (LEO-288): while the mode runs the desk shows this palette, and when it ends the baseline (the sun's, or the user's pick) comes back untouched. Omit it and the mode tints nothing \u2014 `accent_role` already picks a role within whatever palette is active, and this optional field is for the rare mode that must pick a different palette altogether.\n\n`wallpaper` leases by the same rule (LEO-289): a mode that needs a specific look behind it names the file; the mood's own binding still wins, and an absent name leases nothing.",
+          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.\n\n`palette` is a LEASE, not a write (LEO-288): while the mode runs the desk shows this palette, and when it ends the baseline (the sun's, or the user's pick) comes back untouched. Omit it and the mode tints nothing \u2014 `accent_role` already picks a role within whatever palette is active, and this optional field is for the rare mode that must pick a different palette altogether. Wallpapers belong to palettes, not modes (LEO-365): the theme store's per-palette `wallpapers` binding is what changes the image, so a mode has nothing more to lease for it.",
           "type": "object",
           "properties": {
             "palette": {
-              "description": "The palette leased while this mode holds. Must name a variant the shell carries (Theme.qml / a theme pack); an unknown name reads as no lease \u2014 resolution never fails.",
-              "$ref": "#/$defs/id"
-            },
-            "wallpaper": {
-              "description": "The image bound while this mode holds. Names a file in the wallpaper directory (absolute paths and the mood/palette bindings remain the broader contract); an unknown name reads as no lease.",
-              "type": "string",
-              "maxLength": 256
+              "description": "The palette leased while this mode holds. Either a plain id (leased at every hour) or a `{ day, night }` pair (LEO-365) leased by the clock \u2014 day is 07:00 (inclusive) through 18:59, the same split hypr's `,theme.sh` `daytime()` uses. Must name a variant the shell carries (Theme.qml / a theme pack); an unknown name reads as no lease \u2014 resolution never fails.",
+              "oneOf": [
+                { "$ref": "#/$defs/id" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["day", "night"],
+                  "properties": {
+                    "day": { "$ref": "#/$defs/id" },
+                    "night": { "$ref": "#/$defs/id" }
+                  }
+                }
+              ]
             }
           }
         }
