@@ -1,9 +1,9 @@
-// DofusRoster — Dofus-only bar isle for the gaming workspace (LEO-234).
+// DofusRoster — Dofus-only bar isle for the dofus workspace (LEO-234).
 //
 // This is not attached to a window or Hyprland group; it is a bar cluster that
 // mirrors the group order from DofusWindows and exposes the swap-detector
 // controls from DofusSwap. It appears only while the active workspace on this
-// monitor is the gaming workspace and Dofus clients are present.
+// monitor is the dofus workspace and Dofus clients are present.
 //
 // Layout per request:
 //   [ (class icon, Character, learn-hash button) ... ] [ recalibrate ] [ run/stop ]
@@ -24,11 +24,11 @@ Surface {
     readonly property var _mon: Hyprland.monitorFor(screen)
     readonly property string _screenName: screen?.name ?? ""
 
-    // Visible only on the gaming workspace while Dofus clients are present.
-    readonly property bool _onGaming: _mon?.activeWorkspace?.name === "gaming"
+    // Visible only on the dofus workspace while Dofus clients are present.
+    readonly property bool _onDofus: _mon?.activeWorkspace?.name === "dofus"
     readonly property bool _hasDofus: (DofusWindows.windows ?? []).some(
         w => w.workspaceId === _mon?.activeWorkspace?.id)
-    visible: root._onGaming && root._hasDofus
+    visible: root._onDofus && root._hasDofus
 
     elevation: "island"
     implicitHeight: Theme.barHeight
