@@ -20,6 +20,7 @@ import QtQuick
 import "."   // Store
 import "HyprfocusRead.js" as Read
 import "DeclarationEdit.js" as Edit
+import "ModePrecedence.js" as ModePrecedence
 
 Singleton {
     id: root
@@ -37,7 +38,7 @@ Singleton {
     Store {
         id: pointer
         name: "focus"
-        defaults: ({ mode: "neutral", until: null, source: null, set_at: null })
+        defaults: ({ mode: "work", until: null, previous: null, source: null, set_at: null })
         onChanged: root._refresh()
     }
 
@@ -46,8 +47,14 @@ Singleton {
     // rather than through one of this singleton's own accessors.
     readonly property var data: declaration.data ?? ({})
 
-    // Active mode id, and the record the declaration holds for it.
-    readonly property string mode: pointer.get("mode") ?? "neutral"
+    // The raw pointer fields, and `mode` as it reads RIGHT NOW: a lapsed
+    // timed mode falls back to `previous` (or `work`, the default/resting
+    // mode) rather than staying stuck on its own stale value.
+    // `neutral`, the hidden recovery mode, only ever appears here as a
+    // deliberate manual write, never as this fallback.
+    readonly property var previous: pointer.get("previous") ?? null
+    readonly property string mode: ModePrecedence.effectiveMode(
+        { mode: pointer.get("mode") ?? "work", until: root.until, previous: root.previous })
     property var current: ({})
     property var modes: ({})
 
@@ -63,6 +70,8 @@ Singleton {
     // declaration replaced under a running shell — and the bar should say so
     // rather than render a blank.
     readonly property bool known: Read.known(declaration.data, root.mode)
+    // At rest: the desk is on its hidden recovery mode, not merely on the
+    // default `work` mode (which is itself an enforced, resting state now).
     readonly property bool resting: root.mode === "neutral"
 
     // How the desk is meant to look while this mode runs. Passed through

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/quantumfate/quickshell/schemas/focus.schema.json",
   "title": "focus.json",
-  "description": "The current mood: a visual operating state, not just a notification switch. `neutral` is the resting state; the other five each carry their own accent role, surface alpha, density, motion energy and notification policy (see Focus.qml's `moods` table \u2014 not duplicated here, same as theme.json naming a palette rather than embedding one). Also the firm-focus contract: read by the media browser and game launchers (refuse-to-start, with a reason) and by do-not-disturb; never by anything that would kill an already-running session.",
+  "description": "The current mood: a visual operating state, not just a notification switch. `work` is the default/resting state; `neutral` stays a hidden recovery mode, reachable only by an explicit manual write, never a fallback. The other moods each carry their own accent role, surface alpha, density, motion energy and notification policy (see Focus.qml's `moods` table \u2014 not duplicated here, same as theme.json naming a palette rather than embedding one). Also the firm-focus contract: read by the media browser and game launchers (refuse-to-start, with a reason) and by do-not-disturb; never by anything that would kill an already-running session.",
   "classification": "observation",
   "type": "object",
   "additionalProperties": false,
@@ -12,7 +12,7 @@
   ],
   "properties": {
     "mode": {
-      "description": "The active mood. `neutral` is the default, unrestricted state; every other mood blocks the launches enforce.md lists (except launching into itself) until `until`, or forever if `until` is null.",
+      "description": "The active mood as WRITTEN, not necessarily as it reads once `until` has passed (see `previous`). `work` is the default, resting mode every mood without a manual choice reads as; every mode but `work` blocks the launches enforce.md lists (except launching into itself) until `until`, or forever if `until` is null. `neutral` stays a hidden recovery mode: it never appears in a picker and no fallback ever lands on it — only a deliberate manual write puts the pointer there.",
       "type": "string",
       "enum": [
         "neutral",
@@ -22,12 +22,19 @@
       ]
     },
     "until": {
-      "description": "ISO-8601 timestamp the mood lapses back to `neutral` at, or null for an open-ended session that only an explicit `stop`/`set` ends.",
+      "description": "ISO-8601 timestamp the mood lapses at, or null for an open-ended session that only an explicit `stop`/`set` ends. Past this timestamp the effective mode is `previous` (or `work`, the default, if `previous` is unset) — never `neutral`.",
       "type": [
         "string",
         "null"
       ],
       "format": "date-time"
+    },
+    "previous": {
+      "description": "The mode to fall back to once `until` passes, recorded at the moment a TIMED mode (one with `until` set) is entered: the effective mode of the pointer at that instant, or — if that pointer was itself a timed, unexpired mode — ITS `previous`, carried forward rather than nested. Cleared to null whenever an open-ended mode (no `until`) is entered. Absent/null on an expired timed mode falls back to `work`, never `neutral`.",
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "source": {
       "description": "Who last wrote this pointer. Absent/null means an existing store written before this field existed, or a write nothing bothered to attribute \u2014 treat that as `manual` for precedence purposes, since a pointer of unknown origin is safest treated as a deliberate choice rather than something a schedule may casually overwrite. Once a schedule can write this file alongside a keybind and a timer, the desk needs to say why it changed, not just what it changed to.",

@@ -1,7 +1,9 @@
 // CalendarPanel — calendar center. Three stacked regions (06-widgets.md
-// §6.5): today's timeline, an upcoming list tagged with the focus mode each
-// event implies, and a collapsed month grid. Opened from CalendarPill, same
-// PanelBus-driven single-window pattern as ProjectsDashboard/SysPanel.
+// §6.5): today's timeline, an upcoming list (the focus mode each
+// event implies is disabled — CalendarSource.impliedMode always returns
+// null, so the mode chip and Enter-to-adopt both stay dormant), and a
+// collapsed month grid. Opened from CalendarPill, same PanelBus-driven
+// single-window pattern as ProjectsDashboard/SysPanel.
 //
 // Adopting a mode from Upcoming shells out to the `focus` IPC target
 // (services/Focus.qml's `set(mode, minutes)`) rather than importing the
@@ -41,10 +43,9 @@ Scope {
     readonly property var upcomingEntries: CalendarSource.upcoming(PanelBus.calendarEntries, scope.todayIso, scope.nowTime, 5)
     readonly property var freeBlocks: CalendarSource.freeBlocks(scope.todayEntries, 6, 24)
 
-    // Per-calendar mode defaults, overridable per event via entry.mode.
-    // Empty until a feed (CalDAV, later) starts tagging its calendars —
-    // local entries fall through to the title-keyword guess in
-    // CalendarSource.impliedMode.
+    // Per-calendar mode defaults, part of the (disabled)
+    // CalendarSource.impliedMode contract — kept so a future re-enable needs
+    // no caller-side rewrite here.
     readonly property var calendarModeDefaults: ({})
 
     function moveCursor(days) {
@@ -166,8 +167,12 @@ Scope {
                         else if (key === "k" || event.key === Qt.Key_Up)
                             scope.upcomingIndex = Math.max(0, scope.upcomingIndex - 1);
                         else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            // impliedMode is disabled (undesigned
+                            // precedence against ModePrecedence.js) and always
+                            // returns null — Enter adopts nothing until it does.
                             const ev = scope.upcomingEntries[scope.upcomingIndex];
-                            if (ev) scope.adopt(CalendarSource.impliedMode(ev, scope.calendarModeDefaults));
+                            const mode = ev ? CalendarSource.impliedMode(ev, scope.calendarModeDefaults) : null;
+                            if (mode) scope.adopt(mode);
                         } else return;
                         event.accepted = true;
                     } else if (scope.focusRegion === "month") {
@@ -306,7 +311,12 @@ Scope {
                                         color: Theme.subtextAlt
                                         font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                                     }
+                                    // impliedMode is disabled and always
+                                    // returns null, so `row.mode` is always falsy today —
+                                    // hidden rather than deleted so the chip reappears
+                                    // the moment the mapping is redesigned and re-enabled.
                                     Rectangle {
+                                        visible: !!row.mode
                                         implicitWidth: modeLabel.implicitWidth + Theme.space.sm * 2
                                         implicitHeight: modeLabel.implicitHeight + Theme.space.xs
                                         radius: Theme.radiusSmall

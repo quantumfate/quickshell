@@ -86,27 +86,31 @@ test("ymOf reads year/month(0-based) out of an ISO date", () => {
     assert.deepEqual(ymOf("2026-03-15"), { year: 2026, month: 2 });
 });
 
-test("impliedMode prefers an explicit entry.mode over any keyword", () => {
+// the calendar -> mode mapping is disabled and undesigned.
+// impliedMode keeps its (entry, calendarDefaults) -> mode-id-or-null shape
+// but always answers null, "no opinion" — these tests pin that it can no
+// longer derive a mode from anything, not that the derivation is wrong.
+test("impliedMode is disabled: an explicit entry.mode is not enough to imply anything", () => {
     const entry = { title: "review the deck", mode: "work" };
-    assert.equal(impliedMode(entry), "work");
+    assert.equal(impliedMode(entry), null);
 });
 
-test("impliedMode falls back to a per-calendar default before guessing keywords", () => {
+test("impliedMode is disabled: a per-calendar default implies nothing", () => {
     const entry = { title: "standup", calendar: "work-cal" };
-    assert.equal(impliedMode(entry, { "work-cal": "work" }), "work");
+    assert.equal(impliedMode(entry, { "work-cal": "work" }), null);
 });
 
-test("impliedMode guesses from a title keyword ('dofus raid' -> gaming)", () => {
-    assert.equal(impliedMode({ title: "20:00 raid" }), "gaming");
-    assert.equal(impliedMode({ title: "exam prep" }), "study");
+test("impliedMode is disabled: a title keyword implies nothing ('dofus raid' stays null)", () => {
+    assert.equal(impliedMode({ title: "20:00 raid" }), null);
+    assert.equal(impliedMode({ title: "exam prep" }), null);
 });
 
-test("impliedMode defaults to neutral with no signal at all", () => {
-    assert.equal(impliedMode({ title: "team sync" }), "neutral");
+test("impliedMode is disabled: no signal at all is still null", () => {
+    assert.equal(impliedMode({ title: "team sync" }), null);
 });
 
 test("impliedMode tolerates a missing/undefined entry", () => {
-    assert.equal(impliedMode(undefined), "neutral");
+    assert.equal(impliedMode(undefined), null);
 });
 
 test("upcoming returns entries at or after now, soonest first, capped at the limit", () => {

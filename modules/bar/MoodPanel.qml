@@ -53,7 +53,7 @@ Scope {
     function closePanel() { PanelBus.close("mood"); }
 
     function untilLabel() {
-        if (scope.mood === "neutral" || !Focus.until) return "";
+        if (!Focus.until) return "";
         const ms = Date.parse(Focus.until) - Date.now();
         if (ms <= 0) return "";
         const m = Math.ceil(ms / 60000);
@@ -234,14 +234,18 @@ Scope {
 
                             Text {
                                 Layout.fillWidth: true
-                                text: (scope.mood === "neutral" ? "neutral" : Focus.current.name) + scope.untilLabel()
-                                color: scope.mood === "neutral" ? Theme.subtext : Theme.accent
+                                // `work` is the default/resting mode: styled
+                                // like the old neutral resting state, name and all —
+                                // `neutral` itself is a hidden recovery mode, not this
+                                // panel's idea of "at rest".
+                                text: Focus.current.name + scope.untilLabel()
+                                color: scope.mood === "work" ? Theme.subtext : Theme.accent
                                 font { family: Theme.fontFamily; pixelSize: Theme.fs.lg; weight: Font.Bold }
                                 elide: Text.ElideRight
                             }
                             Rectangle {
                                 id: stopBtn
-                                visible: scope.mood !== "neutral"
+                                visible: scope.mood !== "work"
                                 implicitWidth: stopLabel.implicitWidth + Theme.space.sm * 2
                                 implicitHeight: stopLabel.implicitHeight + Theme.space.sm
                                 radius: Theme.radiusSmall
@@ -503,9 +507,10 @@ Scope {
 
                         Text {
                             Layout.fillWidth: true
-                            text: scope.mood === "neutral"
-                                ? "at rest - the scene secretary reads the neutral pointer"
-                                : "pointer: " + scope.mood + " \u00b7 " + scope.provenance
+                            // `work` reads as any other pointer now \u2014 it is
+                            // the resting default, not a special unpointed state the
+                            // way `neutral` used to be.
+                            text: "pointer: " + scope.mood + " \u00b7 " + scope.provenance
                             color: Theme.subtext
                             font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
@@ -579,7 +584,7 @@ Scope {
 
                         Text {
                             Layout.fillWidth: true
-                            text: "edits apply to " + (scope.mood === "neutral" ? "the resting mood" : "\u201c" + Focus.current.name + "\u201d") + " \u00b7 persisted to mood-policy.json"
+                            text: "edits apply to " + (scope.mood === "work" ? "the resting mood" : "\u201c" + Focus.current.name + "\u201d") + " \u00b7 persisted to mood-policy.json"
                             color: Theme.subtextAlt
                             font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere

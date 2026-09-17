@@ -1,6 +1,7 @@
 {
-  "mode": "neutral",
+  "mode": "work",
   "until": null,
+  "previous": null,
   "source": null,
   "set_at": null
 }

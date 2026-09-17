@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { decide } = loadLibrary("services/ModePrecedence.js");
+const { decide, effectiveMode, nextPrevious } = loadLibrary("services/ModePrecedence.js");
 
 const state = over => ({ mode: "neutral", until: null, source: null, set_at: null, ...over });
 
@@ -92,4 +92,51 @@ test("an allowed write reports nothing skipped", () => {
     const current = state({ mode: "neutral", source: "schedule" });
     const proposal = state({ mode: "chores", source: "schedule" });
     assert.equal(decide(current, proposal, new Date()).skipped, null);
+});
+
+// a lapsed timed mode falls back to `previous` (or `work`), never
+// `neutral` — `effectiveMode`/`nextPrevious` are the pure functions Focus.qml
+// and Hyprfocus.qml both read for this so the pointer, the bar pill and the
+// mood panel can never disagree about what mode is actually on.
+test("effectiveMode reads the raw mode while until is unset", () => {
+    assert.equal(effectiveMode({ mode: "study", until: null }), "study");
+});
+
+test("effectiveMode reads the raw mode while until is still ahead", () => {
+    const until = new Date(Date.now() + 60000).toISOString();
+    assert.equal(effectiveMode({ mode: "study", until, previous: "gaming" }), "study");
+});
+
+test("effectiveMode falls back to `previous` once until has passed", () => {
+    const until = new Date(Date.now() - 1000).toISOString();
+    assert.equal(effectiveMode({ mode: "study", until, previous: "gaming" }), "gaming");
+});
+
+test("effectiveMode falls back to `work` once until has passed with no `previous`", () => {
+    const until = new Date(Date.now() - 1000).toISOString();
+    assert.equal(effectiveMode({ mode: "study", until, previous: null }), "work");
+});
+
+test("effectiveMode never reads as `neutral` from a lapsed timed mode", () => {
+    const until = new Date(Date.now() - 1000).toISOString();
+    assert.notEqual(effectiveMode({ mode: "study", until }), "neutral");
+});
+
+test("nextPrevious records the current effective mode for an untimed current pointer", () => {
+    assert.equal(nextPrevious({ mode: "work", until: null }), "work");
+});
+
+test("nextPrevious records the current effective mode for an expired timed current pointer", () => {
+    const until = new Date(Date.now() - 1000).toISOString();
+    assert.equal(nextPrevious({ mode: "study", until, previous: "gaming" }), "gaming");
+});
+
+test("nextPrevious carries forward `previous` rather than nesting when current is itself timed and unexpired", () => {
+    const until = new Date(Date.now() + 60000).toISOString();
+    assert.equal(nextPrevious({ mode: "study", until, previous: "work" }), "work");
+});
+
+test("nextPrevious carries forward a null `previous` from a timed-unexpired current, rather than the current mode", () => {
+    const until = new Date(Date.now() + 60000).toISOString();
+    assert.equal(nextPrevious({ mode: "study", until, previous: null }), null);
 });

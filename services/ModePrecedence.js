@@ -25,6 +25,11 @@
  *  not just on who wrote it. */
 var RANK = { schedule: 2, timer: 1 };
 
+/** The default/resting mode: what a timed mode falls back to once it lapses
+ *  and there is no `previous` to fall back to (`neutral` is no longer
+ *  the fallback; it is now a hidden recovery mode only reachable by hand). */
+var DEFAULT_MODE = "work";
+
 function normaliseSource(source) {
     return source == null ? "manual" : source;
 }
@@ -56,6 +61,37 @@ function isManualHold(current, now) {
  * did not apply the proposal, so a schedule boundary that loses to a manual
  * hold can be recorded rather than silently dropped.
  */
+/**
+ * The effective mode `pointer` (`{ mode, until, previous }`) reads as right
+ * now: `mode` itself while `until` is unset or still ahead, else `previous`
+ * (falling back to `DEFAULT_MODE` when there is none) — never `neutral`,
+ * which only a manual write can put on the pointer.
+ */
+function effectiveMode(pointer, now) {
+    now = now || new Date();
+    pointer = pointer || {};
+    var mode = pointer.mode || DEFAULT_MODE;
+    var until = pointer.until;
+    if (until == null || new Date(until).getTime() > now.getTime()) return mode;
+    return pointer.previous || DEFAULT_MODE;
+}
+
+/**
+ * The `previous` a write entering a TIMED mode (one with `until` set) should
+ * record, given the pointer as it stands right now. Carries forward the
+ * current pointer's own `previous` unchanged when the current mode is itself
+ * timed and unexpired, rather than nesting a chain of timed modes; otherwise
+ * records the current effective mode, exactly as `effectiveMode` reads it.
+ */
+function nextPrevious(current, now) {
+    now = now || new Date();
+    current = current || {};
+    var until = current.until;
+    var currentlyTimedUnexpired = until != null && new Date(until).getTime() > now.getTime();
+    if (currentlyTimedUnexpired) return current.previous ?? null;
+    return effectiveMode(current, now);
+}
+
 function decide(current, proposal, now) {
     now = now || new Date();
     current = current || {};

@@ -18,8 +18,10 @@ pragma Singleton
 // read through `Hyprfocus`) — the one store both the compositor and the shell
 // read. `accentRole` below mirrors that rather than keeping a second copy.
 //
-// `mode` names one of the declared moods (see `policyDefaults`); `neutral` is the resting
-// state every desk starts in. Switching moods is a single `set()` — exactly like
+// `mode` names one of the declared moods (see `policyDefaults`); `work` is the
+// default/resting state every desk starts in and what a lapsed timed mode
+// falls back to. `neutral` stays a hidden recovery mode, reached
+// only by an explicit manual write, never a fallback. Switching moods is a single `set()` — exactly like
 // Theme's palette switch — and everything that reads `Focus.mode` /
 // `Focus.current` reacts on its own: Theme.qml binds its `accent` and
 // `surfaceAlpha` to `Focus.accentRole`/`Focus.surfaceAlpha`, which are plain
@@ -47,6 +49,7 @@ import Quickshell.Io
 import QtQuick
 import "."   // Theme, Hyprfocus
 import "ModeAnnounce.js" as ModeAnnounce
+import "ModePrecedence.js" as ModePrecedence
 
 Singleton {
     id: root
@@ -60,11 +63,22 @@ Singleton {
     Store {
         id: stateStore
         name: "focus"
-        defaults: ({ mode: "neutral", until: null })
+        defaults: ({ mode: "work", until: null, previous: null })
     }
 
-    readonly property string mode: stateStore.get("mode") ?? "neutral"
+    // The raw pointer as written, and `previous` — the mode a timed write
+    // carried forward, read back for `mode`'s fallback below.
+    readonly property string rawMode: stateStore.get("mode") ?? "work"
     readonly property var until: stateStore.get("until") ?? null
+    readonly property var previous: stateStore.get("previous") ?? null
+
+    // The mode as it reads RIGHT NOW: `rawMode` while `until` is unset or
+    // still ahead, else `previous` (or `work`, the default/resting mode, if
+    // there is none) — never `neutral`, the hidden recovery mode, unless a
+    // manual write put it there directly. Every consumer below reads this,
+    // not `rawMode`, so a lapsed timed mode falls back on its own.
+    readonly property string mode: ModePrecedence.effectiveMode(
+        { mode: root.rawMode, until: root.until, previous: root.previous })
 
     // The definitional per-mood policy, in the store's snake_case shape. This
     // literal IS assets/mood-policy.default.json (the lockstep test pins them
@@ -157,11 +171,10 @@ Singleton {
         .reduce((acc, id) => acc.concat((root.policyData[id].launches ? root.policyData[id].launches.block : null) || []), [])
         .filter((v, i, a) => a.indexOf(v) === i)
 
-    // Live even past `until`: a stale non-neutral mood that nothing has
-    // cleared yet should stop blocking (and read as neutral) on its own,
-    // rather than wait for the next explicit `stop()`.
-    readonly property bool active: root.mode !== "neutral" &&
-        (root.until === null || Date.now() < Date.parse(root.until))
+    // `mode` already resolves a lapsed timed mode to its fallback, so this is
+    // just "is the effective mode the hidden recovery one" — neutral is the
+    // only mode that blocks nothing.
+    readonly property bool active: root.mode !== "neutral"
 
     // Refuse-to-start at dispatch time. Reads the ACTIVE mood's launch policy
     // from the store: `soft` warns and lets through, `firm`/`hard` refuse.
@@ -217,18 +230,25 @@ Singleton {
     // through ModePrecedence.decide before it may land.
     function set(mode, minutes) {
         if (!root.policyData[mode]) return;
+        const now = new Date();
         const until = (minutes && minutes > 0)
-            ? new Date(Date.now() + minutes * 60000).toISOString()
+            ? new Date(now.getTime() + minutes * 60000).toISOString()
             : null;
-        stateStore.set({ mode: mode, until: until, source: "manual", set_at: new Date().toISOString() });
+        // Open-ended entry clears `previous`; a timed entry records what to
+        // fall back to once it lapses (carried forward, not nested — see
+        // ModePrecedence.nextPrevious).
+        const previous = until === null ? null
+            : ModePrecedence.nextPrevious({ mode: root.rawMode, until: root.until, previous: root.previous }, now);
+        stateStore.set({ mode: mode, until: until, previous: previous, source: "manual", set_at: now.toISOString() });
     }
 
-    // The explicit override: back to the resting state. Also what a lapsed
-    // timed mood settles to on its own via `active`. Provenance too — a stop
-    // is a deliberate write like any other.
+    // The explicit override: back to the resting state (`work` —
+    // `neutral` stays a hidden recovery mode, never the default). Also what a
+    // lapsed timed mood settles to on its own via `mode`'s own fallback.
+    // Provenance too — a stop is a deliberate write like any other.
     function stop() {
         stateStore.set({
-            mode: "neutral", until: null, source: "manual", set_at: new Date().toISOString()
+            mode: "work", until: null, previous: null, source: "manual", set_at: new Date().toISOString()
         });
     }
 

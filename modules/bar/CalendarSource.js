@@ -58,34 +58,34 @@ function ymOf(iso) {
 }
 
 // Keyword -> implied focus mode, checked against a lowercased title. Order
-// matters: first match wins, so put the more specific words first. This is
-// the fallback tier — an explicit `entry.mode` or a per-calendar default
-// (see impliedMode) always wins over a keyword guess.
+// matters: first match wins, so put the more specific words first. Kept for
+// the day `impliedMode` is redesigned and re-enabled (see below); dead code
+// today since `impliedMode` never reaches it.
 const MODE_KEYWORDS = [
     ["study", ["study", "studying", "exam", "revision", "flashcards"]],
     ["work", ["deep work", "write", "writing", "code", "coding", "design", "focus block", "review", "planning"]],
     ["gaming", ["game", "gaming", "raid", "dofus"]]
 ];
 
-// entry -> one of the declared mode ids (neutral, work, study, gaming).
-// Precedence, most to least specific:
-//   1. entry.mode          — explicit, always wins (the per-event override)
-//   2. calendarDefaults[entry.calendar] — a per-calendar default, for a feed
-//      (eventually CalDAV) whose calendar name already implies a mode
-//   3. a keyword match on the title (MODE_KEYWORDS)
-//   4. "neutral"
-// A calendar feed can fill `entries` with a `mode` field directly once one
-// exists; today's local JSON just relies on tiers 3/4.
+/**
+ * The calendar-driven mode mapping contract: entry -> a declared mode id, or
+ * null for "no opinion". Were it enabled, the intended precedence (most to
+ * least specific) was:
+ *   1. entry.mode          — explicit, always wins (the per-event override)
+ *   2. calendarDefaults[entry.calendar] — a per-calendar default, for a feed
+ *      (eventually CalDAV) whose calendar name already implies a mode
+ *   3. a keyword match on the title (MODE_KEYWORDS)
+ *   4. null — no signal, caller keeps whatever mode is already active
+ *
+ * DISABLED: this mechanism is undesigned — a calendar entry writing
+ * the focus pointer needs its own precedence story (ModePrecedence.js) that
+ * nobody has specified yet — so it always returns null, "no opinion", and
+ * every caller must treat that as "derive nothing, do not touch focus.json".
+ * The interface shape (entry, calendarDefaults) -> mode-id-or-null is kept so
+ * a future design slots back in without a caller-side rewrite.
+ */
 function impliedMode(entry, calendarDefaults) {
-    if (!entry) return "neutral";
-    if (entry.mode) return entry.mode;
-    const byCalendar = (calendarDefaults || {})[entry.calendar];
-    if (byCalendar) return byCalendar;
-    const title = (entry.title || "").toLowerCase();
-    for (const [mode, keywords] of MODE_KEYWORDS) {
-        if (keywords.some(k => title.includes(k))) return mode;
-    }
-    return "neutral";
+    return null;
 }
 
 // entries -> the next `limit` (default 5) at or after `nowIso`/`nowTime`

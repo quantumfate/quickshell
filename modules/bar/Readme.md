@@ -31,13 +31,15 @@ One top bar per monitor (except the excluded portrait panel). Three isles:
 - **centre** — what's playing / what to adjust: media, brightness, volume.
 - **right** — when is it / what's the mood: clock, mode pill, calendar entry.
   The mode pill (`ModePill.qml`) shows the active mode's declared name
-  (`hyprfocus.json`'s `modes.<id>.name`; "Neutral" at rest) tinted by
-  `Theme.accent`, which already tracks the mode's declared
-  `presentation.accent_role`. Clicking it opens `MoodPanel.qml`, whose mode
-  picker offers only the declaration's non-`hidden` modes
-  (`Hyprfocus.ids()`) — neutral stays reachable solely as the hypr modes
-  submap's recovery mode, never as a picker choice, so the resting pill can
-  say "Neutral" honestly without inviting anyone back to it.
+  (`hyprfocus.json`'s `modes.<id>.name`; "Work" at rest — `work` is the
+  default/resting mode) tinted by `Theme.accent`, which already
+  tracks the mode's declared `presentation.accent_role`. Clicking it opens
+  `MoodPanel.qml`, whose mode picker offers only the declaration's
+  non-`hidden` modes (`Hyprfocus.ids()`) — `neutral` stays reachable solely
+  as the hypr modes submap's recovery mode, never as a picker choice and
+  never a fallback a lapsed timed mode settles to (see `previous` in
+  `schemas/focus.schema.json`), so the resting pill can say "Work" honestly
+  without inviting anyone back to `neutral`.
 
 Autohide follows `Hyprfocus.current.presentation.bar_autohide` — the
 declaration's own per-mode flag, not the retired `deep`/`game` mode ids. A

@@ -54,7 +54,9 @@ Scope {
             summary: (scope.sceneLast.mode ?? "")
                 ? (scope.sceneLast.mode + " applied" + ((scope.sceneLast.vetoes ?? []).length ? " · " + (scope.sceneLast.vetoes ?? []).length + " vetoes honoured" : ""))
                 : "never on this machine",
-            restart: [",scene-apply.sh", scope.sceneLast.mode || "neutral"],
+            // "work": the default/resting mode — not "neutral",
+            // which is now a hidden recovery mode only entered by hand.
+            restart: [",scene-apply.sh", scope.sceneLast.mode || "work"],
         },
     ]
     // scene-policy's own reader surface (LEO-241): watched like

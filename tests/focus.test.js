@@ -50,9 +50,10 @@ test("the shipped defaults satisfy the schema", () => {
     assert.deepEqual(validate(defaults), []);
 });
 
-test("defaults start in the neutral state", () => {
-    assert.equal(defaults.mode, "neutral");
+test("defaults start in the work state (work is the default/resting mode)", () => {
+    assert.equal(defaults.mode, "work");
     assert.equal(defaults.until, null);
+    assert.equal(defaults.previous, null);
 });
 
 test("the schema rejects an unknown mode", () => {
