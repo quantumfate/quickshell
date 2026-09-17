@@ -10,10 +10,11 @@ import { loadLibrary } from "./qml.js";
 
 const {
     catalogOrder, modeOrder, iconFor, orderBy, canonical, barWorkspaces,
-    selector, buildRows, filterRows, roleForScreen
+    selector, buildRows, filterRows, roleForScreen, activeName
 } = loadLibrary("modules/bar/WorkspaceSwitch.js", [
     "catalogOrder", "modeOrder", "iconFor", "orderBy", "canonical",
-    "barWorkspaces", "selector", "buildRows", "filterRows", "roleForScreen"
+    "barWorkspaces", "selector", "buildRows", "filterRows", "roleForScreen",
+    "activeName"
 ]);
 
 // A small fixture declaration: catalog order code, creative, media; "work"
@@ -146,4 +147,15 @@ test("roleForScreen() calls an unrecognised screen secondary, an empty store pri
     assert.equal(roleForScreen({ "DP-1": {} }, "HDMI-A-1"), "secondary");
     assert.equal(roleForScreen({}, "eDP-1"), "primary");
     assert.equal(roleForScreen(undefined, "eDP-1"), "primary");
+});
+
+test("activeName() reads the focused row's name, which is the scene name", () => {
+    const rows = [{ name: "code", active: false }, { name: "creative", active: true }];
+    assert.equal(activeName(rows), "creative");
+});
+
+test("activeName() is empty when nothing on this monitor is focused yet", () => {
+    assert.equal(activeName([{ name: "code", active: false }]), "");
+    assert.equal(activeName([]), "");
+    assert.equal(activeName(undefined), "");
 });

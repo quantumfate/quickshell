@@ -1,7 +1,8 @@
 // Workspaces bar module: a surface pill of per-workspace buttons for this
 // monitor, in the active hyprfocus mode's declared order, each shown as a
-// Nerd Font icon (see WorkspaceSwitch.js).
-//   active   → mauve, filled pill
+// Nerd Font icon (see WorkspaceSwitch.js), plus the focused scene's name
+// (LEO-371) so "which scene am I in" reads without decoding an icon.
+//   active   → accent (the active mode's colour), pill background + underline
 //   occupied → lavender (has windows)
 //   idle     → overlay0
 //   urgent   → red
@@ -48,6 +49,11 @@ Rectangle {
         return order.map(w => byId.get(w.id));
     }
 
+    // The focused row's scene name (pure logic, tested in
+    // tests/workspaceswitch.test.js): workspaces are named by scene, so this
+    // is just picking the active one out of `_sorted`.
+    readonly property string _activeName: WorkspaceSwitch.activeName(root._sorted ?? [])
+
     color: "transparent"
     implicitWidth: row.implicitWidth
     implicitHeight: 22
@@ -60,22 +66,34 @@ Rectangle {
         Repeater {
             model: root._sorted
 
-            // Icon only — the active workspace is signalled purely by icon colour
-            // (mauve), never a background.
-            delegate: Text {
+            // The active workspace gets an accent pill (background + a thin
+            // underline) behind its icon, not just a colour change — the
+            // accent tracks the active mode's role (Theme.accent), so the
+            // highlight itself says which mode this scene belongs to.
+            delegate: Rectangle {
                 id: wsDelegate
                 required property var modelData
                 readonly property bool active: modelData.active
                 readonly property bool occupied: (modelData.toplevels?.values?.length ?? 0) > 0
                 readonly property bool urgent: modelData.urgent ?? false
 
-                text: WorkspaceSwitch.iconFor(Hyprfocus.data, modelData.name, modelData.id)
-                color: urgent ? Theme.c.red
-                     : active ? Theme.c.mauve
-                     : ws.hovered ? Theme.c.text
-                     : occupied ? Theme.c.lavender
-                     : Theme.c.overlay0
-                font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
+                implicitWidth: icon.implicitWidth + (active ? Theme.space.sm * 2 : 0)
+                implicitHeight: icon.implicitHeight + (active ? Theme.space.xs * 2 : 0)
+                radius: Theme.radiusPill
+                color: active ? Theme.withAlpha(Theme.accent, Theme.surfaceAlpha.island) : "transparent"
+                border { width: active ? 1 : 0; color: Theme.accent }
+
+                Text {
+                    id: icon
+                    anchors.centerIn: parent
+                    text: WorkspaceSwitch.iconFor(Hyprfocus.data, wsDelegate.modelData.name, wsDelegate.modelData.id)
+                    color: wsDelegate.urgent ? Theme.c.red
+                         : wsDelegate.active ? Theme.accent
+                         : ws.hovered ? Theme.c.text
+                         : wsDelegate.occupied ? Theme.c.lavender
+                         : Theme.c.overlay0
+                    font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
+                }
 
                 HoverHandler { id: ws }
                 // Dispatched directly, not via modelData.activate(): a named
@@ -85,6 +103,18 @@ Rectangle {
                     onTapped: Hyprland.dispatch('hl.dsp.workspace("' + WorkspaceSwitch.selector(wsDelegate.modelData) + '")')
                 }
             }
+        }
+
+        // The focused scene's name, next to the row (LEO-371). Elided on a
+        // laptop-width bar rather than pushing the rest of the island off
+        // screen.
+        Text {
+            visible: root._activeName !== ""
+            text: root._activeName
+            color: Theme.accent
+            elide: Text.ElideRight
+            Layout.maximumWidth: Theme.space.xl * 5
+            font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
         }
     }
 }

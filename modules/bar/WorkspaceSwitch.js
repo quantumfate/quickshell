@@ -130,6 +130,21 @@ function filterRows(rows, query) {
 }
 
 /**
+ * The active row's scene name for one monitor's bar (LEO-371): workspaces are
+ * named by scene already, so the focused row's `name` IS the scene name —
+ * this just picks it out rather than making a bar delegate re-derive it.
+ *
+ * rows: [{ name, active }] — a monitor's ordered rows (barWorkspaces() +
+ * Hyprland's per-workspace `active` flag merged in by the caller).
+ * -> the focused row's name, or "" when nothing on this monitor is focused
+ *    (a fresh monitor before Hyprland reports focus, e.g.).
+ */
+function activeName(rows) {
+    const w = (rows || []).find(r => r.active);
+    return (w && w.name) || "";
+}
+
+/**
  * Which monitor role (`"primary"`/`"secondary"`) a screen plays, from the
  * `geometry` store's `monitors` map (keyed by real output name, published by
  * hypr's conf/host.lua — see services/BarGaps.js).
