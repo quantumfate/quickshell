@@ -84,6 +84,71 @@ function snapAfterLeave() {
 }
 
 /**
+ * Session state: { submap, shown, dwellArmed }. `submap` is the last raw
+ * event's data ("" or "reset" at root); `shown` is whether the overlay is
+ * mapped; `dwellArmed` is whether a dwell timer is pending before it opens.
+ * The initial session, before any submap event has landed.
+ */
+function initialSession() {
+    return { submap: "", shown: false, dwellArmed: false };
+}
+
+/**
+ * The overlay's timing/decision logic (LEO-300), as a pure reducer: given the
+ * current session and one event, the next session. QML drives a Timer and an
+ * IpcHandler off this so the state machine itself — not just its numbers — is
+ * unit-testable from node, independent of a running compositor.
+ *
+ * Events:
+ *   { type: "submap", data }  — a Hyprland `submap` raw event landed.
+ *   { type: "dismiss" }       — the `whichkey dismiss`/`hide` IPC landed.
+ *   { type: "dwellFired" }    — the armed dwell timer elapsed.
+ *
+ * Leaving to root ("" or "reset") or an explicit dismiss both close with NO
+ * dwell — the dwell only ever gates the overlay *appearing*, never leaving.
+ * Moving between non-root submaps while already shown never re-arms the
+ * dwell — it stays open and just follows. `dwellFired` re-checks `submap`
+ * before opening, so a dwell that was left running past a leave (defensive:
+ * QML also stops the Timer synchronously on every leave/dismiss) can never
+ * paint a node the user already left.
+ *
+ * @param {{submap: string, shown: boolean, dwellArmed: boolean}} session
+ * @param {{type: string, data?: string}} event
+ * @returns {{submap: string, shown: boolean, dwellArmed: boolean}}
+ */
+function reduceSession(session, event) {
+    if (event.type === "submap") {
+        const submap = event.data || "";
+        const inSubmap = submap !== "" && submap !== "reset";
+        if (!inSubmap) {
+            // Back at root: dismiss immediately, whether or not a dwell for
+            // the submap just left was still pending.
+            return { submap, shown: false, dwellArmed: false };
+        }
+        if (session.shown) {
+            // Already open: follow to the new submap, no re-arm.
+            return { submap, shown: true, dwellArmed: false };
+        }
+        // Not yet open: arm the dwell for this entry.
+        return { submap, shown: false, dwellArmed: true };
+    }
+    if (event.type === "dismiss") {
+        // Explicit dismiss wins immediately, regardless of a pending dwell.
+        return { submap: session.submap, shown: false, dwellArmed: false };
+    }
+    if (event.type === "dwellFired") {
+        const inSubmap = session.submap !== "" && session.submap !== "reset";
+        if (!inSubmap) {
+            // Raced a leave that didn't stop the timer: never open on a node
+            // already left.
+            return { ...session, dwellArmed: false };
+        }
+        return { ...session, shown: true, dwellArmed: false };
+    }
+    return session;
+}
+
+/**
  * The human-readable key label (LEO-306): the same table the cheat sheet's
  * model uses (a ".pragma library" cannot import another), so both surfaces
  * spell a chord the same way. A glyph table for xkb words plus the named
