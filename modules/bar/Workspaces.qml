@@ -1,5 +1,6 @@
 // Workspaces bar module: a surface pill of per-workspace buttons for this
-// monitor, in ascending id order, each shown as a Nerd Font icon.
+// monitor, in the active hyprfocus mode's declared order, each shown as a
+// Nerd Font icon (see WorkspaceSwitch.js).
 //   active   → mauve, filled pill
 //   occupied → lavender (has windows)
 //   idle     → overlay0
@@ -8,7 +9,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Hyprland
-import "../../services"   // Theme
+import "../../services"   // Theme, Hyprfocus
 import "WorkspaceSwitch.js" as WorkspaceSwitch
 
 Rectangle {
@@ -18,26 +19,18 @@ Rectangle {
     required property var screen
     readonly property var _monitor: Hyprland.monitorFor(screen)
 
-    // Per-workspace icon by name (from Hyprland default_name), else by id, else a
-    // generic dot. Add a workspace = add a line here.
-    readonly property var _iconByName: ({
-        "code": "",    //  terminal
-        "creative": "",   //  book
-        "proton": "",  //  envelope
-        "media": "",   //  music
-        "gaming": "",   //  gamepad
-        "logs": "",   //
-        "misc": "",   //
-    })
-    function _icon(wsName, wsId) {
-        return root._iconByName[wsName] ?? (wsId > 0 && wsId < 10 ? String(wsId) : ""); //  dot
-    }
+    // LEO-340's published per-output gaps double as the one role signal the
+    // shell has (see WorkspaceSwitch.roleForScreen's header): which monitor
+    // is "primary" per the active hyprfocus mode's scene placement.
+    Store { id: _geometry; name: "geometry" }
+    readonly property string _role: WorkspaceSwitch.roleForScreen(_geometry.data.monitors, root.screen.name)
 
-    // This monitor's real (non-special) workspaces, in canonical order — the
-    // named ones (declared order, id-backed twins merged) then undeclared
-    // ids. Hyprland's list is creation order, and its named workspaces carry
-    // negative auto ids, so the bar must not sort by id. `_tick` re-evaluates
-    // the list on every compositor event.
+    // Icons and order come from the hyprfocus declaration (LEO-343): no
+    // hardcoded workspace name list or icon map here. This monitor's rows are
+    // the active mode's admitted scenes for `_role`, in declared order, plus
+    // any other real workspace that still holds windows. Hyprland's list is
+    // creation order and named workspaces carry negative auto ids, so the bar
+    // must not sort by id. `_tick` re-evaluates on every compositor event.
     property int _tick: 0
     Connections { target: Hyprland; function onRawEvent(e) { root._tick++; } }
     readonly property var _sorted: {
@@ -45,7 +38,14 @@ Rectangle {
         const all = (Hyprland.workspaces?.values ?? [])
             .filter(w => w.monitor === root._monitor)
             .filter(w => w.id > 0 || !w.name.startsWith("special:"));
-        return WorkspaceSwitch.canonical(all);
+        const plain = all.map(w => ({
+            id: w.id,
+            name: w.name,
+            occupied: (w.toplevels?.values?.length ?? 0) > 0
+        }));
+        const order = WorkspaceSwitch.barWorkspaces(Hyprfocus.data, Hyprfocus.mode, root._role, plain);
+        const byId = new Map(all.map(w => [w.id, w]));
+        return order.map(w => byId.get(w.id));
     }
 
     color: "transparent"
@@ -69,7 +69,7 @@ Rectangle {
                 readonly property bool occupied: (modelData.toplevels?.values?.length ?? 0) > 0
                 readonly property bool urgent: modelData.urgent ?? false
 
-                text: root._icon(modelData.name, modelData.id)
+                text: WorkspaceSwitch.iconFor(Hyprfocus.data, modelData.name, modelData.id)
                 color: urgent ? Theme.c.red
                      : active ? Theme.c.mauve
                      : ws.hovered ? Theme.c.text
