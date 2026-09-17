@@ -35,6 +35,9 @@ Scope {
     property string submap: ""          // from rawEvent; "" or "reset" at root
     readonly property bool inSubmap: scope.submap !== "" && scope.submap !== "reset"
     readonly property var tree: store.data
+    // The pure LEO-300 session reducer (WhichKey.js) is the single source of
+    // truth for shown/dwell timing; this mirrors its last decision.
+    property bool dwellArmed: false
     readonly property var node: WK.nodeFor(tree, submap)
     property var rows: WK.rowsFor(node)
     readonly property var path: WK.pathFromRoot(tree, submap)
@@ -66,7 +69,7 @@ Scope {
         id: dwell
         interval: 350
         repeat: false
-        onTriggered: scope.open()
+        onTriggered: scope._apply(WK.reduceSession(scope._session(), { type: "dwellFired" }))
     }
 
     Store {
@@ -77,42 +80,52 @@ Scope {
 
     IpcHandler {
         target: "whichkey"
-        function toggle(): void { scope.shown ? scope.close() : scope.open(); }
+        function toggle(): void { scope.shown ? scope._dismiss() : scope.open(); }
         function show(): void { scope.open(); }
-        function hide(): void { scope.close(); }
-        function dismiss(): void { scope.close(); }
+        function hide(): void { scope._dismiss(); }
+        function dismiss(): void { scope._dismiss(); }
     }
 
     // Recursive submap follow: arm a dwell when the user enters any submap from
     // root; keep the menu open while moving between submaps; dismiss the moment
-    // we return to root. A config reload closes too, so a stale overlay can
-    // never be orphaned on screen.
+    // we return to root (no dwell on the leave path — WhichKey.js reduceSession
+    // is the single source of truth for that decision). A config reload closes
+    // too, so a stale overlay can never be orphaned on screen.
     Connections {
         target: Hyprland
         function onRawEvent(event) {
-            if (event.name === "submap") scope.submap = event.data;
-            else if (event.name === "configreloaded") scope.close();
+            if (event.name === "submap") scope._apply(WK.reduceSession(scope._session(), { type: "submap", data: event.data }));
+            else if (event.name === "configreloaded") scope._dismiss();
         }
     }
-    onInSubmapChanged: scope._syncSession()
 
-    function _syncSession() {
-        if (scope.inSubmap) {
-            // Entering or moving within the submap stack: if already shown,
-            // just stay; otherwise arm the dwell for a fresh entry.
-            if (!scope.shown && !dwell.running) dwell.start();
-        } else {
-            // Back at root: stop any pending dwell and dismiss immediately.
-            dwell.stop();
-            scope.close();
-        }
+    // The reducer's view of the current session.
+    function _session() {
+        return { submap: scope.submap, shown: scope.shown, dwellArmed: scope.dwellArmed };
+    }
+
+    // Apply a reducer decision: sync the dwell Timer to it, then open/close.
+    function _apply(next) {
+        scope.submap = next.submap;
+        scope.dwellArmed = next.dwellArmed;
+        if (next.dwellArmed) dwell.start();
+        else dwell.stop();
+        if (next.shown) scope.open();
+        else scope.close();
+    }
+
+    // The explicit-dismiss path (IPC dismiss/hide, config reload): closes
+    // immediately and, critically, stops a dwell that was still pending —
+    // otherwise it would fire later and reopen on a node already left.
+    function _dismiss() {
+        scope._apply(WK.reduceSession(scope._session(), { type: "dismiss" }));
     }
     // The tree document is also runtime truth: a mode that withholds the
     // submap the menu is on removes its node from the dump, and the menu must
     // go with it — a mode change does not fire a submap event by itself, so
     // this is what keeps the overlay from surviving into a mode where its
     // submap no longer exists (LEO-303).
-    onNodeChanged: if (!scope.node) scope.close()
+    onNodeChanged: if (!scope.node) scope._dismiss()
 
     PanelWindow {
         visible: scope.shown

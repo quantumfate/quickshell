@@ -9,7 +9,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { nodeFor, pathFromRoot, rowsFor, fadeFor, snapAfterLeave } = loadLibrary("modules/whichkey/WhichKey.js");
+const { nodeFor, pathFromRoot, rowsFor, fadeFor, snapAfterLeave, initialSession, reduceSession } =
+    loadLibrary("modules/whichkey/WhichKey.js");
+
+/** Folds an event sequence through reduceSession from a fresh session. */
+function run(events) {
+    return events.reduce(reduceSession, initialSession());
+}
 
 // Shape mirroring what whichkey.lua dumps (items are registry order).
 const TREE = {
@@ -103,4 +109,73 @@ test("the lingering tail of a dismissal is zero, by contract", () => {
     // in this path would both swallow input and break on the dead timer
     // runtime (LEO-302). The model pins the answer so the contract survives.
     assert.equal(snapAfterLeave(), 0);
+});
+
+// reduceSession: the LEO-300 timing/decision state machine, exercised as event
+// sequences rather than isolated calls, since the bug was about the CHAIN of
+// events (enter -> dwell -> leaf exit), not any single transition.
+
+test("entering a submap arms the dwell instead of opening immediately", () => {
+    const s = run([{ type: "submap", data: "which" }]);
+    assert.deepEqual(s, { submap: "which", shown: false, dwellArmed: true });
+});
+
+test("the dwell firing is what opens the overlay", () => {
+    const s = run([{ type: "submap", data: "which" }, { type: "dwellFired" }]);
+    assert.deepEqual(s, { submap: "which", shown: true, dwellArmed: false });
+});
+
+test("moving to a child submap while already shown follows without re-arming", () => {
+    const s = run([
+        { type: "submap", data: "which" },
+        { type: "dwellFired" },
+        { type: "submap", data: "dofus" },
+    ]);
+    assert.deepEqual(s, { submap: "dofus", shown: true, dwellArmed: false });
+});
+
+test("a leaf action's exit (submap back to reset) dismisses with no dwell", () => {
+    const s = run([
+        { type: "submap", data: "which" },
+        { type: "dwellFired" },
+        { type: "submap", data: "dofus" },
+        { type: "submap", data: "reset" },
+    ]);
+    assert.deepEqual(s, { submap: "reset", shown: false, dwellArmed: false });
+});
+
+test("leaving before the dwell fires cancels it — no open-then-immediately-close flash", () => {
+    const s = run([{ type: "submap", data: "which" }, { type: "submap", data: "reset" }]);
+    assert.deepEqual(s, { submap: "reset", shown: false, dwellArmed: false });
+});
+
+test("explicit dismiss wins over a pending dwell, regardless of the submap event ordering", () => {
+    // The issue calls out that a leaf action's dispatch can race the submap
+    // event resolving; the explicit `dismiss` IPC must close (and disarm the
+    // dwell) whichever of the two lands first.
+    const s = run([{ type: "submap", data: "which" }, { type: "dismiss" }]);
+    assert.deepEqual(s, { submap: "which", shown: false, dwellArmed: false });
+});
+
+test("REGRESSION: a leaf exit never leaves the previous node shown", () => {
+    // Full chain: dwell into a nested node, then exit via a leaf action. At
+    // every point after the exit event, the overlay must read as hidden and
+    // must never claim to still be showing the node that was left.
+    const before = run([
+        { type: "submap", data: "which" },
+        { type: "dwellFired" },
+        { type: "submap", data: "dofus" },
+        { type: "dwellFired" }, // a second dwell must not have been armed; a no-op if it fires
+    ]);
+    assert.equal(before.shown, true);
+    assert.equal(before.submap, "dofus");
+
+    const afterLeafExit = reduceSession(before, { type: "submap", data: "reset" });
+    assert.equal(afterLeafExit.shown, false, "the overlay must be hidden immediately on exit");
+    assert.notEqual(afterLeafExit.submap, "dofus", "must not still name the node that was left");
+
+    // A stale dwell timer racing the exit (defensive: QML also stops it
+    // synchronously) must not resurrect the overlay on the departed node.
+    const staleDwell = reduceSession(afterLeafExit, { type: "dwellFired" });
+    assert.equal(staleDwell.shown, false, "a stale dwell must never reopen a departed node");
 });
