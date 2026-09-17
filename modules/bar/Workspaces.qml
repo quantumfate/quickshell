@@ -2,10 +2,14 @@
 // monitor, in the active hyprfocus mode's declared order, each shown as a
 // Nerd Font icon (see WorkspaceSwitch.js), plus the focused scene's name
 // (LEO-371) so "which scene am I in" reads without decoding an icon.
-//   active   → accent (the active mode's colour), pill background + underline
-//   occupied → lavender (has windows)
-//   idle     → overlay0
-//   urgent   → red
+// LEO-373: every scene the active mode admits is shown, whether or not it
+// has a live Hyprland workspace yet — WorkspaceSwitch.rowState() names each
+// row's play state:
+//   focused → accent (the active mode's colour), pill background + underline
+//   playing → lavender (has windows)
+//   dormant → overlay0, further dimmed (admitted, no windows — may not even
+//             exist in Hyprland yet; its key still focuses/creates it)
+//   urgent  → red, regardless of state
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
@@ -28,10 +32,12 @@ Rectangle {
 
     // Icons and order come from the hyprfocus declaration (LEO-343): no
     // hardcoded workspace name list or icon map here. This monitor's rows are
-    // the active mode's admitted scenes for `_role`, in declared order, plus
-    // any other real workspace that still holds windows. Hyprland's list is
-    // creation order and named workspaces carry negative auto ids, so the bar
-    // must not sort by id. `_tick` re-evaluates on every compositor event.
+    // EVERY scene the active mode admits for `_role`, in declared order —
+    // dormant ones included, synthesized even when Hyprland has not created
+    // their workspace yet (LEO-373) — plus any other real workspace that
+    // still holds windows. Hyprland's list is creation order and named
+    // workspaces carry negative auto ids, so the bar must not sort by id.
+    // `_tick` re-evaluates on every compositor event.
     property int _tick: 0
     Connections { target: Hyprland; function onRawEvent(e) { root._tick++; } }
     readonly property var _sorted: {
@@ -46,7 +52,11 @@ Rectangle {
         }));
         const order = WorkspaceSwitch.barWorkspaces(Hyprfocus.data, Hyprfocus.mode, root._role, plain);
         const byId = new Map(all.map(w => [w.id, w]));
-        return order.map(w => byId.get(w.id));
+        // A synthesized row (id: null — an admitted scene with no live
+        // Hyprland workspace) has no live counterpart to look up: pass it
+        // through as-is, the delegate below already treats an absent
+        // `.toplevels`/`.active`/`.urgent` as empty/false/false.
+        return order.map(w => w.id === null ? w : byId.get(w.id));
     }
 
     // The focused row's scene name (pure logic, tested in
@@ -73,9 +83,14 @@ Rectangle {
             delegate: Rectangle {
                 id: wsDelegate
                 required property var modelData
-                readonly property bool active: modelData.active
+                readonly property bool active: modelData.active ?? false
                 readonly property bool occupied: (modelData.toplevels?.values?.length ?? 0) > 0
                 readonly property bool urgent: modelData.urgent ?? false
+                // rowState() (tests/workspaceswitch.test.js) names the row's
+                // play state; a synthesized row (no live workspace) reads as
+                // dormant the same as an existing, empty one.
+                readonly property string state: WorkspaceSwitch.rowState({ active: active, occupied: occupied })
+                readonly property bool dormant: state === "dormant"
 
                 implicitWidth: icon.implicitWidth + (active ? Theme.space.sm * 2 : 0)
                 implicitHeight: icon.implicitHeight + (active ? Theme.space.xs * 2 : 0)
@@ -87,11 +102,16 @@ Rectangle {
                     id: icon
                     anchors.centerIn: parent
                     text: WorkspaceSwitch.iconFor(Hyprfocus.data, wsDelegate.modelData.name, wsDelegate.modelData.id)
+                    // Dormant rows read via the same dim tier a fresh/idle
+                    // workspace already used (overlay0) — LEO-373 just widens
+                    // who reaches that state to admitted-but-windowless rows,
+                    // synthesized or real, rather than adding a new colour.
                     color: wsDelegate.urgent ? Theme.c.red
                          : wsDelegate.active ? Theme.accent
                          : ws.hovered ? Theme.c.text
                          : wsDelegate.occupied ? Theme.c.lavender
                          : Theme.c.overlay0
+                    opacity: wsDelegate.dormant ? 0.7 : 1.0
                     font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
                 }
 

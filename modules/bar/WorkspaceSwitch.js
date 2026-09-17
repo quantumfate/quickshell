@@ -77,19 +77,39 @@ function canonical(declaration, workspaces) {
 }
 
 /**
- * The bar pill's rows for one monitor: the active mode's admitted scenes for
- * `role`, in declared order, plus any other real workspace that still holds
- * windows — appended after, unordered by name (hyprfocus hold semantics: a
- * workspace a mode no longer admits keeps its windows parked, not deleted).
+ * The bar pill's rows for one monitor: EVERY scene the active mode admits
+ * for `role`, in declared order — including one Hyprland has not created a
+ * workspace for yet, as a synthetic zero-window row (`id: null`) — plus any
+ * other real workspace that still holds windows, appended after, unordered
+ * by name (hyprfocus hold semantics: a workspace a mode no longer admits
+ * keeps its windows parked, not deleted). LEO-373: showing every admitted
+ * scene up front, dormant or not, is the "clear choice on entry" the bar
+ * gives a mode.
  *
  * workspaces: [{ id, name, occupied }]
  */
 function barWorkspaces(declaration, modeId, role, workspaces) {
     const order = modeOrder(declaration, modeId, role);
     const inOrder = new Set(order);
-    const admitted = (workspaces || []).filter(w => inOrder.has(w.name));
+    const byName = new Map((workspaces || []).map(w => [w.name, w]));
+    const admitted = order.map(name => byName.get(name) || { id: null, name, occupied: false });
     const others = (workspaces || []).filter(w => !inOrder.has(w.name) && w.occupied);
     return orderBy(order, admitted.concat(others));
+}
+
+/**
+ * A bar row's play state (LEO-373). `focused` wins outright; otherwise a row
+ * with at least one window is `playing`, and a row with none — including a
+ * synthetic row for a scene Hyprland has not created yet — is `dormant`.
+ * Dormant is a display state only: the workspace is still admitted and its
+ * positional key still works (mode admission is a separate concern, see
+ * barWorkspaces()'s header).
+ *
+ * row: { occupied, active }
+ */
+function rowState(row) {
+    if (row && row.active) return "focused";
+    return (row && row.occupied) ? "playing" : "dormant";
 }
 
 // The selector a dispatch speaks for a workspace row: named workspaces by

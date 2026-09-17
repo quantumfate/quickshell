@@ -10,11 +10,11 @@ import { loadLibrary } from "./qml.js";
 
 const {
     catalogOrder, modeOrder, iconFor, orderBy, canonical, barWorkspaces,
-    selector, buildRows, filterRows, roleForScreen, activeName
+    rowState, selector, buildRows, filterRows, roleForScreen, activeName
 } = loadLibrary("modules/bar/WorkspaceSwitch.js", [
     "catalogOrder", "modeOrder", "iconFor", "orderBy", "canonical",
-    "barWorkspaces", "selector", "buildRows", "filterRows", "roleForScreen",
-    "activeName"
+    "barWorkspaces", "rowState", "selector", "buildRows", "filterRows",
+    "roleForScreen", "activeName"
 ]);
 
 // A small fixture declaration: catalog order code, creative, media; "work"
@@ -102,6 +102,47 @@ test("barWorkspaces() drops an admitted-nowhere, unoccupied workspace", () => {
         { id: 2, name: "creative", occupied: false }
     ]);
     assert.deepEqual(rows.map(r => r.id), [1]);
+});
+
+test("barWorkspaces() synthesizes a zero-window row for an admitted scene Hyprland has not created yet (LEO-373)", () => {
+    // "code" holds no live workspace at all here — the mode still admits it,
+    // so the bar must still show it, dormant, at its declared position.
+    const rows = barWorkspaces(declaration, "work", "primary", []);
+    assert.deepEqual(rows, [{ id: null, name: "code", occupied: false }]);
+});
+
+test("barWorkspaces() mixes a synthesized admitted row with a real occupied one, in declared order", () => {
+    const rows = barWorkspaces(declaration, "work", "secondary", [
+        { id: 9, name: "media", occupied: true }
+    ]);
+    assert.deepEqual(rows, [{ id: 9, name: "media", occupied: true }]);
+
+    // Two admitted scenes on one role: one real+empty, one not created yet.
+    const twoScene = {
+        base: declaration.base,
+        modes: { work: { scenes: [
+            { name: "code", monitor: "primary" },
+            { name: "creative", monitor: "primary" }
+        ] } }
+    };
+    const mixed = barWorkspaces(twoScene, "work", "primary", [
+        { id: 4, name: "code", occupied: false }
+    ]);
+    assert.deepEqual(mixed, [
+        { id: 4, name: "code", occupied: false },
+        { id: null, name: "creative", occupied: false }
+    ]);
+});
+
+test("rowState() is focused when active, else playing with a window and dormant without", () => {
+    assert.equal(rowState({ occupied: true, active: true }), "focused");
+    assert.equal(rowState({ occupied: false, active: true }), "focused");
+    assert.equal(rowState({ occupied: true, active: false }), "playing");
+    assert.equal(rowState({ occupied: false, active: false }), "dormant");
+});
+
+test("rowState() treats a synthesized not-yet-created row as dormant", () => {
+    assert.equal(rowState({ id: null, name: "code", occupied: false }), "dormant");
 });
 
 test("selector() speaks name for named workspaces, id for numeric ones", () => {

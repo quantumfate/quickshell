@@ -2,10 +2,7 @@
   "version": 3,
   "base": {
     "bindings": [
-      "dofus",
-      "shelf-ankama",
-      "shelf-steam",
-      "shelf-lutris"
+      "dofus"
     ],
     "services": [
       "theme-auto",
@@ -57,7 +54,10 @@
         ],
         "strays": "float",
         "icon": "",
-        "bindings": []
+        "bindings": [
+          "shelf-ankama",
+          "shelf-lutris"
+        ]
       },
       "pokemon": {
         "blocks": [
@@ -104,7 +104,9 @@
         "barred": [],
         "strays": "float",
         "icon": "",
-        "bindings": []
+        "bindings": [
+          "shelf-steam"
+        ]
       },
       "media": {
         "blocks": [
@@ -230,10 +232,7 @@
       ],
       "bindings": {
         "remove": [
-          "dofus",
-          "shelf-ankama",
-          "shelf-steam",
-          "shelf-lutris"
+          "dofus"
         ]
       },
       "presentation": {
@@ -266,10 +265,7 @@
       ],
       "bindings": {
         "remove": [
-          "dofus",
-          "shelf-ankama",
-          "shelf-steam",
-          "shelf-lutris"
+          "dofus"
         ]
       },
       "notify": {
@@ -305,10 +301,7 @@
       ],
       "bindings": {
         "remove": [
-          "dofus",
-          "shelf-ankama",
-          "shelf-steam",
-          "shelf-lutris"
+          "dofus"
         ]
       },
       "notify": {

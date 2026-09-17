@@ -11,12 +11,15 @@
 // watchChanges makes external writes (Lua config, scripts) reload reactively;
 // our writes bump the file so the Lua side picks them up on next access.
 // A store not yet under the store directory is adopted from the legacy
-// location on first load, so moving the collection needs no tooling — the
-// first save relocates it.
+// location the first time its target file is MISSING (never merely empty —
+// LEO-372 #1), so moving the collection needs no tooling; the legacy file is
+// then renamed to `<name>.json.migrated` so it can never be re-applied. See
+// StoreMigrate.js for the pure migrate/don't-migrate decision.
 import Quickshell
 import Quickshell.Io
 import QtQuick
 import "."   // Config singleton
+import "StoreMigrate.js" as StoreMigrate
 
 Item {
     id: root
@@ -61,26 +64,12 @@ Item {
         path: root.path
         watchChanges: true
         onFileChanged: reload()
+        // Target exists: read it as-is, migration never applies here (LEO-372
+        // #1). An empty or `{}` file is either a writer mid-write (e.g. hypr's
+        // whichkey.lua truncate-then-rewrite) or a genuinely empty store —
+        // either way NOT evidence that the legacy document should reappear.
         onLoaded: {
             const raw = (text() || "").trim();
-            // Empty file: prefer a legacy document over seeding defaults, so a
-            // store that was created before the quantum-store directory exists
-            // still migrates forward.
-            if (raw === "" || raw === "{}") {
-                const legacyRaw = (legacy.text() || "").trim();
-                if (legacyRaw !== "" && legacyRaw !== "{}") {
-                    try {
-                        root.put(JSON.parse(legacyRaw));
-                        return;
-                    } catch (e) {
-                        console.warn("Store(" + root.name + "): legacy JSON unreadable", e);
-                    }
-                }
-                if (root._hasDefaults()) {
-                    root.put(root.defaults);
-                    return;
-                }
-            }
             let parsed;
             try {
                 parsed = JSON.parse(raw || "{}");
@@ -89,47 +78,16 @@ Item {
                 return;
             }
             root.data = parsed;
-            // Defensive migration: if the current file only contains default
-            // keys and the legacy file has additional keys, copy the missing
-            // keys forward. This fixes the race where defaults were seeded
-            // before the legacy location could be adopted.
-            const legacyRaw = (legacy.text() || "").trim();
-            if (legacyRaw !== "" && legacyRaw !== "{}") {
-                try {
-                    const legacyData = JSON.parse(legacyRaw);
-                    const defaultKeys = root._hasDefaults() ? Object.keys(root.defaults) : [];
-                    const currentKeys = Object.keys(parsed);
-                    const currentIsDefaultShaped = currentKeys.every(k => defaultKeys.includes(k));
-                    if (currentIsDefaultShaped) {
-                        let merged = false;
-                        for (const k in legacyData) {
-                            if (!(k in parsed)) {
-                                parsed[k] = legacyData[k];
-                                merged = true;
-                            }
-                        }
-                        if (merged) {
-                            console.log("Store(" + root.name + "): migrating missing keys from legacy");
-                            root.put(parsed);
-                        }
-                    }
-                } catch (e) {
-                    console.warn("Store(" + root.name + "): legacy JSON unreadable", e);
-                }
-            }
             root.changed();
         }
-        // Missing file: adopt the legacy location if it still holds the
-        // document (writing it forward relocates it), else seed defaults.
+        // Target missing: this is the only case migration runs from. Adopt
+        // the legacy document when it holds one, else seed defaults.
         onLoadFailed: (err) => {
-            const legacyRaw = (legacy.text() || "").trim();
-            if (legacyRaw !== "" && legacyRaw !== "{}") {
-                try {
-                    root.put(JSON.parse(legacyRaw));
-                    return;
-                } catch (e) {
-                    console.warn("Store(" + root.name + "): legacy JSON unreadable", e);
-                }
+            const legacyRaw = legacy.text();
+            if (StoreMigrate.shouldMigrate(false, legacyRaw)) {
+                root.put(JSON.parse(legacyRaw.trim()));
+                root._retireLegacy();
+                return;
             }
             if (root._hasDefaults()) root.put(root.defaults);
             else console.warn("Store(" + root.name + "): load failed", err);
@@ -139,5 +97,13 @@ Item {
     FileView {
         id: legacy
         path: root.legacyPath
+    }
+
+    // Renames the legacy file out of the way after a successful migration, so
+    // it can never be re-applied (mv, not FileView — FileView has no rename).
+    Process { id: retireProc }
+    function _retireLegacy() {
+        retireProc.command = ["mv", "--", root.legacyPath, root.legacyPath + ".migrated"];
+        retireProc.running = true;
     }
 }
