@@ -41,6 +41,11 @@ Singleton {
         onChanged: root._refresh()
     }
 
+    // The raw declaration document ({ base, modes }), for pure-function
+    // consumers that read it directly (e.g. modules/bar/WorkspaceSwitch.js)
+    // rather than through one of this singleton's own accessors.
+    readonly property var data: declaration.data ?? ({})
+
     // Active mode id, and the record the declaration holds for it.
     readonly property string mode: pointer.get("mode") ?? "neutral"
     property var current: ({})

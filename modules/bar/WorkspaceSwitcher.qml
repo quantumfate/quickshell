@@ -11,7 +11,7 @@ import Quickshell.Wayland
 import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Theme, Hypr
+import "../../services"   // Theme, Hypr, Hyprfocus
 import "../common"        // Surface
 import "WorkspaceSwitch.js" as WorkspaceSwitch
 
@@ -34,7 +34,9 @@ Scope {
     readonly property var _rows: {
         scope._tick;   // dependency
         // Named (auto-id) workspaces are the real ones: include them, and let
-        // WorkspaceSwitch.canonical() merge any id-backed twins.
+        // WorkspaceSwitch.canonical() merge any id-backed twins. Every real
+        // workspace is shown here regardless of the active mode — this
+        // overlay's job is "jump to any workspace by search" (LEO-343).
         const workspaces = (Hyprland.workspaces?.values ?? [])
             .filter(w => w.id > 0 || !w.name.startsWith("special:"))
             .map(w => ({ id: w.id, name: w.name }));
@@ -45,7 +47,8 @@ Scope {
             if (wsId === undefined) continue;
             windows.push({ wsId: wsId, title: ipc?.title ?? t?.title ?? "(untitled)" });
         }
-        return WorkspaceSwitch.buildRows(WorkspaceSwitch.canonical(workspaces), windows);
+        const ordered = WorkspaceSwitch.canonical(Hyprfocus.data, workspaces);
+        return WorkspaceSwitch.buildRows(Hyprfocus.data, ordered, windows);
     }
 
     readonly property var filtered: WorkspaceSwitch.filterRows(scope._rows, scope.query)

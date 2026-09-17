@@ -187,6 +187,11 @@
             "float"
           ],
           "default": "slot"
+        },
+        "icon": {
+          "description": "The glyph the bar's workspace pill shows for this scene's workspace (LEO-343), from the same icon font the bar already uses. Omit and the bar falls back to a numeric/dot glyph, the same as an undeclared workspace.",
+          "type": "string",
+          "maxLength": 8
         }
       }
     },
