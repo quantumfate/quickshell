@@ -14,7 +14,7 @@
   "properties": {
     "version": {
       "description": "Declaration format version. Bumped when the grammar changes incompatibly, or when the shipped content changes enough that a stored declaration should be re-seeded (LEO-337) \u2014 the CLI (`,hyprfocus seed`) reseeds a store whose version is lower than this one, once, without --force.",
-      "const": 3
+      "const": 4
     },
     "base": {
       "$ref": "#/$defs/desk"
@@ -204,12 +204,16 @@
       "additionalProperties": false,
       "properties": {
         "classes": {
-          "description": "Literal class or Lua pattern, matched literal-first so a hyphenated class does not trip on `-` being a quantifier. Also the scene's CLAIM: two scenes active in one mode may not list the same string (compared textually). A `slot:<scene>/<role>` string claims a launch-identity tag rather than a class (interim, until launch identity stamping lands) and matches no window yet.",
+          "description": "Literal class or Lua pattern, matched literal-first so a hyphenated class does not trip on `-` being a quantifier. Also the scene's CLAIM: two scenes active in one mode may not list the same string (compared textually). Two blocks in the SAME scene may share a class only when each also sets a distinct `slot`.",
           "type": "array",
           "items": {
             "type": "string"
           },
           "minItems": 1
+        },
+        "slot": {
+          "description": "Identity suffix (LEO-364) disambiguating same-class blocks within one scene, e.g. `pokemon/chat` and `pokemon/stream` both matching `zen-gaming-media`. With this set, the block only claims a window already carrying the Hyprland tag `slot:<slot>`; `hypr/scene/identify.lua` stamps that tag, once, on whichever live window of the matching class is still unslotted.",
+          "type": "string"
         },
         "order": {
           "description": "Position in the left-to-right sequence. With a layout provider this is the order boxes are placed, not a correction applied afterwards.",

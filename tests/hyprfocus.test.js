@@ -64,10 +64,14 @@ function lint(doc) {
             listed.add(name);
             for (const block of base.scenes?.[name]?.blocks ?? []) {
                 for (const cls of block.classes) {
-                    const owner = claims.get(cls);
+                    // A `slot`-bearing block claims the launch-identity tag, not
+                    // the bare class, so it keys separately (LEO-364): two scenes
+                    // sharing a class stay unflagged when a slot disambiguates.
+                    const key = block.slot ? `${cls}:${block.slot}` : cls;
+                    const owner = claims.get(key);
                     if (owner && owner !== name)
                         say(`${mode}.scenes`, `class '${cls}' claimed by ${owner} and ${name}`);
-                    else claims.set(cls, name);
+                    else claims.set(key, name);
                 }
             }
         }
@@ -131,11 +135,23 @@ test("the lint catches an unknown monitor role and a duplicate scene", () => {
 });
 
 test("the lint catches two active scenes claiming one class", () => {
+    // Strip the slot: a bare shared class (no identity tag to disambiguate)
+    // is genuinely ambiguous, unlike pokemon's real slotted blocks below.
     const broken = structuredClone(declaration);
-    broken.base.scenes.pokemon.blocks[1].classes = ["zen-gaming-media"];
+    delete broken.base.scenes.pokemon.blocks[1].slot;
     assert.deepEqual(lint(broken), [
         "gaming.scenes: class 'zen-gaming-media' claimed by dofus and pokemon",
     ]);
+});
+
+test("a slot lets pokemon and dofus share zen-gaming-media without conflict", () => {
+    // dofus's companion block claims the bare class; pokemon's two blocks
+    // claim it only under a slot (LEO-364) — distinct keys, so no conflict.
+    assert.equal(declaration.base.scenes.dofus.blocks[1].classes[0], "zen-gaming-media");
+    assert.equal(declaration.base.scenes.dofus.blocks[1].slot, undefined);
+    for (const block of declaration.base.scenes.pokemon.blocks) {
+        if (block.classes.includes("zen-gaming-media")) assert.ok(block.slot);
+    }
 });
 
 test("the lint catches `only` combined with `add`", () => {

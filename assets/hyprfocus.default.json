@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "base": {
     "bindings": [],
     "services": [
@@ -64,16 +64,18 @@
           },
           {
             "classes": [
-              "slot:pokemon/chat"
+              "zen-gaming-media"
             ],
+            "slot": "pokemon/chat",
             "order": 2,
             "share": 0.35,
             "guard": "deny"
           },
           {
             "classes": [
-              "slot:pokemon/stream"
+              "zen-gaming-media"
             ],
+            "slot": "pokemon/stream",
             "order": 3,
             "share": 0.35,
             "guard": "deny"
