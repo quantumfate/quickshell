@@ -16,7 +16,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Theme, Focus
+import "../../services"   // Theme, Hyprfocus
 import "../../services/BarGaps.js" as BarGaps
 import "../common"        // Surface
 
@@ -74,14 +74,14 @@ Scope {
             // keybind/IPC toggle (when no hover has set an anchor yet).
             Component.onCompleted: if (!SysMon.homeScreen) SysMon.homeScreen = bar.screen.name;
 
-            // --- Autohide (LEO-221): honours Focus's mode rather than a local
-            // guess. `deep` sheds every zone but workspaces + clock and starts
-            // autohiding; `game` autohides the full bar without shedding
-            // anything — it just needs to stay out of the way while playing.
-            // Mood-specific idle/slide values land with LEO-227; until then
-            // this reads only the mode string, never a hardcoded timing table.
-            readonly property bool deepMode: Focus.mode === "deep"
-            readonly property bool autohideOn: bar.deepMode || Focus.mode === "game"
+            // --- Autohide (LEO-221): honours the declaration rather than a
+            // local guess. `deep`/`game` (the old shedding/autohide ids) are
+            // retired (see hypr AGENTS.md's mode-id contract); the current
+            // modes speak through `presentation.bar_autohide` instead
+            // (work/study autohide, neutral/gaming stay put) — no mode today
+            // declares zone-shedding on top of that, so this bar no longer
+            // has a `deepMode` concept to key off.
+            readonly property bool autohideOn: Hyprfocus.current.presentation?.bar_autohide ?? false
 
             property bool revealed: true
             Connections { target: scope; function onRevealTickChanged() { bar.revealed = true; idle.restart(); } }
@@ -118,7 +118,7 @@ Scope {
                     Workspaces { screen: bar.screen }
                     SubmapIndicator {}
                     GroupChip {}
-                    HyprLayout { visible: !bar.deepMode }
+                    HyprLayout {}
                 }
 
                 // Dofus-only isle: appears only on the gaming workspace while
@@ -136,7 +136,6 @@ Scope {
 
                 // centre island: what's playing / what to adjust.
                 Island {
-                    visible: !bar.deepMode
                     anchors { horizontalCenter: parent.horizontalCenter; verticalCenter: parent.verticalCenter }
                     Media { screenName: bar.screen.name }
                     Brightness { screenName: bar.screen.name }
@@ -152,11 +151,11 @@ Scope {
                         rightMargin: content.edgeInset.right
                     }
                     Clock {}
-                    // The mood pill stays even in autohide/deep mode: it
+                    // The mood pill stays even while the bar autohides: it
                     // carries the countdown until the mood ends, which is the
                     // one thing you want while the rest of the bar drops away.
                     ModePill { screenName: bar.screen.name }
-                    CalendarPill { screenName: bar.screen.name; visible: !bar.deepMode }
+                    CalendarPill { screenName: bar.screen.name }
                 }
             }
 
