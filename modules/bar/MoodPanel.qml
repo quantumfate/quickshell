@@ -27,7 +27,11 @@ Scope {
     readonly property var notif: scope.pol.notifications || {}
     readonly property var launch: scope.pol.launches || {}
     readonly property var sceneMap: scope.pol.scenes || {}
-    readonly property var moodIds: Object.keys(Focus.policyData)
+    // Hyprfocus.ids() already excludes hidden modes (neutral's recovery
+    // fallback, reached only from the hypr modes submap) by the declaration's
+    // own `hidden` flag - reuse it rather than re-deriving the same list from
+    // the policy store's keys.
+    readonly property var moodIds: Hyprfocus.ids().filter(id => Focus.policyData[id])
 
     // The user-unit background tasks the policy names. Lives here (not in the
     // schema) because the list is a UI choice: what the desk actually runs.
