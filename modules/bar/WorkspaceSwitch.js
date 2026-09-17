@@ -166,25 +166,21 @@ function activeName(rows) {
 
 /**
  * Which monitor role (`"primary"`/`"secondary"`) a screen plays, from the
- * `geometry` store's `monitors` map (keyed by real output name, published by
- * hypr's conf/host.lua — see services/BarGaps.js).
+ * `geometry` store's `roles` map (LEO-368): `{ primary: "<output>", secondary:
+ * "<output>" }`, published by hypr's conf/host.lua next to the per-output
+ * gaps (see services/BarGaps.js) from the host's own `primary_monitor`/
+ * `secondary_monitor` and which outputs are actually connected — an
+ * unconnected or ignored output is omitted from the map entirely, never
+ * defaulted onto another role.
  *
- * Every host file's workspace_specs lists its primary-role workspace first
- * (the default/unset-monitor case) and any secondary-role one later,
- * explicitly marked (`monitor = "secondary"`) — see conf/hosts/*.lua in the
- * hypr repo. `geometry.monitor_gaps()` (hypr/lib/geometry.lua) builds the
- * published map by walking that same spec order and keeping the first gap
- * seen per output, so its key order mirrors the spec order: the primary
- * output is always the map's first key. This is the one role signal the
- * shell has without re-reading hypr's host files — no `primary`/`secondary`
- * mapping is otherwise published to a store the shell can read.
- *
- * A screen absent from the map (an older store, or a monitor the store has
- * not been rewritten for yet) reads as secondary: it is safer to under-place
- * an unrecognised output than to duplicate the primary role onto it.
+ * An empty or missing map (an older store published before LEO-368) reads
+ * every screen as primary, so a single-monitor host still bars correctly
+ * while the store catches up. Once a map exists, a screen it does not name
+ * as `primary` reads as secondary: it is safer to under-place an
+ * unrecognised or disconnected output than to duplicate the primary role
+ * onto it.
  */
-function roleForScreen(monitors, screenName) {
-    const names = Object.keys(monitors || {});
-    if (names.length === 0) return "primary";
-    return screenName === names[0] ? "primary" : "secondary";
+function roleForScreen(roles, screenName) {
+    if (!roles || Object.keys(roles).length === 0) return "primary";
+    return screenName === roles.primary ? "primary" : "secondary";
 }

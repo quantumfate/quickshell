@@ -24,11 +24,11 @@ Rectangle {
     required property var screen
     readonly property var _monitor: Hyprland.monitorFor(screen)
 
-    // LEO-340's published per-output gaps double as the one role signal the
-    // shell has (see WorkspaceSwitch.roleForScreen's header): which monitor
-    // is "primary" per the active hyprfocus mode's scene placement.
+    // LEO-368: hypr's conf/host.lua publishes the primary/secondary role map
+    // in the same `geometry` store LEO-340 already reads (see
+    // WorkspaceSwitch.roleForScreen's header).
     Store { id: _geometry; name: "geometry" }
-    readonly property string _role: WorkspaceSwitch.roleForScreen(_geometry.data.monitors, root.screen.name)
+    readonly property string _role: WorkspaceSwitch.roleForScreen(_geometry.data.roles, root.screen.name)
 
     // Icons and order come from the hyprfocus declaration (LEO-343): no
     // hardcoded workspace name list or icon map here. This monitor's rows are

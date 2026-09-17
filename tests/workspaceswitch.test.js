@@ -178,16 +178,23 @@ test("no match yields an empty list rather than throwing", () => {
     assert.deepEqual(filterRows(rows, "nonexistent"), []);
 });
 
-test("roleForScreen() calls the geometry store's first monitor primary", () => {
-    const monitors = { "DP-1": { left: 40, right: 40 }, "DP-2": { left: 8, right: 8 } };
-    assert.equal(roleForScreen(monitors, "DP-1"), "primary");
-    assert.equal(roleForScreen(monitors, "DP-2"), "secondary");
+test("roleForScreen() reads the geometry store's published role map", () => {
+    const roles = { primary: "DP-1", secondary: "DP-2" };
+    assert.equal(roleForScreen(roles, "DP-1"), "primary");
+    assert.equal(roleForScreen(roles, "DP-2"), "secondary");
 });
 
-test("roleForScreen() calls an unrecognised screen secondary, an empty store primary", () => {
-    assert.equal(roleForScreen({ "DP-1": {} }, "HDMI-A-1"), "secondary");
+test("roleForScreen() calls an unrecognised screen secondary, never guesses from key order", () => {
+    assert.equal(roleForScreen({ primary: "DP-1" }, "HDMI-A-1"), "secondary");
+});
+
+test("roleForScreen() reads every screen as primary until the store carries a role map (pre-LEO-368)", () => {
     assert.equal(roleForScreen({}, "eDP-1"), "primary");
     assert.equal(roleForScreen(undefined, "eDP-1"), "primary");
+});
+
+test("roleForScreen() never calls the secondary output primary, even as the map's only entry", () => {
+    assert.equal(roleForScreen({ secondary: "HDMI-A-1" }, "HDMI-A-1"), "secondary");
 });
 
 test("activeName() reads the focused row's name, which is the scene name", () => {

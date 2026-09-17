@@ -21,8 +21,11 @@ One top bar per monitor (except the excluded portrait panel). Three isles:
   [`WorkspaceSwitch.js`](WorkspaceSwitch.js) for the pure logic
   (`barWorkspaces`, `rowState`, `roleForScreen`, `activeName`) and its
   header for how a monitor's primary/secondary role is read off the
-  `geometry` store, absent any store that publishes the role mapping
-  directly.
+  `geometry` store's `roles` map (LEO-368) — hypr's `conf/host.lua`
+  publishes it explicitly next to the per-output gaps, so `roleForScreen`
+  reads a real fact instead of guessing from the gaps map's key order. An
+  unconnected or ignored output is simply absent from the map, never
+  defaulted onto a role.
 - **Dofus** — appears only on the `gaming` workspace while Dofus clients are
   present. Mirrors the Hyprland group order from `DofusWindows`, highlights the
   focused member, focuses on click, and exposes the swap-detector controls from
