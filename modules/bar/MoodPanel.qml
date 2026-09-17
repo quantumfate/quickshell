@@ -1,10 +1,11 @@
-// MoodPanel — the mood centre (LEO-237). The bar's way to both pick the active
-// mood and read/edit that mood's policy: notifications, background work, launch
-// aggression and scene reachability. Every control writes through
-// Focus.patchMood straight into the mood-policy store, so the change is
-// reflected by the running shell immediately — Notify's suppression reads
-// Focus.notifications.policy, Theme's accent/surfaceAlpha read the same store,
-// and the Hyprland event manager and launcher scripts read the identical file.
+// MoodPanel — the mode centre. What a mode actually controls (desktop-model.md):
+// theme, active scenes and the monitor each lands on. The panel is a mode
+// switcher plus a read-only view of the declaration's scene set for the
+// active mode — notification policy, background task levels and launch
+// aggression moved out of the per-mode surface (permissions/notification
+// routing land in a later issue) since a mode never controlled them by the
+// model, only enforced them as a historical accident of the old mood-policy
+// shape. The one edit left is the palette lease, through Hyprfocus.patchMode.
 // Opened from ModePill via PanelBus, same single-window pattern as CalendarPanel.
 pragma ComponentBehavior: Bound
 import Quickshell
@@ -19,23 +20,13 @@ import "../common"        // Surface
 Scope {
     id: scope
 
-    // The active mood and its policy record — re-read from Focus on every store
-    // change, so the panel edits the same data the rest of the shell sees.
+    // The active mode, re-read from Focus on every store change.
     readonly property string mood: Focus.mode
-    readonly property var pol: Focus.current
-    readonly property var bg: scope.pol.background || {}
-    readonly property var notif: scope.pol.notifications || {}
-    readonly property var launch: scope.pol.launches || {}
-    readonly property var sceneMap: scope.pol.scenes || {}
     // Hyprfocus.ids() already excludes hidden modes (neutral's recovery
     // fallback, reached only from the hypr modes submap) by the declaration's
     // own `hidden` flag - reuse it rather than re-deriving the same list from
     // the policy store's keys.
     readonly property var moodIds: Hyprfocus.ids().filter(id => Focus.policyData[id])
-
-    // The user-unit background tasks the policy names. Lives here (not in the
-    // schema) because the list is a UI choice: what the desk actually runs.
-    readonly property var bgTasks: ["theme-auto", "obsidian", "state-backup", "chezmoi", "audio-notify"]
 
     // Cap so the panel fits on a laptop screen; taller content scrolls instead
     // of clipping (fs.xl = the largest type step, so the cap scales with the UI).
@@ -47,7 +38,6 @@ Scope {
     readonly property real maxCardHeight: Theme.fs.xl * 34
     readonly property real maxCardWidth: Theme.fs.xl * 26
 
-    function patch(p) { Focus.patchMood(scope.mood, p); }
     function adopt(id) { Focus.set(id, 0); }
     function stop() { Focus.stop(); }
     function closePanel() { PanelBus.close("mood"); }
@@ -60,33 +50,14 @@ Scope {
         return " · " + (m >= 60 ? Math.floor(m / 60) + "h " + (m % 60) + "m" : m + "m") + " left";
     }
 
-    // A task's effective background level. The single definitional resolver
-    // lives on Focus (backgroundTaskLevel) — the panel displays it, and
-    // ,scene-apply.sh reads the same verdict at apply time, so the UI and the
-    // systemd seam can never disagree. `prevent` beats `defer` beats `allow`;
-    // a wildcard allow covers everything not listed.
-    function taskLevel(task) { return Focus.backgroundTaskLevel(task); }
-
-    // Cycle a task through unset -> defer -> prevent -> unset (LEO-252
-    // retired the wildcard shape: not-listed IS allowed, so an explicit
-    // "allow" state never carried information and the cycle shrinks to what
-    // actually changes behavior).
-    function cycleTask(task) {
-        const seq = ["unset", "defer", "prevent"];
-        const from = scope.taskLevel(task);
-        const next = seq[(seq.indexOf(from) + 1) % seq.length];
-        const defer = (scope.bg.defer || []).filter(t => t !== task);
-        const prevent = (scope.bg.prevent || []).filter(t => t !== task);
-        if (next === "defer") defer.push(task);
-        else if (next === "prevent") prevent.push(task);
-        scope.patch({ background: Object.assign({}, scope.bg, { defer: defer, prevent: prevent }) });
-    }
-
-    function sceneSummary() {
-        const keys = Object.keys(scope.sceneMap);
-        if (keys.length === 0) return "all scenes reachable";
-        return keys.map(k => k + ": " + scope.sceneMap[k]).join(" · ");
-    }
+    // The scene set the active mode declares, each with its monitor role and
+    // the base catalog's icon (base.scenes[name].icon) — the panel's one data
+    // source for "what runs where" is the declaration, never mood-policy.
+    readonly property var scenePlacements: (Hyprfocus.current.scenes || []).map(p => ({
+        name: p.name,
+        monitor: p.monitor,
+        icon: (Hyprfocus.data.base?.scenes?.[p.name]?.icon) || ""
+    }))
 
     // The explain half (LEO-280): the declaration as sentences. The pointer's
     // provenance stands so the panel answers "why is my desk like this"
@@ -322,181 +293,51 @@ Scope {
 
                         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
 
-                        // -- notifications: what is allowed on screen.
-                        SectionTag { title: "notifications" }
-
-                        FieldRow {
-                            label: "policy"
-                            options: ["all", "critical-only", "none"]
-                            value: scope.notif.policy || "all"
-                            onPick: (v) => scope.patch({ notifications: Object.assign({}, scope.notif, { policy: v }) })
-                        }
-                        FieldRow {
-                            label: "position"
-                            options: ["top-right", "bottom-right"]
-                            value: scope.notif.position || "top-right"
-                            onPick: (v) => scope.patch({ notifications: Object.assign({}, scope.notif, { position: v }) })
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Theme.space.md
-                            Text {
-                                Layout.fillWidth: true
-                                text: "queue while suppressed"
-                                color: Theme.text
-                                font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
-                            }
-                            SegRow {
-                                stretch: false
-                                Layout.preferredWidth: Theme.fs.xl * 5
-                                options: ["on", "off"]
-                                value: scope.notif.queue ? "on" : "off"
-                                onPick: (v) => scope.patch({ notifications: Object.assign({}, scope.notif, { queue: v === "on" }) })
-                            }
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Theme.space.md
-                            Text {
-                                Layout.fillWidth: true
-                                text: "digest on exit"
-                                color: Theme.text
-                                font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
-                            }
-                            SegRow {
-                                stretch: false
-                                Layout.preferredWidth: Theme.fs.xl * 5
-                                options: ["on", "off"]
-                                value: scope.notif.digest_on_exit ? "on" : "off"
-                                onPick: (v) => scope.patch({ notifications: Object.assign({}, scope.notif, { digest_on_exit: v === "on" }) })
-                            }
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            text: scope.notif.timeout === 0
-                                ? "toasts stick until closed"
-                                : "toasts auto-expire after " + Math.round(scope.notif.timeout / 1000) + "s"
-                            color: Theme.subtextAlt
-                            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
-                        }
-
-                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
-
-                        // -- background: user-unit work the desk runs.
-                        SectionTag { title: "background" }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "click a task to cycle unset → defer → prevent (nothing listed runs freely)"
-                            color: Theme.subtextAlt
-                            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
-                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                        }
+                        // -- scenes: the active mode's declared set, each on
+                        // its monitor role (desktop-model.md: a mode controls
+                        // theme, active scenes and monitor per scene — nothing
+                        // else). Read-only: the declaration is edited by the
+                        // CLI/seed, not this panel.
+                        SectionTag { title: "scenes" }
 
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: Theme.space.xs
 
                             Repeater {
-                                model: scope.bgTasks
-                                delegate: Rectangle {
-                                    id: trow
-                                    required property string modelData
-                                    readonly property string lvl: scope.taskLevel(trow.modelData)
+                                model: scope.scenePlacements
+                                delegate: RowLayout {
+                                    id: srow
+                                    required property var modelData
                                     Layout.fillWidth: true
-                                    implicitHeight: Math.max(lvlChip.implicitHeight, taskLabel.implicitHeight) + Theme.space.sm * 2
-                                    radius: Theme.radiusSmall
-                                    color: Theme.withAlpha(Theme.surface, 0.35)
+                                    spacing: Theme.space.sm
 
-                                    RowLayout {
-                                        anchors { fill: parent; leftMargin: Theme.space.sm; rightMargin: Theme.space.sm }
-                                        spacing: Theme.space.sm
-
-                                        Text {
-                                            id: taskLabel
-                                            Layout.fillWidth: true
-                                            text: trow.modelData
-                                            color: Theme.text
-                                            font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
-                                            elide: Text.ElideRight
-                                        }
-
-                                        Rectangle {
-                                            id: lvlChip
-                                            implicitWidth: lvlText.implicitWidth + Theme.space.sm * 2
-                                            implicitHeight: lvlText.implicitHeight + Theme.space.xs
-                                            radius: Theme.radiusSmall
-                                            color: trow.lvl === "prevent" ? Theme.withAlpha(Theme.error, 0.18)
-                                                : trow.lvl === "defer" ? Theme.withAlpha(Theme.warning, 0.18)
-                                                : Theme.withAlpha(Theme.success, 0.18)
-                                            border { width: 1; color: trow.lvl === "prevent" ? Theme.error
-                                                : trow.lvl === "defer" ? Theme.warning
-                                                : Theme.success }
-                                            Text {
-                                                id: lvlText
-                                                anchors.centerIn: parent
-                                                text: trow.lvl === "unset" ? "allow" : trow.lvl
-                                                color: trow.lvl === "prevent" ? Theme.error
-                                                    : trow.lvl === "defer" ? Theme.warning
-                                                    : Theme.success
-                                                font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Font.DemiBold }
-                                            }
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                onClicked: scope.cycleTask(trow.modelData)
-                                            }
-                                        }
+                                    Text {
+                                        text: srow.modelData.icon
+                                        color: Theme.accent
+                                        font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: srow.modelData.name
+                                        color: Theme.text
+                                        font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
+                                        elide: Text.ElideRight
+                                    }
+                                    Text {
+                                        text: srow.modelData.monitor
+                                        color: Theme.subtext
+                                        font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                                     }
                                 }
                             }
                         }
-
-                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
-
-                        // -- launches: how firmly the mood refuses media/game.
-                        SectionTag { title: "launches" }
-
-                        FieldRow {
-                            label: "aggression"
-                            options: ["soft", "firm", "hard"]
-                            value: scope.launch.aggression || "firm"
-                            onPick: (v) => scope.patch({ launches: Object.assign({}, scope.launch, { aggression: v }) })
-                        }
                         Text {
+                            visible: scope.scenePlacements.length === 0
                             Layout.fillWidth: true
-                            text: (scope.launch.block || []).length === 0
-                                ? "refuses nothing"
-                                : "refuses: " + (scope.launch.block || []).join(" · ")
-                                    + (scope.launch.override ? "  (override available)" : "")
-                            color: Theme.subtext
-                            font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            text: "aggression \u201csoft\u201d warns and lets through \u00b7 \u201cfirm\u201d/\u201chard\u201d refuse \u00b7 a mood never blocks itself"
+                            text: "no scenes declared for this mode"
                             color: Theme.subtextAlt
                             font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
-                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                        }
-
-                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
-
-                        // -- scenes: which workspace scenes this mood restricts.
-                        SectionTag { title: "scenes" }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: scope.sceneSummary()
-                            color: Theme.subtext
-                            font { family: Theme.fontFamily; pixelSize: Theme.fs.sm }
-                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                        }
-                        Text {
-                            Layout.fillWidth: true
-                            text: "absence = reachable; \u201cblocked\u201d only stops dispatch into the scene, never a session already running"
-                            color: Theme.subtextAlt
-                            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
-                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                         }
 
                         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
@@ -584,7 +425,7 @@ Scope {
 
                         Text {
                             Layout.fillWidth: true
-                            text: "edits apply to " + (scope.mood === "work" ? "the resting mood" : "\u201c" + Focus.current.name + "\u201d") + " \u00b7 persisted to mood-policy.json"
+                            text: "edits apply to " + (scope.mood === "work" ? "the resting mode" : "\u201c" + Focus.current.name + "\u201d") + " \u00b7 persisted to hyprfocus.json"
                             color: Theme.subtextAlt
                             font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
