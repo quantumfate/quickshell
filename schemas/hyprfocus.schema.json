@@ -231,11 +231,6 @@
           "exclusiveMinimum": 0,
           "maximum": 1
         },
-        "collect": {
-          "description": "Members that drifted to another workspace come home. Off by default: a window moved away deliberately should stay where it was put.",
-          "type": "boolean",
-          "default": false
-        },
         "guard": {
           "description": "How a non-group block resists being grouped. `deny` also refuses a deliberate toggle, for a tile whose job is to be a fixed region beside a group.",
           "enum": [
