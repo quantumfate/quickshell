@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "base": {
     "bindings": [],
     "services": [
@@ -98,11 +98,9 @@
           "Ankama Launcher"
         ],
         "strays": "float",
-        "icon": "",
+        "icon": "\uf7fb",
         "bindings": [
-          "dofus",
-          "shelf-ankama",
-          "shelf-lutris"
+          "dofus"
         ],
         "drawers": [
           "ankama",
@@ -139,7 +137,7 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "󰜡",
+        "icon": "\udb81\udf21",
         "bindings": []
       },
       "steam-games": {
@@ -155,10 +153,8 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "",
-        "bindings": [
-          "shelf-steam"
-        ],
+        "icon": "\uf1b6",
+        "bindings": [],
         "drawers": [
           "steam"
         ]
@@ -176,7 +172,7 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "",
+        "icon": "\uf16a",
         "bindings": []
       },
       "code": {
@@ -201,7 +197,7 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "",
+        "icon": "\uf120",
         "bindings": []
       },
       "obsidian-linear": {
@@ -223,7 +219,7 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "",
+        "icon": "\uf249",
         "bindings": [
           "obsidian"
         ]
@@ -251,14 +247,14 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "",
+        "icon": "\ueb1b",
         "bindings": []
       },
       "logs": {
         "blocks": [],
         "barred": [],
         "strays": "float",
-        "icon": "",
+        "icon": "\ue64e",
         "bindings": [
           "logs"
         ]
