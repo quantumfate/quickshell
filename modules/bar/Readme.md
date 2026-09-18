@@ -42,7 +42,12 @@ One top bar per monitor (except the excluded portrait panel). Three isles:
   as the hypr modes submap's recovery mode, never as a picker choice and
   never a fallback a lapsed timed mode settles to (see `previous` in
   `schemas/focus.schema.json`), so the resting pill can say "Work" honestly
-  without inviting anyone back to `neutral`.
+  without inviting anyone back to `neutral`. Its palette lease field uses
+  `modules/common/PalettePicker.qml` (a wrapping swatch grid, readable at any
+  palette count) paired with `modules/common/HoverDetail.qml` (a fixed-height
+  slot for hover-preview text, so pointing at a chip never resizes the
+  panel) — both components are shell-wide, not mood-panel-specific, for the
+  theme panel to reuse.
 
 Autohide follows `Hyprfocus.current.presentation.bar_autohide` — the
 declaration's own per-mode flag, not the retired `deep`/`game` mode ids. A

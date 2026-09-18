@@ -15,7 +15,7 @@ import QtQuick.Layouts
 import "../../services"   // Theme, PanelBus, Focus, Hyprfocus, SceneVeto
 import "../../services/ModeExplain.js" as ModeExplain
 import "../../services/ModeAnnounce.js" as ModeAnnounce
-import "../common"        // Surface
+import "../common"        // Surface, PalettePicker, HoverDetail
 
 Scope {
     id: scope
@@ -69,6 +69,8 @@ Scope {
 
     // The transition preview: what entering a chip would take, named before
     // the mode is entered (the announce model's own line, not a rewrite).
+    // Rendered through HoverDetail so hovering a chip never resizes the card
+    // (LEO-384) — the box exists whether this is "" or three lines long.
     property string _preview: ""
     function hoverChip(id) {
         const spec = Hyprfocus.modes[id];
@@ -76,42 +78,12 @@ Scope {
         scope._preview = a ? a.body : "nothing taken away · enforces immediately";
     }
 
-    // A row of option chips; exactly one is highlighted. `stretch` makes it
-    // share the row's width (used full-width); off + a preferredWidth makes a
-    // compact selector next to a label.
-    component SegRow: RowLayout {
-        id: seg
-        property var options: []
-        property string value: ""
-        property var onPick: null
-        property bool stretch: true
-        Layout.fillWidth: seg.stretch
-        spacing: Theme.space.xs
-
-        Repeater {
-            model: seg.options
-            delegate: Rectangle {
-                id: opt
-                required property string modelData
-                readonly property bool active: opt.modelData === seg.value
-                Layout.fillWidth: true
-                implicitHeight: Theme.fs.sm + Theme.space.sm * 2 + 2
-                radius: Theme.radiusSmall
-                color: opt.active ? Theme.withAlpha(Theme.accent, 0.18) : Theme.withAlpha(Theme.surface, 0.5)
-                border { width: 1; color: opt.active ? Theme.accent : Theme.withAlpha(Theme.border, 0.5) }
-                Text {
-                    anchors.centerIn: parent
-                    text: opt.modelData
-                    color: opt.active ? Theme.accent : Theme.subtext
-                    font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: opt.active ? Font.Bold : Font.Normal }
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: if (seg.onPick) seg.onPick(opt.modelData)
-                }
-            }
-        }
+    // The palette-swatch hover preview (PalettePicker.onHoverName), same
+    // reserved-space treatment as the mode preview above.
+    property string _palettePreview: ""
+    function hoverPalette(name) {
+        const p = Theme.palettes[name];
+        scope._palettePreview = p ? (name + " — base " + p.base + " · accent " + p.mauve) : "";
     }
 
     // Small uppercase section heading, same voice as the calendar panel.
@@ -121,31 +93,6 @@ Scope {
         text: tag.title.toUpperCase()
         color: Theme.subtext
         font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; weight: Font.Bold }
-    }
-
-    // A labelled option row: caption on the left, SegRow taking the rest.
-    component FieldRow: RowLayout {
-        id: field
-        required property string label
-        required property var options
-        required property string value
-        required property var onPick
-        Layout.fillWidth: true
-        spacing: Theme.space.md
-
-        Text {
-            Layout.preferredWidth: Theme.fs.xl * 5
-            text: field.label
-            color: Theme.subtext
-            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
-        }
-        SegRow {
-            stretch: false
-            Layout.preferredWidth: Theme.fs.xl * 7
-            options: field.options
-            value: field.value
-            onPick: field.onPick
-        }
     }
 
     PanelWindow {
@@ -270,17 +217,9 @@ Scope {
                         }
 
                         // What entering the pointed-at chip takes, named before
-                        // it is entered (LEO-280's read half) — and the vetoes
-                        // the last transition honoured, so a refusal is
-                        // visible in the panel the desk runs it from.
-                        Text {
-                            visible: scope._preview !== ""
-                            Layout.fillWidth: true
-                            text: scope._preview
-                            color: Theme.subtextAlt
-                            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
-                            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                        }
+                        // it is entered (LEO-280's read half) — reserved space
+                        // (HoverDetail) so hovering a chip never resizes the card.
+                        HoverDetail { text: scope._preview }
                         Text {
                             visible: (SceneVeto.last?.vetoes ?? []).length > 0
                             Layout.fillWidth: true
@@ -393,13 +332,22 @@ Scope {
                         // (LEO-365) reads as "day / night" and has no single
                         // segment to highlight; picking a segment still writes
                         // a plain string, one palette for both halves.
-                        FieldRow {
-                            id: paletteField
+                        //
+                        // PalettePicker wraps into a swatch grid instead of one
+                        // fixed row (LEO-384), so it stays readable regardless
+                        // of how many palettes a pack ships.
+                        SectionTag { title: "lease palette" }
+
+                        PalettePicker {
+                            id: palettePicker
                             readonly property var raw: (Hyprfocus.current.presentation || {}).palette
                             readonly property bool isPair: raw && typeof raw === "object"
-                            label: "lease palette"
-                            options: ["none"].concat(Object.keys(Theme.palettes))
-                            value: isPair ? (raw.day + " / " + raw.night) : (raw || "none")
+                            Layout.fillWidth: true
+                            entries: [{ name: "none", swatch: Theme.withAlpha(Theme.subtext, 0.3) }]
+                                .concat(Object.keys(Theme.palettes).map(n => ({ name: n, swatch: Theme.palettes[n].base })))
+                            value: palettePicker.isPair ? (palettePicker.raw.day + " / " + palettePicker.raw.night) : (palettePicker.raw || "none")
+                            onHoverName: (name) => scope.hoverPalette(name)
+                            onHoverEnd: () => scope._palettePreview = ""
                             onPick: (v) => {
                                 const result = Hyprfocus.patchMode(scope.mood, { palette: v === "none" ? "" : v });
                                 if (result !== "") {
@@ -413,6 +361,10 @@ Scope {
                                 Theme.noteLease();
                             }
                         }
+
+                        // Swatch hover preview — reserved space, same as the
+                        // mode-chip preview above.
+                        HoverDetail { text: scope._palettePreview }
 
                         Text {
                             visible: !Hyprfocus.known
