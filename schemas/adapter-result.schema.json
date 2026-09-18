@@ -95,6 +95,44 @@
           }
         }
       }
+    },
+    "wallpaper": {
+      "description": "One entry per monitor a `wallpaper` command actually resolved this run (list is read-only and writes none). Separate from applied/pending/failed: this is what was chosen, not whether a surface accepted it — see applied/pending/failed (surface \"wallpaper\" or \"wallpaper[OUTPUT]\") for whether the pick actually painted. Optional: absent on a run that touched no wallpaper.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "palette",
+          "output",
+          "file",
+          "index",
+          "count"
+        ],
+        "properties": {
+          "palette": {
+            "type": "string",
+            "minLength": 1
+          },
+          "output": {
+            "description": "A monitor name, or \"*\" meaning every monitor got the same pick.",
+            "type": "string",
+            "minLength": 1
+          },
+          "file": {
+            "description": "The chosen file's basename, or \"\" when the palette's set is empty.",
+            "type": "string"
+          },
+          "index": {
+            "description": "Position in the shuffled order, or -1 when nothing was chosen.",
+            "type": "integer"
+          },
+          "count": {
+            "description": "Size of the palette's wallpaper set.",
+            "type": "integer"
+          }
+        }
+      }
     }
   },
   "$defs": {

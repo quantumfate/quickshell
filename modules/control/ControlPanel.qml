@@ -1,18 +1,34 @@
-// Control Centre — the one panel over Theme/Sound/Focus, all of which had a
-// backend and no UI. Five sections: Theme (palette + day/night), Appearance
-// (scale/transparency), Wallpaper, Sound, Focus.
+// Control Centre — the one panel over Theme/Sound, both of which had a
+// backend and no UI. Four sections: Theme (palette + day/night), Appearance
+// (scale/transparency), Wallpaper, Sound.
 //
-// Palette/day-night/scale/transparency/wallpaper are written straight to the
-// `theme` Store (a second instance over the same theme.json Theme.qml reads —
-// see services/Store.qml) rather than through Theme's IpcHandler, whose
+// Mode switching moved out (LEO-366) — modules/bar/MoodPanel.qml owns modes
+// (adopting one, stopping, the palette a mode leases); this panel never
+// duplicates that. What is left here is what MoodPanel doesn't cover: the
+// baseline palette/day-night pointer, per-palette wallpaper sets, and
+// appearance/sound dials.
+//
+// Palette/day-night/scale/transparency are written straight to the `theme`
+// Store (a second instance over the same theme.json Theme.qml reads — see
+// services/Store.qml) rather than through Theme's IpcHandler, whose
 // set/scale/transparency/cycle/auto functions are nested inside that
-// IpcHandler and so aren't callable from outside it. Sound and Focus expose
-// their transport as plain functions on the singleton itself, so those are
-// called directly.
+// IpcHandler and so aren't callable from outside it. The wallpaper section is
+// the one exception: it never writes the store directly (decision: QML is
+// never a wallpaper writer), it only calls Theme.wallpaperNext/Prev/Random/
+// Pick, which shell out to `,theme.sh wallpaper ...` — see services/Theme.qml.
+// Sound exposes its transport as plain functions on its own singleton, so
+// that's called directly.
 //
 // The theme section renders AdapterResult (services/AdapterResult.qml), what
 // `,theme.sh apply` actually did last time, rather than assuming the fan-out
-// landed everywhere: see that file's header for why.
+// landed everywhere: see that file's header for why. Restart notices are
+// rendered quiet and inline (small, subdued text) rather than as banners —
+// a tier the user didn't ask about is context, not an alarm.
+//
+// The palette picker (both the theme grid and the wallpaper browser's target)
+// and its hover preview reuse modules/common/PalettePicker.qml and
+// HoverDetail.qml, shared with MoodPanel so both surfaces solve "many
+// palettes" and "hover never resizes the panel" exactly once.
 //
 // Toggle from Hyprland:  qs -c quantumfate ipc call control toggle
 pragma ComponentBehavior: Bound
@@ -29,16 +45,20 @@ Scope {
     id: scope
 
     property bool shown: false
-    property var wallpapers: []   // filenames under ~/.config/hypr/wallpapers
 
-    // The palette the keyboard/pointer is currently pointed at, distinct from
-    // Theme.name (the palette actually applied). The wallpaper picker below
-    // binds to this — per-palette, not to the desk globally — so previewing
-    // frappe shows and edits frappe's wallpaper, not whatever is live.
+    // The palette the pointer/browser is currently aimed at, distinct from
+    // Theme.name (the palette actually applied). The wallpaper section below
+    // binds to this — per-palette, not to the desk globally — so browsing
+    // frappe's set shows and edits frappe's wallpaper, not whatever is live.
     property string previewPalette: Theme.name
-    property int previewIndex: Math.max(0, Object.keys(Theme.palettes).indexOf(Theme.name))
 
-    readonly property string wallpaperDir: Quickshell.env("HOME") + "/.config/hypr/wallpapers"
+    // Hover preview text for the theme swatch grid, rendered through
+    // HoverDetail so hovering never resizes the panel (see PalettePicker.qml).
+    property string _palettePreview: ""
+    function hoverPalette(name) {
+        const p = Theme.palettes[name];
+        scope._palettePreview = p ? (name + " — base " + p.base + " · accent " + p.mauve) : "";
+    }
 
     // Direct write access to the same file Theme.qml reads; see file header.
     Store {
@@ -53,8 +73,9 @@ Scope {
         function hide(): void { scope.hide(); }
     }
 
-    function show() { wallpaperLister.running = true; shown = true; }
+    function show() { Theme.wallpaperRefresh(scope.previewPalette); shown = true; }
     function hide() { shown = false; }
+    onPreviewPaletteChanged: Theme.wallpaperRefresh(scope.previewPalette)
 
     // Fans a theme change out to kitty/GTK/Qt/wallpaper. Read `,theme.sh --help`
     // before touching this — `apply` is the only subcommand this panel needs,
@@ -74,38 +95,11 @@ Scope {
     function setScale(value) { themeStore.set({ scale: ControlLogic.clamp(value, 0.8, 2.5) }); }
     function setTransparency(value) { themeStore.set({ transparency: ControlLogic.clamp(value, 0, 1) }); }
 
-    // Binds a wallpaper to whichever palette is previewed, not to the desk
-    // globally — Theme.wallpapers is a palette -> filename map, and this
-    // panel is the only writer of it.
-    function setWallpaper(name) {
-        const map = Object.assign({}, Theme.wallpapers);
-        map[scope.previewPalette] = name;
-        themeStore.set({ wallpapers: map });
-        if (scope.previewPalette === Theme.name) scope.applyTheme();
-    }
-
-    // Moves the preview cursor by name (pointer) or by grid step (keyboard);
-    // both funnel through here so previewIndex and previewPalette never drift
-    // apart.
     readonly property var paletteNames: Object.keys(Theme.palettes)
-    function previewByName(name) {
-        const i = scope.paletteNames.indexOf(name);
-        if (i >= 0) { scope.previewIndex = i; scope.previewPalette = name; }
-    }
-    function previewMove(key) {
-        scope.previewIndex = ControlLogic.moveGridIndex(scope.previewIndex, key, scope.paletteNames.length, 4);
-        scope.previewPalette = scope.paletteNames[scope.previewIndex];
-    }
 
-    Process {
-        id: wallpaperLister
-        command: ["bash", "-lc", "ls -1 '" + scope.wallpaperDir + "' 2>&1"]
-        stdout: StdioCollector {
-            onStreamFinished: scope.wallpapers = ControlLogic.parseWallpaperList(text)
-        }
-    }
-
-    // Small reusable click-to-pick swatch used by both the palette grid and the
+    // Small reusable click-to-pick swatch used by the day/night pills. Kept
+    // for those (a lighter footprint than the full PalettePicker fits their
+    // inline row); the main theme grid below uses PalettePicker/HoverDetail.
     // day/night pills. `previewed` (keyboard/pointer focus) and `active`
     // (actually applied) are distinct so the picker can show both at once.
     component PalettePill: Rectangle {
@@ -233,14 +227,6 @@ Scope {
             width: card.width
             height: card.height
             Keys.onEscapePressed: scope.hide()
-            Keys.onPressed: (event) => {
-                const key = { [Qt.Key_H]: "h", [Qt.Key_J]: "j", [Qt.Key_K]: "k", [Qt.Key_L]: "l" }[event.key];
-                if (key) { scope.previewMove(key); event.accepted = true; }
-                else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    scope.setPalette(scope.previewPalette);
-                    event.accepted = true;
-                }
-            }
 
             Surface {
                 id: card
@@ -284,42 +270,31 @@ Scope {
                             font.pixelSize: Theme.fs.xs
                         }
 
-                        GridLayout {
+                        // Reused from the mode panel (modules/common/
+                        // PalettePicker.qml): a fixed-footprint swatch chip
+                        // that wraps instead of squeezing, so this stays
+                        // readable at 4 palettes or 40. Clicking sets the
+                        // active theme AND the wallpaper browser's target
+                        // below; hovering only previews (HoverDetail, no
+                        // resize).
+                        PalettePicker {
+                            id: themePicker
                             Layout.fillWidth: true
-                            columns: 4
-                            rowSpacing: Theme.space.sm
-                            columnSpacing: Theme.space.sm
-
-                            Repeater {
-                                model: scope.paletteNames
-                                delegate: PalettePill {
-                                    id: swatch
-                                    required property string modelData
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: Theme.fs.xl * 2.8
-                                    paletteName: swatch.modelData
-                                    active: Theme.name === swatch.modelData
-                                    previewed: scope.previewPalette === swatch.modelData
-                                    onPicked: scope.setPalette(swatch.modelData)
-                                    onHovered: scope.previewByName(swatch.modelData)
-
-                                    ColumnLayout {
-                                        anchors { fill: parent; margins: Theme.space.xs }
-                                        spacing: Theme.space.xs
-                                        SwatchStrip { Layout.fillWidth: true; Layout.fillHeight: true; pal: swatch.pal }
-                                        Text {
-                                            Layout.alignment: Qt.AlignHCenter
-                                            text: swatch.paletteName
-                                            color: swatch.pal.text
-                                            font { pixelSize: Theme.fs.xs; bold: swatch.active }
-                                        }
-                                    }
-                                }
+                            entries: scope.paletteNames.map(n => ({ name: n, swatch: Theme.palettes[n].base }))
+                            value: scope.previewPalette
+                            onHoverName: (name) => scope.hoverPalette(name)
+                            onHoverEnd: () => scope._palettePreview = ""
+                            onPick: (name) => {
+                                scope.previewPalette = name;
+                                scope.setPalette(name);
                             }
                         }
+                        HoverDetail { text: scope._palettePreview }
 
-                        // The quiet chip: only what is still outstanding, named
-                        // with its reason, so "restart Zen" is actionable.
+                        // Quiet, inline restart notices — small and subdued
+                        // rather than a banner: a tier the user didn't ask
+                        // about is context, not an alarm. Each names the
+                        // honest tier the last apply actually reported.
                         ColumnLayout {
                             Layout.fillWidth: true
                             visible: AdapterResult.pending.length > 0 || AdapterResult.failed.length > 0
@@ -331,8 +306,8 @@ Scope {
                                     required property var modelData
                                     Layout.fillWidth: true
                                     wrapMode: Text.Wrap
-                                    text: "restart required — " + modelData.surface + ": " + modelData.reason
-                                    color: Theme.pending
+                                    text: modelData.surface + " — " + modelData.tier + ": " + modelData.reason
+                                    color: Theme.subtextAlt
                                     font.pixelSize: Theme.fs.xs
                                 }
                             }
@@ -342,7 +317,7 @@ Scope {
                                     required property var modelData
                                     Layout.fillWidth: true
                                     wrapMode: Text.Wrap
-                                    text: "failed — " + modelData.surface + ": " + modelData.reason
+                                    text: modelData.surface + " — " + modelData.reason
                                     color: Theme.error
                                     font.pixelSize: Theme.fs.xs
                                 }
@@ -465,55 +440,134 @@ Scope {
                         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
 
                         // ---- Wallpaper -------------------------------------
-                        // Bound to the previewed palette, not the desk: picking
-                        // one here writes Theme.wallpapers[previewPalette].
+                        // A per-monitor browser for the previewed palette's
+                        // set (LEO-366), not a cramped grid: one row per
+                        // monitor showing what it currently has, with
+                        // next/prev stepping it live through the shuffled
+                        // set. Every mutation calls Theme.wallpaperNext/Prev/
+                        // Pick, which shell out to `,theme.sh wallpaper ...`
+                        // — this panel never writes the wallpaper store
+                        // itself (see services/Theme.qml's header).
                         SectionTitle { text: "WALLPAPER — " + scope.previewPalette }
 
-                        GridLayout {
+                        readonly property var wallpaperMonitors: Object.keys(Theme.wallpaperSet.monitors ?? ({}))
+
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            columns: 4
-                            rowSpacing: Theme.space.sm
-                            columnSpacing: Theme.space.sm
+                            spacing: Theme.space.sm
 
                             Repeater {
-                                model: scope.wallpapers
-                                delegate: Rectangle {
-                                    id: wp
+                                model: content.wallpaperMonitors
+                                delegate: RowLayout {
+                                    id: monRow
                                     required property string modelData
-                                    readonly property bool active: Theme.wallpaperFor(scope.previewPalette) === wp.modelData
+                                    readonly property var pick: Theme.wallpaperSet.monitors[monRow.modelData] ?? ({})
+                                    // "*" is the one-wallpaper-for-everything
+                                    // surface name ,theme.sh records applied/
+                                    // pending/failed under (see apply_wallpaper
+                                    // in bin/,theme.sh); a real output name
+                                    // gets its own "wallpaper[NAME]" surface.
+                                    readonly property string surface: monRow.modelData === "*" ? "wallpaper" : "wallpaper[" + monRow.modelData + "]"
+                                    readonly property string tier: AdapterResult.tierFor(monRow.surface)
                                     Layout.fillWidth: true
-                                    Layout.preferredHeight: Theme.fs.xl * 3
-                                    radius: Theme.radiusSmall
-                                    color: Theme.surface
-                                    border { width: wp.active ? 2 : 1; color: wp.active ? Theme.accent : Theme.border }
-                                    clip: true
+                                    spacing: Theme.space.sm
 
-                                    Image {
-                                        anchors.fill: parent
-                                        source: "file://" + scope.wallpaperDir + "/" + wp.modelData
-                                        fillMode: Image.PreserveAspectCrop
-                                        asynchronous: true
-                                        visible: status === Image.Ready
+                                    Rectangle {
+                                        Layout.preferredWidth: Theme.fs.xl * 4
+                                        Layout.preferredHeight: Theme.fs.xl * 2.4
+                                        radius: Theme.radiusSmall
+                                        color: Theme.surface
+                                        border { width: 1; color: Theme.border }
+                                        clip: true
+                                        Image {
+                                            anchors.fill: parent
+                                            source: monRow.pick.current ? "file://" + Theme.wallpaperRoot + "/" + monRow.pick.current : ""
+                                            fillMode: Image.PreserveAspectCrop
+                                            asynchronous: true
+                                            visible: status === Image.Ready
+                                        }
                                     }
-                                    Text {
-                                        anchors.centerIn: parent
-                                        visible: parent.children[0].status !== Image.Ready
-                                        text: wp.modelData
-                                        color: Theme.subtext
-                                        font.pixelSize: Theme.fs.xs
-                                        wrapMode: Text.Wrap
-                                        width: parent.width - Theme.space.sm
-                                        horizontalAlignment: Text.AlignHCenter
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: Theme.space.xs
+                                        Text {
+                                            text: monRow.modelData === "*" ? "all monitors" : monRow.modelData
+                                            color: Theme.text
+                                            font.pixelSize: Theme.fs.sm
+                                        }
+                                        Text {
+                                            text: monRow.pick.current ? monRow.pick.current.split("/").pop() : "none bound"
+                                            color: Theme.subtext
+                                            font.pixelSize: Theme.fs.xs
+                                            elide: Text.ElideMiddle
+                                        }
+                                        // Quiet, inline — the honest tier from
+                                        // the last apply, not shown at all
+                                        // when it's the unremarkable case
+                                        // (already immediate).
+                                        Text {
+                                            visible: monRow.tier !== "" && monRow.tier !== "immediate"
+                                            text: monRow.tier
+                                            color: Theme.subtextAlt
+                                            font.pixelSize: Theme.fs.xs
+                                        }
                                     }
-                                    MouseArea { anchors.fill: parent; onClicked: scope.setWallpaper(wp.modelData) }
+
+                                    Rectangle {
+                                        implicitWidth: prevLabel.implicitWidth + Theme.space.lg
+                                        implicitHeight: prevLabel.implicitHeight + Theme.space.sm
+                                        radius: Theme.radiusSmall
+                                        color: Theme.surface
+                                        border { width: 1; color: Theme.border }
+                                        Text { id: prevLabel; anchors.centerIn: parent; text: "prev"; color: Theme.text; font.pixelSize: Theme.fs.sm }
+                                        MouseArea { anchors.fill: parent; onClicked: Theme.wallpaperPrev(scope.previewPalette, monRow.modelData) }
+                                    }
+                                    Rectangle {
+                                        implicitWidth: nextLabel.implicitWidth + Theme.space.lg
+                                        implicitHeight: nextLabel.implicitHeight + Theme.space.sm
+                                        radius: Theme.radiusSmall
+                                        color: Theme.surface
+                                        border { width: 1; color: Theme.border }
+                                        Text { id: nextLabel; anchors.centerIn: parent; text: "next"; color: Theme.text; font.pixelSize: Theme.fs.sm }
+                                        MouseArea { anchors.fill: parent; onClicked: Theme.wallpaperNext(scope.previewPalette, monRow.modelData) }
+                                    }
                                 }
                             }
+
+                            Text {
+                                visible: content.wallpaperMonitors.length === 0
+                                Layout.fillWidth: true
+                                text: "no monitors reported yet for " + scope.previewPalette
+                                color: Theme.subtext
+                                font.pixelSize: Theme.fs.sm
+                            }
                         }
-                        Text {
-                            visible: scope.wallpapers.length === 0
-                            text: "No wallpapers found in " + scope.wallpaperDir
-                            color: Theme.subtext
-                            font.pixelSize: Theme.fs.sm
+
+                        // Full-size review + pick: opens the whole set in feh
+                        // (decision 6 — previewing there is live too, through
+                        // the same script; see Theme.openWallpaperViewer).
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.space.sm
+                            Text {
+                                Layout.fillWidth: true
+                                text: Theme.wallpaperSet.count + " wallpapers in " + scope.previewPalette + "’s set"
+                                color: Theme.subtextAlt
+                                font.pixelSize: Theme.fs.xs
+                            }
+                            Rectangle {
+                                implicitWidth: browseLabel.implicitWidth + Theme.space.lg
+                                implicitHeight: browseLabel.implicitHeight + Theme.space.sm
+                                radius: Theme.radiusSmall
+                                color: Theme.withAlpha(Theme.accent, 0.18)
+                                border { width: 1; color: Theme.accent }
+                                Text { id: browseLabel; anchors.centerIn: parent; text: "browse in feh"; color: Theme.accent; font.pixelSize: Theme.fs.sm }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: Theme.openWallpaperViewer(scope.previewPalette, win.screen.width, win.screen.height)
+                                }
+                            }
                         }
 
                         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
@@ -572,53 +626,6 @@ Scope {
                                 text: Sound.volume.toFixed(2)
                                 color: Theme.subtext
                                 font.pixelSize: Theme.fs.sm
-                            }
-                        }
-
-                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
-
-                        // ---- Focus ------------------------------------------
-                        SectionTitle { text: "FOCUS" }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Theme.space.sm
-
-                            Rectangle {
-                                implicitWidth: startText.implicitWidth + Theme.space.lg
-                                implicitHeight: startText.implicitHeight + Theme.space.sm
-                                radius: Theme.radiusSmall
-                                color: Focus.active ? Theme.surface : Theme.withAlpha(Theme.success, 0.3)
-                                border { width: 1; color: Focus.active ? Theme.border : Theme.success }
-                                Text {
-                                    id: startText
-                                    anchors.centerIn: parent
-                                    text: "Start"
-                                    color: Theme.text
-                                    font.pixelSize: Theme.fs.sm
-                                }
-                                MouseArea { anchors.fill: parent; onClicked: Focus.set("work", 0) }
-                            }
-                            Rectangle {
-                                implicitWidth: stopText.implicitWidth + Theme.space.lg
-                                implicitHeight: stopText.implicitHeight + Theme.space.sm
-                                radius: Theme.radiusSmall
-                                color: Focus.active ? Theme.withAlpha(Theme.error, 0.3) : Theme.surface
-                                border { width: 1; color: Focus.active ? Theme.error : Theme.border }
-                                Text {
-                                    id: stopText
-                                    anchors.centerIn: parent
-                                    text: "Stop"
-                                    color: Theme.text
-                                    font.pixelSize: Theme.fs.sm
-                                }
-                                MouseArea { anchors.fill: parent; onClicked: Focus.stop() }
-                            }
-                            Item { Layout.fillWidth: true }
-                            Text {
-                                text: Focus.active ? ("focus — " + (Focus.until ? ("until " + Focus.until) : "no limit")) : "off"
-                                color: Theme.subtext
-                                font.pixelSize: Theme.fs.xs
                             }
                         }
                     }

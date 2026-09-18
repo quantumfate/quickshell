@@ -286,6 +286,82 @@ Singleton {
     readonly property int barFontSize: fs.md
     readonly property int barFontWeight: Font.DemiBold
 
+    // ---- wallpaper browsing (LEO-366) --------------------------------------
+    // Mutation always shells out to `,theme.sh wallpaper ...` — this file
+    // never writes `wallpapers`/`wallpaper_shuffle` to the store itself; the
+    // script is the one writer (bin/,theme.sh in the hypr repo) and it saves,
+    // shuffles, and repaints the live desktop when the palette is the one
+    // showing. `wallpaperFor`/`wallpapers` above stay read-only mirrors of
+    // whatever it last wrote.
+    readonly property string wallpaperRoot: Quickshell.env("HOME") + "/.config/hypr/wallpapers"
+
+    // The last `wallpaper list` result: {palette, monitors: {NAME: {current,
+    // index}}, count, items}. "" until the first refresh.
+    property var wallpaperSet: ({ palette: "", monitors: ({}), count: 0, items: [] })
+
+    Process {
+        id: wallpaperLister
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.wallpaperSet = JSON.parse(text); }
+                catch (e) { console.warn("theme: bad `wallpaper list` JSON"); }
+            }
+        }
+    }
+    function wallpaperRefresh(palette) {
+        wallpaperLister.command = [",theme.sh", "wallpaper", "list", palette];
+        wallpaperLister.running = true;
+    }
+
+    // One mutator process for next/prev/random/pick, re-listing on exit so
+    // callers see the script's own resolution (shuffle position, the file it
+    // actually picked) rather than guessing it client-side.
+    Process {
+        id: wallpaperMutator
+        property string palette: ""
+        onExited: root.wallpaperRefresh(wallpaperMutator.palette)
+    }
+    function _runWallpaper(args, palette) {
+        wallpaperMutator.palette = palette;
+        wallpaperMutator.command = [",theme.sh", "wallpaper"].concat(args);
+        wallpaperMutator.running = true;
+    }
+    function wallpaperNext(palette, output) {
+        root._runWallpaper(output ? ["next", palette, "--output", output] : ["next", palette], palette);
+    }
+    function wallpaperPrev(palette, output) {
+        root._runWallpaper(output ? ["prev", palette, "--output", output] : ["prev", palette], palette);
+    }
+    function wallpaperRandom(palette, output) {
+        root._runWallpaper(output ? ["random", palette, "--output", output] : ["random", palette], palette);
+    }
+    // Binds one specific file (validated by the script against the palette's
+    // set folder) — the `--action` target for the feh viewer below.
+    function wallpaperPick(file, palette) {
+        root._runWallpaper([file, palette], palette);
+    }
+
+    // The full-size viewer (LEO-366): feh over the palette's own set folder,
+    // scaled to fit the given geometry. Return re-binds the image on screen
+    // back to the palette through the same script `wallpaperPick` uses —
+    // still no direct store write, even from inside feh. Stepping
+    // (space/backspace) and quitting (q) are feh's own defaults; nothing to
+    // wire by hand for those.
+    //
+    // NOTE for the hypr-side windowrule agent: feh's default WM_CLASS is
+    // "feh" — a float+center rule on that class is what this viewer wants;
+    // out of scope here.
+    Process { id: viewer }
+    function openWallpaperViewer(palette, width, height) {
+        const dir = root.wallpaperRoot + "/" + palette;
+        const geometry = Math.round(width) + "x" + Math.round(height);
+        viewer.command = ["feh", "--scale-down", "--geometry", geometry,
+            "--title", "wallpapers — " + palette,
+            "--action", ",theme.sh wallpaper %F " + palette,
+            dir];
+        viewer.running = true;
+    }
+
     // The fan-out belongs to the palette, not to whoever changed it — and not
     // to a mood switch. `accent`/`surfaceAlpha` above are plain bindings on
     // Focus.mode; kitty/GTK/Qt already recolour the moment `,theme.sh apply`

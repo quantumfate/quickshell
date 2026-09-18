@@ -19,7 +19,7 @@ Singleton {
         name: "theme.result"
         // A machine that has never run an apply is not an error state: it
         // reports nothing rather than an empty success.
-        defaults: ({ ok: true, ts: 0, adapter: "theme", applied: [], pending: [], failed: [] })
+        defaults: ({ ok: true, ts: 0, adapter: "theme", applied: [], pending: [], failed: [], wallpaper: [] })
     }
 
     readonly property bool ok: store.data.ok ?? true
@@ -29,6 +29,25 @@ Singleton {
     readonly property var applied: store.data.applied ?? []
     readonly property var pending: store.data.pending ?? []
     readonly property var failed: store.data.failed ?? []
+
+    // What the last wallpaper command actually resolved, one entry per
+    // monitor: {palette, output, file, index, count}. Distinct from
+    // applied/pending/failed — this is the pick, not whether it painted.
+    readonly property var wallpaper: store.data.wallpaper ?? []
+    function wallpaperFor(output) {
+        for (const w of root.wallpaper) if (w && w.output === output) return w;
+        return null;
+    }
+
+    // The honest tier for one named surface ("wallpaper" or
+    // "wallpaper[OUTPUT]", same as any other adapter surface): "immediate" or
+    // "next-launch" if the last run says so, "" if the run never mentioned it
+    // (nothing to report — not a failure, just silence).
+    function tierFor(surface) {
+        for (const e of root.applied) if (e && e.surface === surface) return e.tier ?? "immediate";
+        for (const e of root.pending) if (e && e.surface === surface) return e.tier ?? "next-launch";
+        return "";
+    }
 
     // True before any adapter has ever run. Distinct from a run that applied
     // nothing, which is a real (and suspicious) outcome.

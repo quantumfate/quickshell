@@ -96,3 +96,26 @@ test("a failure is not silence", () => {
     assert.deepEqual(validate(withFailure), []);
     assert.equal(withFailure.applied.length + withFailure.failed.length, real.applied.length);
 });
+
+// LEO-366: `wallpaper` is the one addition to this contract — one entry per
+// monitor a `wallpaper` command actually resolved. Optional (a run that
+// touched no wallpaper omits it, like `real` above), but shaped strictly when
+// present.
+test("wallpaper is an optional array of per-monitor picks", () => {
+    const withWallpaper = {
+        ...real,
+        wallpaper: [
+            { palette: "mocha", output: "DP-1", file: "sunset.jpg", index: 3, count: 12 },
+            { palette: "mocha", output: "eDP-1", file: "forest.png", index: 7, count: 12 }
+        ]
+    };
+    assert.deepEqual(validate(withWallpaper), []);
+});
+
+test("a wallpaper entry missing a required field is rejected", () => {
+    const missingCount = {
+        ...real,
+        wallpaper: [{ palette: "mocha", output: "DP-1", file: "sunset.jpg", index: 3 }]
+    };
+    assert.ok(validate(missingCount).length, "a wallpaper entry without `count` was accepted");
+});
