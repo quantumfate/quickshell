@@ -10,11 +10,12 @@ import { loadLibrary } from "./qml.js";
 
 const {
     catalogOrder, modeOrder, iconFor, orderBy, canonical, barWorkspaces,
-    rowState, selector, buildRows, filterRows, roleForScreen, activeName
+    rowState, selector, buildRows, filterRows, roleForScreen, activeName,
+    attachLive
 } = loadLibrary("modules/bar/WorkspaceSwitch.js", [
     "catalogOrder", "modeOrder", "iconFor", "orderBy", "canonical",
     "barWorkspaces", "rowState", "selector", "buildRows", "filterRows",
-    "roleForScreen", "activeName"
+    "roleForScreen", "activeName", "attachLive"
 ]);
 
 // A small fixture declaration: catalog order code, creative, media; "work"
@@ -206,4 +207,28 @@ test("activeName() is empty when nothing on this monitor is focused yet", () => 
     assert.equal(activeName([{ name: "code", active: false }]), "");
     assert.equal(activeName([]), "");
     assert.equal(activeName(undefined), "");
+});
+
+// LEO-344: three admitted scenes (code, obsidian-linear, proton) all live on
+// this Hyprland build with `id: -1` — it reports no numeric identity for a
+// named workspace at all, rather than a merely unstable one. Matching by id
+// collapsed all three onto whichever workspace a same-keyed map inserted
+// last, duplicating it across the other two rows.
+test("attachLive() matches rows to their live workspace by name, not id", () => {
+    const rows = [
+        { id: -1, name: "code", occupied: true },
+        { id: -1, name: "obsidian-linear", occupied: true },
+        { id: -1, name: "proton", occupied: true }
+    ];
+    const live = [
+        { id: -1, name: "code", active: true },
+        { id: -1, name: "obsidian-linear", active: false },
+        { id: -1, name: "proton", active: false }
+    ];
+    assert.deepEqual(attachLive(rows, live), live);
+});
+
+test("attachLive() passes a synthesized row (id: null) through unmatched", () => {
+    const rows = [{ id: null, name: "logs", occupied: false }];
+    assert.deepEqual(attachLive(rows, []), rows);
 });

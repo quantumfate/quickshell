@@ -184,3 +184,23 @@ function roleForScreen(roles, screenName) {
     if (!roles || Object.keys(roles).length === 0) return "primary";
     return screenName === roles.primary ? "primary" : "secondary";
 }
+
+/**
+ * Attach each bar row's live Hyprland object back onto barWorkspaces()'s
+ * result. Rows are matched by NAME, never by `id`: a named workspace's id is
+ * not a trustworthy per-workspace handle (some Hyprland builds report the
+ * same id — e.g. -1 — for every named workspace, since they carry no
+ * numeric identity at all), so keying a live-object map by id can collapse
+ * several distinct named workspaces onto one map entry, silently duplicating
+ * whichever workspace inserted last across every other row that resolved to
+ * a real match (LEO-344).
+ *
+ * rows: barWorkspaces()'s result — one entry per bar row, `id: null` marking
+ *       a synthesized (not-yet-created) row.
+ * live: the real Hyprland workspace objects rows may match by name.
+ * -> rows, with each non-synthesized entry replaced by its live object.
+ */
+function attachLive(rows, live) {
+    const byName = new Map((live || []).map(w => [w.name, w]));
+    return (rows || []).map(w => w.id === null ? w : byName.get(w.name));
+}

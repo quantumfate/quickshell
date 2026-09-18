@@ -51,12 +51,15 @@ Rectangle {
             occupied: (w.toplevels?.values?.length ?? 0) > 0
         }));
         const order = WorkspaceSwitch.barWorkspaces(Hyprfocus.data, Hyprfocus.mode, root._role, plain);
-        const byId = new Map(all.map(w => [w.id, w]));
-        // A synthesized row (id: null — an admitted scene with no live
-        // Hyprland workspace) has no live counterpart to look up: pass it
-        // through as-is, the delegate below already treats an absent
-        // `.toplevels`/`.active`/`.urgent` as empty/false/false.
-        return order.map(w => w.id === null ? w : byId.get(w.id));
+        // Swap each row's plain stand-in for its live Hyprland object,
+        // matched by name (see WorkspaceSwitch.attachLive's header —
+        // LEO-344: matching by `id` here collapsed distinct named
+        // workspaces onto one another). A synthesized row (id: null — an
+        // admitted scene with no live Hyprland workspace) has no live
+        // counterpart and passes through as-is; the delegate below already
+        // treats an absent `.toplevels`/`.active`/`.urgent` as
+        // empty/false/false.
+        return WorkspaceSwitch.attachLive(order, all);
     }
 
     // The focused row's scene name (pure logic, tested in
