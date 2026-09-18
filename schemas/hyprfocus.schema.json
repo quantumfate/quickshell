@@ -14,7 +14,7 @@
   "properties": {
     "version": {
       "description": "Declaration format version. Bumped when the grammar changes incompatibly, or when the shipped content changes enough that a stored declaration should be re-seeded (LEO-337) \u2014 the CLI (`,hyprfocus seed`) reseeds a store whose version is lower than this one, once, without --force.",
-      "const": 4
+      "const": 5
     },
     "base": {
       "$ref": "#/$defs/desk"
@@ -89,6 +89,16 @@
           },
           "additionalProperties": {
             "$ref": "#/$defs/scene"
+          }
+        },
+        "drawers": {
+          "description": "The drawer catalog, keyed by drawer id: a small special workspace that slides in over the current scene and holds one app the desk depends on but that never takes a tile (desktop-model.md \"Drawers\"; today's implementation is docs/shelves.md). A drawer not referenced by any scene's `drawers` list is GLOBAL — reachable from every mode, on the same reserved key it would use inside a scene. One key per drawer everywhere: `key` is validated unique across the whole catalog, so a global drawer's key can never collide with a scene-assigned one either. A drawer absent from the active desk is simply absent from its submap — never shown disabled.",
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/drawer"
           }
         },
         "notify": {
@@ -192,6 +202,50 @@
           "description": "The glyph the bar's workspace pill shows for this scene's workspace (LEO-343), from the same icon font the bar already uses. Omit and the bar falls back to a numeric/dot glyph, the same as an undeclared workspace.",
           "type": "string",
           "maxLength": 8
+        },
+        "drawers": {
+          "description": "Drawers assigned to this scene, by reference into `base.drawers`. Reachable on their reserved key only while this scene is active (locking the scene does not withdraw them); a drawer may be assigned to more than one scene without duplicating its declaration. Every id here must exist in `base.drawers` — an unknown reference is a declaration error, checked the same way an unknown scene reference is.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "drawer": {
+      "description": "A dependency app a scene needs (or the desk always needs) but that must never take a tile: an engine-managed special workspace that slides in over the current scene. Placement, admission and lifecycle are engine policy — this only names what the drawer is and how it starts.",
+      "type": "object",
+      "required": [
+        "key",
+        "class",
+        "desc",
+        "launch"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "description": "The reserved key inside the owning scope's submap (mode-level for a global drawer, scene-level for an assigned one). The SAME key everywhere a drawer is reachable — validated unique across the whole `base.drawers` catalog, so it can never collide with another drawer's key in any scope, global or scene-assigned.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8
+        },
+        "class": {
+          "description": "Window class (or Lua pattern) the drawer holds, matched literal-first the same way a scene block's `classes` is.",
+          "type": "string"
+        },
+        "desc": {
+          "description": "Which-key label.",
+          "type": "string"
+        },
+        "launch": {
+          "description": "The command that opens the app when no window of its class exists yet. Every launch routes through `uwsm`; the host wraps this command, it does not replace it — so the Ankama launcher's command stays whatever gets it running through Lutris, unchanged from today's `on_created_empty`.",
+          "type": "string"
+        },
+        "background": {
+          "description": "Launch this drawer silently on mode entry, before any key is pressed, instead of waiting for the first press (desktop-model.md \"Drawers\"). A background launch failure is logged and never blocks the mode. Declared here; the bring-up executor that reads it ships in a later chunk.",
+          "type": "boolean",
+          "default": false
         }
       }
     },

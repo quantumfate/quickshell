@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "base": {
     "bindings": [],
     "services": [
@@ -14,6 +14,59 @@
     "projects": [],
     "notify": {
       "default": "show"
+    },
+    "drawers": {
+      "signal": {
+        "key": "s",
+        "class": "signal",
+        "desc": "Signal",
+        "launch": "signal-desktop",
+        "background": true
+      },
+      "vesktop": {
+        "key": "v",
+        "class": "vesktop",
+        "desc": "Vesktop",
+        "launch": "vesktop",
+        "background": true
+      },
+      "ankama": {
+        "key": "a",
+        "class": "Ankama Launcher",
+        "desc": "Ankama Launcher",
+        "launch": ",ankama-launcher.sh"
+      },
+      "steam": {
+        "key": "t",
+        "class": "steam",
+        "desc": "Steam",
+        "launch": "steam"
+      },
+      "lutris": {
+        "key": "l",
+        "class": "net.lutris.Lutris",
+        "desc": "Lutris",
+        "launch": "lutris"
+      },
+      "music": {
+        "key": "m",
+        "class": "([Ss]potify)",
+        "desc": "Spotify",
+        "launch": "spotify",
+        "background": true
+      },
+      "ckb-next": {
+        "key": "k",
+        "class": "ckb-next",
+        "desc": "ckb-next",
+        "launch": "ckb-next"
+      },
+      "copyq": {
+        "key": "c",
+        "class": "com.github.hluk.copyq",
+        "desc": "CopyQ",
+        "launch": "copyq"
+      }
     },
     "scenes": {
       "dofus": {
@@ -50,6 +103,10 @@
           "dofus",
           "shelf-ankama",
           "shelf-lutris"
+        ],
+        "drawers": [
+          "ankama",
+          "lutris"
         ]
       },
       "pokemon": {
@@ -101,6 +158,9 @@
         "icon": "",
         "bindings": [
           "shelf-steam"
+        ],
+        "drawers": [
+          "steam"
         ]
       },
       "media": {

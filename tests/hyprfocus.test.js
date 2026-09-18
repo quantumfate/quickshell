@@ -36,8 +36,23 @@ function lint(doc) {
     const base = doc.base;
     const known = Object.fromEntries(KINDS.map(k => [k, new Set(base[k] ?? [])]));
     known.scenes = new Set(Object.keys(base.scenes ?? {}));
+    const drawers = base.drawers ?? {};
     const errors = [];
     const say = (where, msg) => errors.push(`${where}: ${msg}`);
+
+    // One key per drawer, everywhere (LEO-363): a key shared by two catalog
+    // entries would be reachable ambiguously in whichever scope both apply.
+    const keyOwner = new Map();
+    for (const [id, drawer] of Object.entries(drawers)) {
+        const owner = keyOwner.get(drawer.key);
+        if (owner) say("base.drawers", `key '${drawer.key}' claimed by ${owner} and ${id}`);
+        else keyOwner.set(drawer.key, id);
+    }
+    for (const [name, scene] of Object.entries(base.scenes ?? {})) {
+        for (const id of scene.drawers ?? []) {
+            if (!(id in drawers)) say(`base.scenes.${name}.drawers`, `unknown drawer '${id}'`);
+        }
+    }
 
     for (const [mode, spec] of Object.entries(doc.modes)) {
         for (const kind of KINDS) {
@@ -132,6 +147,29 @@ test("the lint catches an unknown monitor role and a duplicate scene", () => {
         "study.scenes: unknown monitor 'DP-1'",
         "study.scenes: duplicate scene 'code'",
     ]);
+});
+
+test("the lint catches two drawers sharing one key", () => {
+    const broken = structuredClone(declaration);
+    const signalKey = broken.base.drawers.signal.key;
+    broken.base.drawers.copyq.key = signalKey;
+    assert.deepEqual(lint(broken), [`base.drawers: key '${signalKey}' claimed by signal and copyq`]);
+});
+
+test("the lint catches a scene assigning an undeclared drawer", () => {
+    const broken = structuredClone(declaration);
+    broken.base.scenes.dofus.drawers.push("spotify");
+    assert.deepEqual(lint(broken), ["base.scenes.dofus.drawers: unknown drawer 'spotify'"]);
+});
+
+test("every drawer key is unique across the catalog, matching the resolver's rule", () => {
+    const keys = Object.values(declaration.base.drawers).map((d) => d.key);
+    assert.equal(new Set(keys).size, keys.length, "a drawer key repeats");
+});
+
+test("ankama and lutris are dofus's drawers, steam is steam-games's, per the product decision", () => {
+    assert.deepEqual(declaration.base.scenes.dofus.drawers, ["ankama", "lutris"]);
+    assert.deepEqual(declaration.base.scenes["steam-games"].drawers, ["steam"]);
 });
 
 test("the lint catches two active scenes claiming one class", () => {
