@@ -3,29 +3,31 @@
 One top bar per monitor (except the excluded portrait panel). Three isles:
 
 - **left** — where am I: workspaces, submap indicator, group chip, layout glyph.
-  The workspace pill's order and icons (LEO-343) come from the hyprfocus
-  declaration, never a hardcoded list: each monitor shows EVERY scene the
-  active mode admits for that monitor's role (`base.scenes[name].icon`,
-  declared order from `modes.<id>.scenes`), plus any other real workspace
-  that still holds windows, appended after. Entering a mode launches
-  nothing (LEO-373): an admitted scene with no windows shows **dormant**
-  (dimmed, `Theme.c.overlay0` + reduced opacity — synthesized even when
-  Hyprland has not created its workspace yet, so the row is there from mode
-  entry, not just after a window appears), one with at least one window
-  shows **playing** (`Theme.c.lavender`), and the one active on this
-  monitor is **focused** (LEO-371's accent pill, `Theme.accent`) regardless
-  of whether it is also playing. Dormant is a display state only — the
-  workspace is still admitted and its row still dispatches `name:<scene>`
-  on click, focusing or creating it. The scene's name is shown next to the
-  focused row, elided laptop-safe. See
-  [`WorkspaceSwitch.js`](WorkspaceSwitch.js) for the pure logic
+  The workspace pill's order and icons come from the hyprfocus declaration,
+  never a hardcoded list: each monitor shows EVERY scene the active mode
+  admits for that monitor's role (`base.scenes[name].icon`, declared order
+  from `modes.<id>.scenes`), plus any other real workspace that still holds
+  windows, appended after. Entering a mode launches nothing: an admitted
+  scene with no windows shows **dormant** (dimmed, `Theme.c.overlay0` +
+  reduced opacity — synthesized even when Hyprland has not created its
+  workspace yet, so the row is there from mode entry, not just after a
+  window appears), one with at least one window shows **playing**
+  (`Theme.c.lavender`), and the one active on this monitor is **focused**
+  (tinted icon, `Theme.accent`) regardless of whether it is also playing.
+  Dormant is a display state only — the workspace is still admitted and its
+  row still dispatches `name:<scene>` on click, focusing or creating it. The
+  active workspace is read off Hyprland's raw `workspace`/`workspacev2`/
+  `focusedmon` events directly rather than the monitor's cached
+  `activeWorkspace`, which was observed to lag on a same-monitor switch —
+  see `Workspaces.qml`'s `_activeWsName` header for the socket2 evidence.
+  See [`WorkspaceSwitch.js`](WorkspaceSwitch.js) for the pure logic
   (`barWorkspaces`, `rowState`, `roleForScreen`, `activeName`) and its
   header for how a monitor's primary/secondary role is read off the
-  `geometry` store's `roles` map (LEO-368) — hypr's `conf/host.lua`
-  publishes it explicitly next to the per-output gaps, so `roleForScreen`
-  reads a real fact instead of guessing from the gaps map's key order. An
-  unconnected or ignored output is simply absent from the map, never
-  defaulted onto a role.
+  `geometry` store's `roles` map — hypr's `conf/host.lua` publishes it
+  explicitly next to the per-output gaps, so `roleForScreen` reads a real
+  fact instead of guessing from the gaps map's key order. An unconnected or
+  ignored output is simply absent from the map, never defaulted onto a
+  role.
 - **Dofus** — appears only on the `gaming` workspace while Dofus clients are
   present. Mirrors the Hyprland group order from `DofusWindows`, highlights the
   focused member, focuses on click, and exposes the swap-detector controls from
