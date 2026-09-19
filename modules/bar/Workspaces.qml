@@ -115,9 +115,6 @@ Rectangle {
         }
     }
 
-    // The focused row's scene name, for the label next to it.
-    readonly property string _activeName: WorkspaceSwitch.activeName(root._sorted ?? [], root._activeWsName)
-
     color: "transparent"
     implicitWidth: row.implicitWidth
     implicitHeight: 22
@@ -178,17 +175,6 @@ Rectangle {
                     onTapped: Hyprland.dispatch('hl.dsp.workspace("' + WorkspaceSwitch.selector(wsDelegate.modelData) + '")')
                 }
             }
-        }
-
-        // The focused scene's name, next to the row. Elided on a laptop-width
-        // bar rather than pushing the rest of the island off screen.
-        Text {
-            visible: root._activeName !== ""
-            text: root._activeName
-            color: Theme.accent
-            elide: Text.ElideRight
-            Layout.maximumWidth: Theme.space.xl * 5
-            font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
         }
     }
 }
