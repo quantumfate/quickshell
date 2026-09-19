@@ -64,7 +64,7 @@ Scope {
     property var sceneLast: (sceneLastFile.text() || "{}")
     FileView {
         id: sceneLastFile
-        path: Quickshell.env("QF_STORE") || (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/quantum-store/scene-policy/last.json"
+        path: Config.stateDir + "/scene-policy/last.json"
         watchChanges: true
         onFileChanged: reload()
         onLoaded: {

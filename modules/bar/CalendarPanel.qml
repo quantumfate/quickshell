@@ -71,7 +71,7 @@ Scope {
     property var weatherReport: ({})
     FileView {
         id: weatherFile
-        path: Quickshell.env("QF_STORE") || (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/quantum-store/weather.json"
+        path: Config.stateDir + "/weather.json"
         watchChanges: true
         onFileChanged: reload()
         onLoaded: {
