@@ -1,6 +1,9 @@
-// projects.json's contract: no `path` field, on purpose (see the schema's own
-// description) — these tests hold the schema and the shipped defaults to that,
-// and to each other, the way store.test.js does for theme.json.
+// projects.json's contract: `path` is a real field now —
+// `,proj.sh` reads it at runtime — but it is machine-specific, so the
+// shipped seed (assets/projects.default.json) never carries one; schema
+// makes it optional rather than required for exactly that reason. These
+// tests hold the schema and the shipped defaults to that, and to each
+// other, the way store.test.js does for theme.json.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -46,7 +49,7 @@ test("the shipped defaults satisfy the schema", () => {
     }
 });
 
-test("no entry carries a path — that stays ,proj.sh's alone", () => {
+test("the shipped seed carries no path — that's machine-specific, filled in by `,proj.sh sync`", () => {
     for (const [name, entry] of Object.entries(defaults.projects)) {
         assert.ok(!("path" in entry), `${name} carries a path; the schema forbids it`);
     }
@@ -64,4 +67,12 @@ test("the schema rejects what it should", () => {
 test("at most one shipped default is the study project", () => {
     const studies = Object.values(defaults.projects).filter(p => p.study);
     assert.ok(studies.length <= 1, "more than one default project claims `study`");
+});
+
+test("scopes accepts a name-to-command map, and is optional", () => {
+    assert.deepEqual(validateEntry({ kind: "repo", windows: ["nvim"], study: false, priority: 0 }, "x"), []);
+    assert.deepEqual(
+        validateEntry({ kind: "repo", windows: ["nvim"], study: false, priority: 0, scopes: { test: "just test" } }, "x"),
+        [],
+    );
 });

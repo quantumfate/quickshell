@@ -39,6 +39,13 @@
             "description": "Hyprland workspace `default_name` this project's windows open onto (only the initial placement; a window moves freely afterward). Source: `.proj.toml`/tms `workspace =`, defaulting to `code`.",
             "type": "string"
           },
+          "scopes": {
+            "description": "A project's own working contexts beyond the fixed `windows` template — \"like scenes but for projects\": name to shell command, each spawned with role tag `slot:<name>` (the same tag vocabulary `windows` entries carry) and joined into the project's group by class. Source: `.proj.toml`'s `[scopes]` table (repo root) or the tms config's `[projects.<name>.scopes]`, one plain `name = \"command\"` per line; absent or `{}` means the project declares none. `,proj.sh scope <name>` / `pick-scope` resolve against whichever project's group is focused, never a hardcoded name.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "kind": {
             "description": "What the dashboard shows this project as.",
             "type": "string",
