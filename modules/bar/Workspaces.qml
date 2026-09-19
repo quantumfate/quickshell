@@ -105,8 +105,20 @@ Rectangle {
             if (event.name === "workspace" || event.name === "workspacev2") {
                 // payload: "name" (workspace) or "name,displayName" (workspacev2)
                 const name = comma === -1 ? data : data.slice(0, comma);
+                // Match the monitor by NAME, never by object identity against
+                // `Hyprland.workspaces`: that is the same model this property
+                // exists to stop trusting, and identity held only while
+                // Quickshell happened to hand back the very same reference --
+                // a workspace the model had not caught up on yet (or re-wrapped)
+                // failed the test silently and the highlight simply never moved.
+                // `screen.name` is the compositor's own output name, so an
+                // unknown workspace falls back to "this event is for the
+                // focused monitor", which is what a bare `workspace` event means.
                 const live = (Hyprland.workspaces?.values ?? []).find(w => w.name === name);
-                if (live && live.monitor === root._monitor) root._activeWsName = name;
+                const onThisScreen = live?.monitor?.name !== undefined
+                    ? live.monitor.name === root.screen.name
+                    : root._monitor?.focused ?? false;
+                if (onThisScreen) root._activeWsName = name;
             } else if (event.name === "focusedmon" || event.name === "focusedmonv2") {
                 // payload: "monitorName,workspaceNameOrAddress"
                 if (comma === -1) return;
