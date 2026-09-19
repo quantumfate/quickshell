@@ -348,14 +348,18 @@ Singleton {
     // (space/backspace) and quitting (q) are feh's own defaults; nothing to
     // wire by hand for those.
     //
-    // NOTE for the hypr-side windowrule agent: feh's default WM_CLASS is
-    // "feh" — a float+center rule on that class is what this viewer wants;
-    // out of scope here.
+    // The hypr-side windowrule (hypr/windowrules.lua, matched on feh's WM_CLASS
+    // "feh") floats, centers and caps the window to the monitor minus
+    // default_gaps' outer margin — that rule is the source of truth for the
+    // final size. `--geometry` here only sets feh's own starting guess so its
+    // internal scale-down math isn't computed against the full monitor before
+    // Hyprland resizes it: the caller already passes a gap-shrunk size (see
+    // ControlPanel.qml), not the raw screen dimensions.
     Process { id: viewer }
     function openWallpaperViewer(palette, width, height) {
         const dir = root.wallpaperRoot + "/" + palette;
         const geometry = Math.round(width) + "x" + Math.round(height);
-        viewer.command = ["feh", "--scale-down", "--geometry", geometry,
+        viewer.command = ["feh", "--scale-down", "--auto-zoom", "--geometry", geometry,
             "--title", "wallpapers — " + palette,
             "--action", ",theme.sh wallpaper %F " + palette,
             dir];

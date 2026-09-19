@@ -565,7 +565,12 @@ Scope {
                                 Text { id: browseLabel; anchors.centerIn: parent; text: "browse in feh"; color: Theme.accent; font.pixelSize: Theme.fs.sm }
                                 MouseArea {
                                     anchors.fill: parent
-                                    onClicked: Theme.openWallpaperViewer(scope.previewPalette, win.screen.width, win.screen.height)
+                                    // Shrunk below the raw screen size so feh's own
+                                    // scale-down math already targets roughly the
+                                    // frame the hypr-side windowrule will enforce
+                                    // (monitor minus default_gaps) rather than the
+                                    // full monitor — see Theme.openWallpaperViewer.
+                                    onClicked: Theme.openWallpaperViewer(scope.previewPalette, win.screen.width * 0.8, win.screen.height * 0.8)
                                 }
                             }
                         }
