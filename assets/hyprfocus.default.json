@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "base": {
     "bindings": [],
     "services": [
@@ -65,7 +65,7 @@
         "key": "c",
         "class": "com.github.hluk.copyq",
         "desc": "CopyQ",
-        "launch": "copyq"
+        "launch": "copyq show"
       }
     },
     "scenes": {
