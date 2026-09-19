@@ -6,16 +6,24 @@
 // monitor is the dofus workspace and Dofus clients are present.
 //
 // Layout per request:
-//   [ (class icon, Character, learn-hash button) ... ] [ recalibrate ] [ run/stop ]
+//   [ (class icon, Character) chip, learn button ] ... [ recalibrate ] [ run/stop ]
 //
 // Membership comes from DofusWindows (the live Hyprland group read model), not
 // reconstructed anywhere else. Swap state comes from DofusSwap.
+//
+// LEO-376: the isle used bare Text as its controls — no hover/pressed state,
+// no hit target past the glyphs, no focus ring. Every action here now renders
+// through DofusRosterButton.qml, the same rounded/alpha-tinted chip idiom as
+// modules/common/PalettePicker.qml, so the bar doesn't read as a second
+// button language next to the mode panel's. Behaviour is unchanged — same
+// DofusWindows.focus/DofusSwap calls as before, just under real controls.
 pragma ComponentBehavior: Bound
 import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Theme, DofusWindows, DofusState, DofusSwap, Tip
+import "../../services"   // Theme, Focus, DofusWindows, DofusState, DofusSwap, Tip
 import "../common"        // Surface, ClassIcon
+import "../whichkey/WhichKey.js" as WK   // fadeFor — shared motion-energy contract
 
 Surface {
     id: root
@@ -23,6 +31,7 @@ Surface {
     required property var screen
     readonly property var _mon: Hyprland.monitorFor(screen)
     readonly property string _screenName: screen?.name ?? ""
+    readonly property int _fade: WK.fadeFor(Focus.motionEnergy, 0, 90)
 
     // Visible only on the dofus workspace while Dofus clients are present.
     readonly property bool _onDofus: _mon?.activeWorkspace?.name === "dofus"
@@ -31,19 +40,21 @@ Surface {
     visible: root._onDofus && root._hasDofus
 
     elevation: "island"
-    implicitHeight: Theme.barHeight
-    implicitWidth: row.implicitWidth + Theme.space.lg * 2
+    implicitHeight: Theme.barHeight * 1.2
+    implicitWidth: row.implicitWidth + Theme.space.xl * 2
 
     RowLayout {
         id: row
         anchors {
             fill: parent
-            leftMargin: Theme.space.lg
-            rightMargin: Theme.space.lg
+            leftMargin: Theme.space.xl
+            rightMargin: Theme.space.xl
         }
-        spacing: Theme.space.md
+        spacing: Theme.space.lg
 
-        // Roster rows, one per group member in group order.
+        // Roster rows, one per group member in group order. Each member is a
+        // soft chip (class icon + name, PalettePicker's rounded/alpha idiom)
+        // that focuses the character on click, plus its own "learn" button.
         Repeater {
             model: DofusWindows.windows ?? []
 
@@ -59,53 +70,77 @@ Surface {
                 spacing: Theme.space.xs
                 Layout.alignment: Qt.AlignVCenter
 
-                // Class emblem for this character (empty when unassigned).
-                ClassIcon {
-                    cls: chipRow.cls
-                    size: 20
-                    Layout.preferredWidth: visible ? size : 0
-                    Layout.preferredHeight: size
-                    Layout.alignment: Qt.AlignVCenter
-                }
-
-                // Character name (or roster position when unnamed).
-                Text {
+                Rectangle {
                     id: chip
-                    text: chipRow.named ? chipRow.character : (chipRow.index + 1) + "."
-                    color: chipRow.active ? Theme.accent
-                         : chipRow.named ? Theme.text : Theme.overlay
-                    font { pixelSize: Theme.fs.xs; family: "monospace"; bold: chipRow.active }
+                    implicitHeight: Theme.barHeight * 0.68
+                    implicitWidth: nameRow.implicitWidth + Theme.space.md * 2
+                    radius: Theme.radiusSmall
+                    color: chipArea.pressed ? Theme.withAlpha(Theme.accent, 0.28)
+                         : chipRow.active ? Theme.withAlpha(Theme.accent, 0.18)
+                         : chipArea.containsMouse ? Theme.withAlpha(Theme.surface, 0.8)
+                         : Theme.withAlpha(Theme.surface, 0.5)
+                    border {
+                        width: chip.activeFocus ? 2 : 1
+                        color: chip.activeFocus ? Theme.accent
+                             : chipRow.active ? Theme.accent
+                             : Theme.withAlpha(Theme.border, 0.5)
+                    }
+                    activeFocusOnTab: true
                     Layout.alignment: Qt.AlignVCenter
+
+                    Behavior on color { ColorAnimation { duration: root._fade } }
+                    Behavior on border.color { ColorAnimation { duration: root._fade } }
+
+                    RowLayout {
+                        id: nameRow
+                        anchors.centerIn: parent
+                        spacing: Theme.space.xs
+
+                        ClassIcon {
+                            cls: chipRow.cls
+                            size: 20
+                            Layout.preferredWidth: visible ? size : 0
+                            Layout.preferredHeight: size
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        Text {
+                            text: chipRow.named ? chipRow.character : (chipRow.index + 1) + "."
+                            color: chipRow.active ? Theme.accent
+                                 : chipRow.named ? Theme.text : Theme.overlay
+                            font { pixelSize: Theme.fs.xs; family: "monospace"; bold: chipRow.active }
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+                    }
 
                     MouseArea {
+                        id: chipArea
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: DofusWindows.focus(chipRow.modelData.selector)
+                        onClicked: { chip.forceActiveFocus(); DofusWindows.focus(chipRow.modelData.selector); }
                     }
-                }
 
-                // Learn button: grab this character's turn-popup hash.
-                Text {
-                    id: learnBtn
-                    visible: chipRow.named
-                    text: "learn"
-                    color: learnArea.containsMouse ? Theme.accent : Theme.subtextAlt
-                    font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
-                    Layout.alignment: Qt.AlignVCenter
-
-                    HoverHandler { id: learnHover }
                     HoverTip {
-                        text: "Learn " + chipRow.character + "'s turn popup"
-                        shown: learnHover.hovered
+                        text: chipRow.named ? ("Focus " + chipRow.character) : ""
+                        shown: chip.activeFocus || (chipArea.containsMouse && chipRow.named)
                         screenName: root._screenName
                     }
 
-                    MouseArea {
-                        id: learnArea
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: DofusSwap.learn(chipRow.character)
-                    }
+                    Keys.onReturnPressed: DofusWindows.focus(chipRow.modelData.selector)
+                    Keys.onEnterPressed: DofusWindows.focus(chipRow.modelData.selector)
+                    Keys.onSpacePressed: DofusWindows.focus(chipRow.modelData.selector)
+                }
+
+                // Learn button: grab this character's turn-popup hash.
+                DofusRosterButton {
+                    visible: chipRow.named
+                    compact: true
+                    text: "learn"
+                    tooltip: "Learn " + chipRow.character + "'s turn popup"
+                    screenName: root._screenName
+                    Layout.alignment: Qt.AlignVCenter
+                    onClicked: DofusSwap.learn(chipRow.character)
                 }
             }
         }
@@ -114,8 +149,8 @@ Surface {
         Rectangle {
             visible: controlRow.visible
             Layout.preferredWidth: 1
-            Layout.preferredHeight: Theme.barHeight * 0.5
-            color: Theme.c.overlay0
+            Layout.preferredHeight: Theme.barHeight * 0.6
+            color: Theme.withAlpha(Theme.c.overlay0, 0.6)
             Layout.alignment: Qt.AlignVCenter
         }
 
@@ -126,51 +161,29 @@ Surface {
             Layout.alignment: Qt.AlignVCenter
 
             // Recalibrate the turn-popup region.
-            Text {
-                id: calibrateLabel
+            DofusRosterButton {
                 text: "recalibrate"
-                color: DofusSwap.calibrating ? Theme.c.yellow : Theme.text
-                font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
+                toggled: DofusSwap.calibrating
+                tone: Theme.c.yellow
+                tooltip: DofusSwap.calibrating
+                    ? "select the turn-popup region..."
+                    : "Recalibrate turn-popup region"
+                screenName: root._screenName
                 Layout.alignment: Qt.AlignVCenter
-
-                HoverHandler { id: calibrateHover }
-                HoverTip {
-                    text: DofusSwap.calibrating
-                        ? "select the turn-popup region..."
-                        : "Recalibrate turn-popup region"
-                    shown: calibrateHover.hovered
-                    screenName: root._screenName
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: DofusSwap.calibrate()
-                }
+                onClicked: DofusSwap.calibrate()
             }
 
             // Start / stop the detector.
-            Text {
-                id: toggleLabel
+            DofusRosterButton {
                 text: DofusSwap.detectorRunning ? "stop" : "start"
-                color: DofusSwap.detectorRunning ? Theme.c.red : Theme.c.green
-                font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
+                toggled: true
+                tone: DofusSwap.detectorRunning ? Theme.c.red : Theme.c.green
+                tooltip: DofusSwap.detectorRunning
+                    ? "Stop swap detector"
+                    : "Start swap detector"
+                screenName: root._screenName
                 Layout.alignment: Qt.AlignVCenter
-
-                HoverHandler { id: toggleHover }
-                HoverTip {
-                    text: DofusSwap.detectorRunning
-                        ? "Stop swap detector"
-                        : "Start swap detector"
-                    shown: toggleHover.hovered
-                    screenName: root._screenName
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: DofusSwap.toggle()
-                }
+                onClicked: DofusSwap.toggle()
             }
         }
     }
