@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/quantumfate/quickshell/schemas/projects.schema.json",
   "title": "projects.json",
-  "description": "Per-project dashboard metadata, keyed by project name. Deliberately does NOT carry `path`: the project's existence and location are `,proj.sh`'s alone (scraped from the tms config), so this file cannot disagree with it about where a project lives. `,proj.sh drift` flags a name here that `,proj.sh list` no longer knows.",
-  "classification": "observation",
+  "description": "The source of truth for which projects exist and what each one opens: a project is a set of kitty windows in one Hyprland group on the `code` scene, and `path`/`windows`/`workspace` here are the template `,proj.sh open` reads at runtime. `,proj.sh sync` is the only writer of those three fields — it rescans the tms config's project roots plus bookmarks (tms's own project definition) and each project's `.proj.toml`, so this file and tms's picker cannot disagree about where a project lives. The dashboard fields (`kind`/`study`/`priority`) are hand-edited or set by another tool and `sync` never touches them for a project it already knows. `path` is deliberately NOT required: a machine-specific absolute path has no business in a shipped seed (`assets/projects.default.json` pre-seeds dashboard metadata for well-known names before anyone has ever synced on a given machine), and `,proj.sh open` on an entry with no `path` yet fails with its own clear message pointing at `sync` rather than the schema pretending every entry is immediately usable. Before this became the runtime source, `path` lived only in `,proj.sh`'s own filesystem scan and this schema carried no `path` field at all — an existing store gains it the first time `,proj.sh sync` runs after upgrading.",
+  "classification": "declaration",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,12 +17,28 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "kind",
           "windows",
+          "kind",
           "study",
           "priority"
         ],
         "properties": {
+          "path": {
+            "description": "Absolute path to the project's directory, written only by `,proj.sh sync`. Absent on an entry nothing has synced yet (e.g. a shipped seed name not present on this machine) — `,proj.sh open` refuses with its own message rather than opening a project with nowhere to open.",
+            "type": "string"
+          },
+          "windows": {
+            "description": "The kitty window template, in open order: one project window per entry, each launched with role tag `slot:<entry>` (`,proj.sh`'s `stamp_slot`). `nvim` is the one recognized role with a special launch command (`nvim --listen <sock> .`, for the graceful-quit path — see `,proj.sh`'s header comment); every other entry opens a plain shell. Source: `.proj.toml`'s `windows =` (repo root) or the tms config's `[projects.<name>] windows =`, defaulting to `[\"nvim\", \"zsh\", \"run\"]`.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "workspace": {
+            "description": "Hyprland workspace `default_name` this project's windows open onto (only the initial placement; a window moves freely afterward). Source: `.proj.toml`/tms `workspace =`, defaulting to `code`.",
+            "type": "string"
+          },
           "kind": {
             "description": "What the dashboard shows this project as.",
             "type": "string",
@@ -33,16 +49,8 @@
               "docs"
             ]
           },
-          "windows": {
-            "description": "Tmux window template. Mirrors `,proj.sh`'s own default order unless a project overrides it here; `.proj.toml`/tms `windows =` still wins for the tmux session itself. This copy is for the dashboard to render without shelling out.",
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1
-          },
           "study": {
-            "description": "At most one project should carry this. The morning-restore routine (hypr start.lua) opens this project's nvim window on workspace 1.",
+            "description": "At most one project should carry this. The morning-restore routine (hypr start.lua) opens this project on workspace 1.",
             "type": "boolean"
           },
           "priority": {
