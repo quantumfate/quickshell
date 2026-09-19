@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "base": {
     "bindings": [],
     "services": [
@@ -291,7 +291,8 @@
         "density": "comfortable",
         "motion_energy": "base",
         "bar_autohide": false
-      }
+      },
+      "main": "code"
     },
     "work": {
       "name": "Work",
@@ -326,7 +327,8 @@
         "density": "compact",
         "motion_energy": "instant",
         "bar_autohide": true
-      }
+      },
+      "main": "code"
     },
     "study": {
       "name": "Study",
@@ -357,7 +359,8 @@
         "density": "compact",
         "motion_energy": "instant",
         "bar_autohide": true
-      }
+      },
+      "main": "code"
     },
     "gaming": {
       "name": "Gaming",
@@ -405,7 +408,8 @@
         "density": "compact",
         "motion_energy": "instant",
         "bar_autohide": false
-      }
+      },
+      "main": "dofus"
     }
   }
 }

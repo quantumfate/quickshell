@@ -14,7 +14,7 @@
   "properties": {
     "version": {
       "description": "Declaration format version. Bumped when the grammar changes incompatibly, or when the shipped content changes enough that a stored declaration should be re-seeded (LEO-337) \u2014 the CLI (`,hyprfocus seed`) reseeds a store whose version is lower than this one, once, without --force.",
-      "const": 7
+      "const": 8
     },
     "base": {
       "$ref": "#/$defs/desk"
@@ -376,6 +376,10 @@
           "description": "Kept out of every user-facing mode listing (CLI `modes`, the shell's pickers, the which-key modes tree). Reachable only as a fallback.",
           "type": "boolean",
           "default": false
+        },
+        "main": {
+          "description": "The scene this mode calls home: where a fresh mode entry lands, and the fallback when a reload cannot restore what a monitor was showing. Must name one of this mode's own `scenes`. Never a periodic correction \u2014 focus is not pulled home while the user works elsewhere.",
+          "type": "string"
         },
         "scenes": {
           "description": "The active scene set, in declaration order. Workspaces are derived from it: a mode admits exactly the workspaces its scenes arrange.",
