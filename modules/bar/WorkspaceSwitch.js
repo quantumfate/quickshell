@@ -154,13 +154,30 @@ function filterRows(rows, query) {
  * named by scene already, so the focused row's `name` IS the scene name —
  * this just picks it out rather than making a bar delegate re-derive it.
  *
- * rows: [{ name, active }] — a monitor's ordered rows (barWorkspaces() +
- * Hyprland's per-workspace `active` flag merged in by the caller).
+ * Two calling conventions:
+ * - `activeName(rows)` — legacy: trust each row's own `active` flag. Kept for
+ *   callers that already resolved focus correctly by other means.
+ * - `activeName(rows, activeWsName)` — LEO-371/LEO-337 follow-up: match by
+ *   NAME against the monitor's own `activeWorkspace.name` instead. A
+ *   workspace's per-object `active`/`focused` flag is driven by Quickshell's
+ *   internal (id-keyed) tracking, which this Hyprland build starves of a
+ *   real numeric id (every named workspace reports `id: -1` — see
+ *   attachLive()'s header); that flag was observed to update only on a
+ *   monitor-crossing focus change, not a plain same-monitor workspace
+ *   switch. `HyprlandMonitor.activeWorkspace.name`, by contrast, is exactly
+ *   what `hyprctl -j monitors` reports and updates on every switch.
+ *
+ * rows: [{ name, active }] — a monitor's ordered rows.
+ * activeWsName: the focused monitor's `activeWorkspace.name`, when known.
  * -> the focused row's name, or "" when nothing on this monitor is focused
- *    (a fresh monitor before Hyprland reports focus, e.g.).
+ *    yet, or the active workspace is not one of this monitor's admitted rows.
  */
-function activeName(rows) {
-    const w = (rows || []).find(r => r.active);
+function activeName(rows, activeWsName) {
+    if (activeWsName !== undefined) {
+        const w = (rows || []).find(r => r && r.name === activeWsName);
+        return (w && w.name) || "";
+    }
+    const w = (rows || []).find(r => r && r.active);
     return (w && w.name) || "";
 }
 

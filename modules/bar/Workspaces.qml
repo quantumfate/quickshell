@@ -5,7 +5,7 @@
 // LEO-373: every scene the active mode admits is shown, whether or not it
 // has a live Hyprland workspace yet — WorkspaceSwitch.rowState() names each
 // row's play state:
-//   focused → accent (the active mode's colour), pill background + underline
+//   focused → icon tinted the active mode's accent colour (no pill/border)
 //   playing → lavender (has windows)
 //   dormant → overlay0, further dimmed (admitted, no windows — may not even
 //             exist in Hyprland yet; its key still focuses/creates it)
@@ -62,10 +62,23 @@ Rectangle {
         return WorkspaceSwitch.attachLive(order, all);
     }
 
+    // This monitor's actually-focused workspace, by NAME (LEO-337 follow-up).
+    // `HyprlandMonitor.activeWorkspace.name` matches `hyprctl -j monitors`
+    // live, confirmed correct per output; a workspace's own `.active`/
+    // `.focused` flag does not (Quickshell tracks it by id, and this build
+    // reports `id: -1` for every named workspace — see attachLive()'s
+    // header). `_tick` forces recompute on every raw event: same-monitor
+    // workspace switches were observed to leave `activeWorkspace` looking
+    // stale until a monitor-crossing focus change also fired.
+    readonly property string _activeWsName: {
+        root._tick; // dependency
+        return root._monitor?.activeWorkspace?.name ?? "";
+    }
+
     // The focused row's scene name (pure logic, tested in
     // tests/workspaceswitch.test.js): workspaces are named by scene, so this
     // is just picking the active one out of `_sorted`.
-    readonly property string _activeName: WorkspaceSwitch.activeName(root._sorted ?? [])
+    readonly property string _activeName: WorkspaceSwitch.activeName(root._sorted ?? [], root._activeWsName)
 
     color: "transparent"
     implicitWidth: row.implicitWidth
@@ -79,14 +92,17 @@ Rectangle {
         Repeater {
             model: root._sorted
 
-            // The active workspace gets an accent pill (background + a thin
-            // underline) behind its icon, not just a colour change — the
-            // accent tracks the active mode's role (Theme.accent), so the
-            // highlight itself says which mode this scene belongs to.
+            // Focus is shown by tinting the ICON accent, not by a pill: a
+            // filled/bordered background made the active state read as a
+            // separate widget rather than "this one scene, highlighted".
+            // occupied/dormant still get their own icon-colour tiers below.
             delegate: Rectangle {
                 id: wsDelegate
                 required property var modelData
-                readonly property bool active: modelData.active ?? false
+                // Name match against root._activeWsName, not modelData.active
+                // (see root._activeWsName's header — that flag lags on this
+                // Hyprland build).
+                readonly property bool active: root._activeWsName !== "" && modelData.name === root._activeWsName
                 readonly property bool occupied: (modelData.toplevels?.values?.length ?? 0) > 0
                 readonly property bool urgent: modelData.urgent ?? false
                 // rowState() (tests/workspaceswitch.test.js) names the row's
@@ -95,11 +111,9 @@ Rectangle {
                 readonly property string state: WorkspaceSwitch.rowState({ active: active, occupied: occupied })
                 readonly property bool dormant: state === "dormant"
 
-                implicitWidth: icon.implicitWidth + (active ? Theme.space.sm * 2 : 0)
-                implicitHeight: icon.implicitHeight + (active ? Theme.space.xs * 2 : 0)
-                radius: Theme.radiusPill
-                color: active ? Theme.withAlpha(Theme.accent, Theme.surfaceAlpha.island) : "transparent"
-                border { width: active ? 1 : 0; color: Theme.accent }
+                implicitWidth: icon.implicitWidth
+                implicitHeight: icon.implicitHeight
+                color: "transparent"
 
                 Text {
                     id: icon

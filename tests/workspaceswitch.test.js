@@ -232,3 +232,77 @@ test("attachLive() passes a synthesized row (id: null) through unmatched", () =>
     const rows = [{ id: null, name: "logs", occupied: false }];
     assert.deepEqual(attachLive(rows, []), rows);
 });
+
+// LEO-337 follow-up: on this Hyprland build, every workspace's own
+// `active`/`focused` flag (Quickshell's id-keyed tracking) was observed live
+// to update only on a monitor-crossing focus change, not a plain
+// same-monitor workspace switch — so the bar's active pill never moved
+// between mod+h/l crossings. `activeWsName` is the monitor's own
+// `activeWorkspace.name`, confirmed correct live by `hyprctl -j monitors`,
+// and updates on every switch. Passing it makes activeName() ignore each
+// row's stale `active` flag entirely and match by name instead.
+test("activeName(rows, activeWsName) matches by name, ignoring a stale per-row active flag", () => {
+    const rows = [
+        { name: "code", active: true },   // stale: this build's Hyprland
+        { name: "proton", active: false } // no longer flags focus correctly.
+    ];
+    assert.equal(activeName(rows, "proton"), "proton");
+});
+
+test("activeName(rows, activeWsName) is empty when the active workspace isn't one of this monitor's rows", () => {
+    const rows = [{ name: "code", active: false }];
+    assert.equal(activeName(rows, "logs"), "");
+});
+
+test("activeName(rows, activeWsName) is empty when no monitor focus is known yet", () => {
+    assert.equal(activeName([{ name: "code", active: true }], ""), "");
+});
+
+// The user's second, unrelated report: scene order must always follow the
+// mode's declared list — never re-sorted by liveness, occupancy, or Hyprland's
+// own creation order. Use a 3-scene fixture (the 2-scene one above can't
+// distinguish "declared order" from "coincidence").
+const threeScene = {
+    base: { scenes: { code: {}, obsidian: {}, proton: {} } },
+    modes: {
+        work: {
+            scenes: [
+                { name: "code", monitor: "primary" },
+                { name: "obsidian", monitor: "primary" },
+                { name: "proton", monitor: "primary" }
+            ]
+        }
+    }
+};
+
+test("barWorkspaces() orders admitted rows by the declared scene list, regardless of the live list's order", () => {
+    const declaredOrder = ["code", "obsidian", "proton"];
+    // Every permutation of arrival order, occupancy, and id assignment that
+    // Hyprland's creation order or liveness could plausibly produce.
+    const arrivalPermutations = [
+        [{ id: 3, name: "proton", occupied: true }, { id: 1, name: "code", occupied: false }, { id: 2, name: "obsidian", occupied: true }],
+        [{ id: 1, name: "code", occupied: true }, { id: 2, name: "obsidian", occupied: true }, { id: 3, name: "proton", occupied: true }],
+        [{ id: 9, name: "obsidian", occupied: false }, { id: 7, name: "proton", occupied: false }, { id: 5, name: "code", occupied: false }],
+        [] // nothing live yet — every row synthesized
+    ];
+    for (const live of arrivalPermutations) {
+        const rows = barWorkspaces(threeScene, "work", "primary", live);
+        assert.deepEqual(rows.map(r => r.name), declaredOrder);
+    }
+});
+
+test("attachLive() preserves barWorkspaces()' row order (matches in place, never resorts)", () => {
+    const rows = barWorkspaces(threeScene, "work", "primary", [
+        { id: -1, name: "code", occupied: true },
+        { id: -1, name: "obsidian", occupied: true },
+        { id: -1, name: "proton", occupied: true }
+    ]);
+    // Live objects arrive in a different (Hyprland creation/event) order.
+    const live = [
+        { id: -1, name: "proton", active: true },
+        { id: -1, name: "code", active: false },
+        { id: -1, name: "obsidian", active: false }
+    ];
+    const attached = attachLive(rows, live);
+    assert.deepEqual(attached.map(r => r.name), ["code", "obsidian", "proton"]);
+});
