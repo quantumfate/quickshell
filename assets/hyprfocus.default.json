@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "base": {
     "bindings": [],
     "services": [
@@ -179,26 +179,74 @@
         "blocks": [
           {
             "classes": [
-              "Kitty-Main",
-              "Proj-[A-Za-z0-9_-]+"
+              "Proj-hypr"
             ],
             "order": 1,
-            "group": true,
-            "share": 0.67
+            "group": true
+          },
+          {
+            "classes": [
+              "Proj-quickshell"
+            ],
+            "order": 2,
+            "group": true
+          },
+          {
+            "classes": [
+              "Proj-system-config"
+            ],
+            "order": 3,
+            "group": true
+          },
+          {
+            "classes": [
+              "Proj-scripts"
+            ],
+            "order": 4,
+            "group": true
+          },
+          {
+            "classes": [
+              "Kitty-Main"
+            ],
+            "order": 5,
+            "group": false
           },
           {
             "classes": [
               "zen-twilight",
               "firefox-developer-edition"
             ],
-            "order": 2,
-            "share": 0.33
+            "order": 6
           }
         ],
         "barred": [],
         "strays": "float",
         "icon": "\uf120",
-        "bindings": []
+        "bindings": [],
+        "layout": "deck",
+        "columns": [
+          {
+            "order": 1,
+            "share": 0.67,
+            "classes": [
+              "Proj-hypr",
+              "Proj-quickshell",
+              "Proj-system-config",
+              "Proj-scripts",
+              "Kitty-Main"
+            ],
+            "deck": "projects"
+          },
+          {
+            "order": 2,
+            "share": 0.33,
+            "classes": [
+              "zen-twilight",
+              "firefox-developer-edition"
+            ]
+          }
+        ]
       },
       "obsidian-linear": {
         "blocks": [

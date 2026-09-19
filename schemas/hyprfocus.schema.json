@@ -14,7 +14,7 @@
   "properties": {
     "version": {
       "description": "Declaration format version. Bumped when the grammar changes incompatibly, or when the shipped content changes enough that a stored declaration should be re-seeded (LEO-337) \u2014 the CLI (`,hyprfocus seed`) reseeds a store whose version is lower than this one, once, without --force.",
-      "const": 8
+      "const": 9
     },
     "base": {
       "$ref": "#/$defs/desk"
