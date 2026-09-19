@@ -59,20 +59,45 @@ Singleton {
 
     // The one fan-out a lease owes. Called from Focus's mode-change seam
     // (the same place the compositor converge and the scene apply fire) AND
-    // on the clock's own hourly tick below, reading the whole composition
-    // explicitly rather than trusting that the `name` binding above has
-    // settled yet. Only a real move fans out: a lease naming the palette
-    // already showing runs nothing (the fan-out reloads Hyprland and resets
-    // every window border, which is noise when nothing recolours — the
-    // fan-out belongs to the palette, not to the mode switch).
+    // on the clock's own hourly tick below.
+    //
+    // "did the resolved palette actually move" used to be answered here in
+    // JS, from PaletteLease.js plus a raw store read — but that path only
+    // knew about a MODE's own lease. A desk in plain `mode: "auto"` with no
+    // lease-bearing mode active has no lease at all, so `held` was always ""
+    // and `now` was always just `store.get("palette")` unchanged — nothing
+    // here ever noticed the sun cross 07:00/19:00, so the hourly tick fanned
+    // out only by accident, when the active mode's own lease happened to
+    // move too (LEO-398: the fan-out is what pokes kitty/GTK/Obsidian/
+    // Linear/the browser, so a desk that never fans out sees the shell and
+    // terminal drift day/night while everything else stays put).
+    //
+    // `,theme.sh get` prints the exact same `resolve()` a manual
+    // `set`/`toggle`/`apply` uses — lease, THEN the auto/manual baseline. So
+    // asking the script instead of re-deriving the answer here means the
+    // automatic and manual paths share one resolver, and can never disagree
+    // about when a fan-out is owed.
     property string _applied: root.name
+    Process {
+        id: resolvedPoll
+        command: [",theme.sh", "get"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const now = text.trim();
+                // Only a real move fans out: a lease naming the palette
+                // already showing runs nothing (the fan-out reloads Hyprland
+                // and resets every window border, which is noise when
+                // nothing recolours — the fan-out belongs to the palette,
+                // not to the mode switch).
+                if (!now || now === root._applied) return;
+                root._applied = now;
+                root.applyToSystem();
+            }
+        }
+    }
     function noteLease() {
-        const held = (Hyprfocus.known && Focus.active)
-            ? PaletteLease.leasedPalette(Hyprfocus.presentation.palette, clock.date.getHours()) : "";
-        const now = root.withLease(held, store.get("palette") ?? "macchiato");
-        if (now === root._applied) return;
-        root._applied = now;
-        root.applyToSystem();
+        resolvedPoll.running = false;
+        resolvedPoll.running = true;
     }
     // A day/night pair (LEO-365) flips on its own at 07:00/19:00 with no
     // mode transition involved, so the hourly tick owes the same fan-out.
