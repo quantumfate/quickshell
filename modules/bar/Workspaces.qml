@@ -1,10 +1,8 @@
 // Workspaces bar module: a surface pill of per-workspace buttons for this
 // monitor, in the active hyprfocus mode's declared order, each shown as a
-// Nerd Font icon (see WorkspaceSwitch.js), plus the focused scene's name
-// (LEO-371) so "which scene am I in" reads without decoding an icon.
-// LEO-373: every scene the active mode admits is shown, whether or not it
-// has a live Hyprland workspace yet — WorkspaceSwitch.rowState() names each
-// row's play state:
+// Nerd Font icon (see WorkspaceSwitch.js). Every scene the active mode
+// admits is shown, whether or not it has a live Hyprland workspace yet —
+// WorkspaceSwitch.rowState() names each row's play state:
 //   focused → icon tinted the active mode's accent colour (no pill/border)
 //   playing → lavender (has windows)
 //   dormant → overlay0, further dimmed (admitted, no windows — may not even
@@ -62,23 +60,60 @@ Rectangle {
         return WorkspaceSwitch.attachLive(order, all);
     }
 
-    // This monitor's actually-focused workspace, by NAME (LEO-337 follow-up).
-    // `HyprlandMonitor.activeWorkspace.name` matches `hyprctl -j monitors`
-    // live, confirmed correct per output; a workspace's own `.active`/
-    // `.focused` flag does not (Quickshell tracks it by id, and this build
-    // reports `id: -1` for every named workspace — see attachLive()'s
-    // header). `_tick` forces recompute on every raw event: same-monitor
-    // workspace switches were observed to leave `activeWorkspace` looking
-    // stale until a monitor-crossing focus change also fired.
-    readonly property string _activeWsName: {
-        root._tick; // dependency
-        return root._monitor?.activeWorkspace?.name ?? "";
+    // This monitor's actually-displayed workspace, by NAME. Third bug in
+    // this family (after workspace ids going away — see attachLive()'s
+    // header). `HyprlandMonitor.activeWorkspace.name` was the prior source,
+    // recomputed via `_tick` on every raw event, but that still read stale
+    // on a same-monitor switch until a monitor-crossing focus change also
+    // fired: bumping `_tick` reruns the binding, but the cached
+    // `activeWorkspace` reference Quickshell hands back for the monitor was
+    // itself not refreshed yet, so re-reading it early just re-read the old
+    // value.
+    //
+    // Root-caused by reading Hyprland's own socket2 emission for this exact
+    // build (src/output/Monitor.cpp, src/desktop/state/FocusState.cpp,
+    // commit 92b82c0c1 of hyprland-git — a live probe against a real
+    // instance wasn't possible: this host's one DRM device is held
+    // exclusively by the running Hyprland session, and Aquamarine's headless
+    // backend refuses to substitute once a real DRM/Wayland display exists
+    // to fail to nest under, so a second `Hyprland` process here reliably
+    // aborts with `CBackend::create() failed!`; a plain socket2 watch would
+    // also have needed the user to drive workspace switches on their live
+    // session, which risked disrupting it):
+    //   - `workspace`/`workspacev2` fire on EVERY workspace change on a
+    //     monitor, same-monitor switch or cross-monitor alike — posted
+    //     unconditionally from `CMonitor::changeWorkspace`.
+    //   - `focusedmon`/`focusedmonv2` fire ONLY when the globally-focused
+    //     monitor itself changes: `CFocusState::rawMonitorFocus` opens with
+    //     `if (m_focusMonitor == pMonitor) return;`, so a same-monitor
+    //     switch posts no `focusedmon` event at all.
+    // That lines up exactly with the observed staleness, so this reads the
+    // active workspace off the raw event payload directly rather than off
+    // the monitor's cached reference — cross-checked against that
+    // workspace's own `.monitor` field (independently fresh; `_sorted`
+    // above already relies on it) so an event for another monitor is
+    // ignored. `focusedmonv2` is handled too, matched by monitor name
+    // against `root.screen.name`, as a second source for a focus change
+    // that crosses monitors without either monitor's active workspace
+    // changing.
+    property string _activeWsName: root._monitor?.activeWorkspace?.name ?? ""
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            const data = event.data ?? "";
+            const comma = data.indexOf(",");
+            if (event.name === "workspace" || event.name === "workspacev2") {
+                // payload: "name" (workspace) or "name,displayName" (workspacev2)
+                const name = comma === -1 ? data : data.slice(0, comma);
+                const live = (Hyprland.workspaces?.values ?? []).find(w => w.name === name);
+                if (live && live.monitor === root._monitor) root._activeWsName = name;
+            } else if (event.name === "focusedmon" || event.name === "focusedmonv2") {
+                // payload: "monitorName,workspaceNameOrAddress"
+                if (comma === -1) return;
+                if (data.slice(0, comma) === root.screen.name) root._activeWsName = data.slice(comma + 1);
+            }
+        }
     }
-
-    // The focused row's scene name (pure logic, tested in
-    // tests/workspaceswitch.test.js): workspaces are named by scene, so this
-    // is just picking the active one out of `_sorted`.
-    readonly property string _activeName: WorkspaceSwitch.activeName(root._sorted ?? [], root._activeWsName)
 
     color: "transparent"
     implicitWidth: row.implicitWidth
@@ -140,18 +175,6 @@ Rectangle {
                     onTapped: Hyprland.dispatch('hl.dsp.workspace("' + WorkspaceSwitch.selector(wsDelegate.modelData) + '")')
                 }
             }
-        }
-
-        // The focused scene's name, next to the row (LEO-371). Elided on a
-        // laptop-width bar rather than pushing the rest of the island off
-        // screen.
-        Text {
-            visible: root._activeName !== ""
-            text: root._activeName
-            color: Theme.accent
-            elide: Text.ElideRight
-            Layout.maximumWidth: Theme.space.xl * 5
-            font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
         }
     }
 }
