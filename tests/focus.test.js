@@ -117,6 +117,22 @@ test("work and study are distinct entries, not aliases of one object", () => {
     assert.notEqual(moods.gaming, moods.work);
 });
 
+test("a fresh store rests in work, with no invented timestamp", () => {
+    // The decided model: a fresh desk starts in `work`, the resting mode --
+    // never `neutral` (the hidden recovery mode), and never with a made-up
+    // `set_at`, which would misreport when the mode was actually set.
+    assert.equal(defaults.mode, "work");
+    assert.equal(defaults.set_at, null);
+});
+
+test("Hyprfocus.qml's pointer Store falls back to the same shipped defaults", () => {
+    const hyprfocusSrc = readFileSync(join(root, "services/Hyprfocus.qml"), "utf8");
+    const literal = hyprfocusSrc.match(/name: "focus"[\s\S]*?defaults:\s*\(({[\s\S]*?})\)/)?.[1];
+    assert.ok(literal, "Hyprfocus.qml's focus Store has no `defaults` literal");
+    const fallback = eval("(" + literal.replace(/(\w+):/g, '"$1":') + ")");
+    assert.deepEqual(fallback, defaults);
+});
+
 test("the focus IPC exposes scene reachability and background verdicts for dispatchers", () => {
     // The gates (workspace binds, ,scene-apply.sh, ,mood-bg.sh) read the SAME
     // oracles the UI reads — no second interpretation of the policy.

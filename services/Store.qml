@@ -32,6 +32,14 @@ Item {
     // checkout/machine works with no manual provisioning. Leave {} for none.
     property var defaults: ({})
 
+    // Whether a missing target may adopt the legacy pre-quantum-store
+    // document. Off for a declaration (Hyprfocus.qml): a missing declaration
+    // must leave the engine inert, never resurrect an old one -- and the
+    // `legacy` FileView below has no watchChanges, so on a long-running shell
+    // it can hand back a document already retired (renamed .migrated) on
+    // disk, from whenever this Store singleton last touched that path.
+    property bool legacyMigration: true
+
     property var data: ({})
     signal changed()
 
@@ -83,7 +91,7 @@ Item {
         // Target missing: this is the only case migration runs from. Adopt
         // the legacy document when it holds one, else seed defaults.
         onLoadFailed: (err) => {
-            const legacyRaw = legacy.text();
+            const legacyRaw = root.legacyMigration ? legacy.text() : "";
             if (StoreMigrate.shouldMigrate(false, legacyRaw)) {
                 root.put(JSON.parse(legacyRaw.trim()));
                 root._retireLegacy();
@@ -96,7 +104,17 @@ Item {
 
     FileView {
         id: legacy
-        path: root.legacyPath
+        // Unloaded (empty path) when legacyMigration is off, so a store that
+        // must never invent a document never even holds a stale read of one.
+        path: root.legacyMigration ? root.legacyPath : ""
+        // watchChanges (LEO-399): without this, a long-running shell process
+        // keeps whatever it read here at startup forever, even after the
+        // legacy file is later renamed away by `_retireLegacy()` -- so a
+        // store wiped mid-session could resurrect a document already
+        // retired to `<name>.json.migrated` on disk. Watching keeps `text()`
+        // honest: once the legacy file is gone, so is this.
+        watchChanges: true
+        onFileChanged: reload()
     }
 
     // Renames the legacy file out of the way after a successful migration, so

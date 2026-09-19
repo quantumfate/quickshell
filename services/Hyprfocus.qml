@@ -32,6 +32,7 @@ Singleton {
     Store {
         id: declaration
         name: "hyprfocus"
+        legacyMigration: false // never resurrect a retired declaration
         onChanged: root._refresh()
     }
 
