@@ -118,7 +118,6 @@ Scope {
                     Workspaces { screen: bar.screen }
                     SubmapIndicator {}
                     GroupChip {}
-                    HyprLayout {}
                 }
 
                 // Dofus-only isle: appears only on the gaming workspace while
