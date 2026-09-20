@@ -1,10 +1,12 @@
 // The store contract.
 //
-// theme.json has three readers — the Quickshell Theme singleton, the Hyprland
-// opacity rules, and ,theme.sh apply. A field renamed in one place currently
-// fails at the third reader, at runtime, on a desk that has already changed
-// colour. The schema is the shared definition; these tests hold the schema, the
-// shipped defaults and Theme.qml to each other.
+// theme.json has four readers — the Quickshell Theme singleton, the Hyprland
+// opacity rules, ,theme.sh apply, and nvim's theme watcher (which follows
+// `resolved`, the lease-aware palette apply writes beside the baseline
+// `palette`). A field renamed in one place currently fails at a later reader,
+// at runtime, on a desk that has already changed colour. The schema is the
+// shared definition; these tests hold the schema, the shipped defaults and
+// Theme.qml to each other.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

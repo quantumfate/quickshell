@@ -36,7 +36,7 @@ Singleton {
     //   focused: bool       that window is the group's active tab
     //   grouped: string[]   the whole group's address list (membership order)
     //   at / size: point    the tile's global geometry (all members share it)
-    //   workspaceId / workspaceName / monitorId: where the tile lives
+    //   workspaceAddress / workspaceName / monitorId: where the tile lives
     property var windows: []
 
     readonly property string titlePrefix: DofusState.titlePrefix
@@ -92,7 +92,16 @@ Singleton {
                 fullscreen: c?.fullscreen ?? 0,
                 at: { x: c?.at?.[0] ?? 0, y: c?.at?.[1] ?? 0 },
                 size: { x: c?.size?.[0] ?? 0, y: c?.size?.[1] ?? 0 },
-                workspaceId: c?.workspace?.id ?? -1,
+                // A client's workspace is `{ address, type, name }` — there
+                // is no `id` field (verified against this Hyprland's own
+                // `hyprctl clients -j`). Reading one yielded `undefined` on
+                // every window, which is how the roster isle's "are any Dofus
+                // clients on the workspace I am showing" test could never be
+                // true. `name` is the join every other consumer here already
+                // uses (scene names, window rules, dispatch targets), so it is
+                // the one this model publishes; `address` rides along as the
+                // compositor's own handle for a named workspace.
+                workspaceAddress: c?.workspace?.address ?? "",
                 workspaceName: c?.workspace?.name ?? "",
                 // hyprctl reports the monitor by numeric id, not name.
                 monitorId: c?.monitor ?? -1,

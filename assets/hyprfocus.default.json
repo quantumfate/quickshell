@@ -164,7 +164,8 @@
           {
             "classes": [
               "mpv",
-              "firefox"
+              "firefox",
+              "zen-twilight-media"
             ],
             "order": 1,
             "share": 1.0

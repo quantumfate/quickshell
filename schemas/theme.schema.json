@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/quantumfate/quickshell/schemas/theme.schema.json",
   "title": "theme.json",
-  "description": "The desk's appearance contract. Read by the Quickshell Theme singleton, by the Hyprland opacity rules, and by ,theme.sh apply \u2014 three readers, so a shape change needs a check that is not any one of them.",
+  "description": "The desk's appearance contract. Read by the Quickshell Theme singleton, by the Hyprland opacity rules, by ,theme.sh apply, and by nvim's theme watcher \u2014 four readers, so a shape change needs a check that is not any one of them.",
   "classification": "declaration",
   "type": "object",
   "additionalProperties": false,
@@ -17,6 +17,16 @@
   "properties": {
     "palette": {
       "description": "The active palette. Must name a table in Theme.qml.",
+      "type": "string",
+      "enum": [
+        "latte",
+        "frappe",
+        "macchiato",
+        "mocha"
+      ]
+    },
+    "resolved": {
+      "description": "The palette in effect right now: the lease's when a mode holds one, the baseline otherwise. Written by ,theme.sh apply on every pass; readers that cannot run the lease resolver themselves (nvim) follow this and fall back to `palette` when it is absent.",
       "type": "string",
       "enum": [
         "latte",

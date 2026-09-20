@@ -17,6 +17,14 @@
 // modules/common/PalettePicker.qml, so the bar doesn't read as a second
 // button language next to the mode panel's. Behaviour is unchanged — same
 // DofusWindows.focus/DofusSwap calls as before, just under real controls.
+//
+// The member rows are that same button too, not a hand-rolled chip with a
+// button beside it: emblem and name are one hit target, and the roster is the
+// group's tab strip now that the dofus workspace hides Hyprland's own
+// groupbar (`engine.hide_groupbar_for` in the hypr repo's host file). Nothing
+// else on screen says which client has focus, so the focused member is the
+// one filled, bolded, accent-bordered control here — read it as the tab bar
+// the compositor stopped drawing.
 pragma ComponentBehavior: Bound
 import Quickshell.Hyprland
 import QtQuick
@@ -35,9 +43,23 @@ Surface {
 
     // Visible only on the dofus workspace while Dofus clients are present.
     readonly property bool _onDofus: _mon?.activeWorkspace?.name === "dofus"
-    readonly property bool _hasDofus: (DofusWindows.windows ?? []).some(
-        w => w.workspaceId === _mon?.activeWorkspace?.id)
-    visible: root._onDofus && root._hasDofus
+
+    // The members this isle speaks for: Dofus clients standing on the very
+    // workspace it is drawn over.
+    //
+    // Joined on the workspace NAME, never an id: a client's workspace object
+    // carries `{ address, type, name }` and no `id` at all, so the old id
+    // comparison was false on every window and this isle never once became
+    // visible with Dofus clients up.
+    //
+    // The filter is also what keeps held clients out of the strip. A mode
+    // that does not admit the dofus workspace parks every client on a hold
+    // workspace (hypr/hyprfocus/hold.lua); `DofusWindows` lists a client
+    // wherever it stands, deliberately, so an unfiltered roster would offer
+    // rows that focus a window the desk has put away.
+    readonly property var _members: (DofusWindows.windows ?? []).filter(
+        w => w.workspaceName === root._mon?.activeWorkspace?.name)
+    visible: root._onDofus && root._members.length > 0
 
     elevation: "island"
     implicitHeight: Theme.barHeight * 1.2
@@ -52,92 +74,55 @@ Surface {
         }
         spacing: Theme.space.lg
 
-        // Roster rows, one per group member in group order. Each member is a
-        // soft chip (class icon + name, PalettePicker's rounded/alpha idiom)
-        // that focuses the character on click, plus its own "learn" button.
+        // Roster rows, one per group member in group order — the tab strip
+        // the hidden groupbar no longer draws. Each member is one button
+        // (class emblem + character name) that focuses the client, carrying
+        // its swap-learned state as the corner dot, plus its own "learn".
         Repeater {
-            model: DofusWindows.windows ?? []
+            model: root._members
 
             RowLayout {
                 id: chipRow
                 required property var modelData
                 required property int index
-                readonly property bool active: modelData.focused ?? false
-                readonly property bool named: !!modelData.name
+                readonly property bool active: chipRow.modelData.focused ?? false
+                readonly property bool named: !!chipRow.modelData.name
                 readonly property string character: chipRow.named ? chipRow.modelData.name : ""
                 readonly property string cls: chipRow.named ? DofusState.classOf(chipRow.character) : ""
+                readonly property bool learned: chipRow.named && DofusSwap.learned(chipRow.character)
 
                 spacing: Theme.space.xs
                 Layout.alignment: Qt.AlignVCenter
 
-                Rectangle {
-                    id: chip
-                    implicitHeight: Theme.barHeight * 0.68
-                    implicitWidth: nameRow.implicitWidth + Theme.space.md * 2
-                    radius: Theme.radiusSmall
-                    color: chipArea.pressed ? Theme.withAlpha(Theme.accent, 0.28)
-                         : chipRow.active ? Theme.withAlpha(Theme.accent, 0.18)
-                         : chipArea.containsMouse ? Theme.withAlpha(Theme.surface, 0.8)
-                         : Theme.withAlpha(Theme.surface, 0.5)
-                    border {
-                        width: chip.activeFocus ? 2 : 1
-                        color: chip.activeFocus ? Theme.accent
-                             : chipRow.active ? Theme.accent
-                             : Theme.withAlpha(Theme.border, 0.5)
-                    }
-                    activeFocusOnTab: true
+                DofusRosterButton {
+                    id: member
+                    // An unnamed client still gets a slot and a number, so the
+                    // strip always accounts for every window in the group —
+                    // the roster is membership, not just the renamed ones.
+                    text: chipRow.named ? chipRow.character : (chipRow.index + 1) + "."
+                    iconCls: chipRow.cls
+                    toggled: chipRow.active
+                    marked: chipRow.learned
+                    tooltip: (chipRow.named ? chipRow.character : "unnamed client")
+                        + (chipRow.active ? " · focused" : " · click to focus")
+                        + (chipRow.learned ? " · turn learned" : "")
+                    screenName: root._screenName
                     Layout.alignment: Qt.AlignVCenter
-
-                    Behavior on color { ColorAnimation { duration: root._fade } }
-                    Behavior on border.color { ColorAnimation { duration: root._fade } }
-
-                    RowLayout {
-                        id: nameRow
-                        anchors.centerIn: parent
-                        spacing: Theme.space.xs
-
-                        ClassIcon {
-                            cls: chipRow.cls
-                            size: 20
-                            Layout.preferredWidth: visible ? size : 0
-                            Layout.preferredHeight: size
-                            Layout.alignment: Qt.AlignVCenter
-                        }
-
-                        Text {
-                            text: chipRow.named ? chipRow.character : (chipRow.index + 1) + "."
-                            color: chipRow.active ? Theme.accent
-                                 : chipRow.named ? Theme.text : Theme.overlay
-                            font { pixelSize: Theme.fs.xs; family: "monospace"; bold: chipRow.active }
-                            Layout.alignment: Qt.AlignVCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: chipArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: { chip.forceActiveFocus(); DofusWindows.focus(chipRow.modelData.selector); }
-                    }
-
-                    HoverTip {
-                        text: chipRow.named ? ("Focus " + chipRow.character) : ""
-                        shown: chip.activeFocus || (chipArea.containsMouse && chipRow.named)
-                        screenName: root._screenName
-                    }
-
-                    Keys.onReturnPressed: DofusWindows.focus(chipRow.modelData.selector)
-                    Keys.onEnterPressed: DofusWindows.focus(chipRow.modelData.selector)
-                    Keys.onSpacePressed: DofusWindows.focus(chipRow.modelData.selector)
+                    onClicked: DofusWindows.focus(chipRow.modelData.selector)
                 }
 
-                // Learn button: grab this character's turn-popup hash.
+                // Learn button: grab this character's turn-popup hash. Green
+                // once a hash exists, so "which of these is still unlearned"
+                // is answerable without opening a panel.
                 DofusRosterButton {
                     visible: chipRow.named
                     compact: true
                     text: "learn"
-                    tooltip: "Learn " + chipRow.character + "'s turn popup"
+                    toggled: chipRow.learned
+                    tone: Theme.c.green
+                    tooltip: chipRow.learned
+                        ? ("Re-learn " + chipRow.character + "'s turn popup")
+                        : ("Learn " + chipRow.character + "'s turn popup")
                     screenName: root._screenName
                     Layout.alignment: Qt.AlignVCenter
                     onClicked: DofusSwap.learn(chipRow.character)
