@@ -110,18 +110,18 @@
         ],
         "docks": {
           "bar.workspaces": {
-            "at": "top-left",
+            "at": "left-bottom",
             "of": "block:1",
             "fallback": {
-              "at": "top-left",
+              "at": "left-bottom",
               "of": "screen"
             }
           },
           "dofus.roster": {
-            "at": "bottom-left",
+            "at": "top-left",
             "of": "block:1",
             "fallback": {
-              "at": "top-center",
+              "at": "top-left",
               "of": "screen"
             }
           },

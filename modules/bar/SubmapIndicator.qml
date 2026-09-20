@@ -1,29 +1,23 @@
-// SubmapIndicator — a small pill on the bar that names the active submap.
+// SubmapIndicator — the active submap's name, inline on the bar.
 //
-// The bar stays honest about context: when Hyprland is in a submap, the pill
-// shows its name. At root the pill hides so the bar does not carry dead state.
-// The pill uses the bar's island material tinted toward the accent.
+// The bar stays honest about context: in a submap the name shows, at root it
+// hides so the bar does not carry dead state. Plain text on the island it
+// already sits in — a chip inside a chip read as a second surface.
 pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Theme
-import "../common"        // Surface
 
-Surface {
+Item {
     id: root
 
     property string submap: ""
     readonly property bool inSubmap: root.submap !== "" && root.submap !== "reset"
 
     visible: root.inSubmap
-    elevation: "island"
-    color: Theme.withAlpha(Theme.accent, 0.18)
-    border { width: 1; color: Theme.withAlpha(Theme.accent, 0.45) }
-    radius: Theme.radiusSmall
-
-    implicitWidth: row.implicitWidth + Theme.space.md * 2
+    implicitWidth: row.implicitWidth
     implicitHeight: Theme.barHeight
 
     Connections {
@@ -35,7 +29,7 @@ Surface {
 
     RowLayout {
         id: row
-        anchors { fill: parent; leftMargin: Theme.space.md; rightMargin: Theme.space.md }
+        anchors.fill: parent
         spacing: Theme.space.xs
 
         Text {
