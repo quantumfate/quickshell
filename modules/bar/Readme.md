@@ -55,6 +55,41 @@ Autohide follows `Hyprfocus.current.presentation.bar_autohide` — the
 declaration's own per-mode flag, not the retired `deep`/`game` mode ids. A
 SUPER-tap IPC reveal and a thin hot strip at the top edge both wake it.
 
+### Side insets (LEO-340 + scene alignment)
+
+Each bar's left/right insets follow the tiled outer gap of its own screen via
+[`services/BarGaps.js`](../../services/BarGaps.js). A scene opts in with
+`bar_follows_scene_gaps`; without it the bar rests at the monitor's published
+base gap:
+
+1. **Subscribed (opt-in)** — the workspace active on this screen declares
+   `bar_follows_scene_gaps: true`; the bar takes the value hyprland resolved
+   for that workspace and published to the `geometry` store's `workspaces` map
+   (keyed by `default_name` == scene name). That value is the distance from
+   the monitor edge to the scene's outermost **visible** window, already
+   whole: the engine's own gap ladder — scene `gaps_out` → host workspace-spec
+   → live global — folded the way the scene's own layout folds a gap, PLUS the
+   workspace rule's `gaps_out` (which the compositor strips from the work area
+   before the layout runs) and, on any side the layout left inset, the rule's
+   `gaps_in` and the window border. Hyprland folds all of it in
+   `hypr/lib/geometry.lua`'s `resolved_gaps`; the bar only reads it — no
+   mirroring, no fall-through, no guess, no addition. Until the publish lands
+   (an edit that just arrived, or a stale store) the bar rests on the default
+   rather than inventing a gap.
+2. **Resting** — the monitor's published base gap (`geometry.monitors`, LEO-340),
+   then `Theme.barInset * 2`, when the store carries nothing for the monitor.
+   An explicit `0` is a real gap, never a fallback signal.
+
+Everything refreshes live, so nothing here ever needs a shell reload: scene
+edits re-emit through the `hyprfocus` Store's FileView watchChanges, and the
+resolved value follows through the `geometry` store's watchChanges when the
+hyprland side re-publishes (at config load from `conf/host.lua`, and on a
+scene edit from `hypr/scene/spec.lua`'s first re-read of the declaration). A
+workspace switch arrives as the compositor's own
+`workspace`/`workspacev2`/`focusedmon` events, which the bar Scope turns into a
+per-screen active scene name — the same raw-event source `Workspaces.qml`
+root-causes in its `_activeWsName` header.
+
 The Dofus isle uses `DofusWindows.windows` as its membership source and
 `DofusSwap` for detector state; it does not rebuild group membership or swap
 state.

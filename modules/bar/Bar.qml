@@ -14,6 +14,7 @@ pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Theme, Hyprfocus
@@ -31,6 +32,7 @@ Scope {
     // a constant. One shared Store instance: FileView.watchChanges means every
     // bar re-reads live (e.g. pulling the laptop's external monitor), no restart.
     Store { id: geometryStore; name: "geometry" }
+    Store { id: hyprfocusStore; name: "hyprfocus" }
 
     // Bumped by the IPC `reveal` call below (bound to a SUPER-tap keybind in
     // the hypr repo) so every bar instance drops out of autohide at once.
@@ -39,6 +41,44 @@ Scope {
     IpcHandler {
         target: "bar"
         function reveal(): void { scope.revealTick++; }
+    }
+
+    // The workspace name active on EACH bar's screen, fed by the compositor's
+    // own raw `workspace`/`workspacev2`/`focusedmon` events — the refresh
+    // signal for the inset's scene rung. Same source and parsing Workspaces.qml
+    // root-caused in its `_activeWsName` header (raw events are fresh where
+    // the monitor's cached activeWorkspace lags); lifted here so every bar
+    // shares one listener instead of one Process per bar. A scene *edit*
+    // needs no event at all: the `hyprfocus` Store (above) re-reads the file
+    // live, so `edgeInset` re-binds on either change — no reload, no poll.
+    property var sceneByScreen: ({})                        // screen name -> scene name
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            const data = event.data ?? "";
+            const comma = data.indexOf(",");
+            let name = null, screen = null;
+            if (event.name === "workspace" || event.name === "workspacev2") {
+                // payload: "name" (workspace) or "name,displayName" (workspacev2)
+                name = comma === -1 ? data : data.slice(0, comma);
+                // The event is for the monitor whose workspace object says so;
+                // when the workspace has no live object yet, it is the focused
+                // monitor — the same fallback Workspaces.qml uses.
+                const live = (Hyprland.workspaces?.values ?? []).find(w => w.name === name);
+                if (live?.monitor?.name !== undefined) screen = live.monitor.name;
+                else screen = (Quickshell.screens.find(s => Hyprland.monitorFor(s)?.focused) ?? {}).name;
+            } else if (event.name === "focusedmon" || event.name === "focusedmonv2") {
+                // payload: "monitorName,workspaceNameOrAddress"
+                if (comma === -1) return;
+                screen = data.slice(0, comma);
+                name = data.slice(comma + 1);
+            }
+            if (screen && name) {
+                const next = Object.assign({}, scope.sceneByScreen);
+                next[screen] = name;
+                scope.sceneByScreen = next;
+            }
+        }
     }
 
     // Tooltip surfaces, one per bar screen (drawn below the bar by TipLayer).
@@ -103,9 +143,21 @@ Scope {
 
                 HoverHandler { onHoveredChanged: if (hovered) bar.wake() }
 
-                // LEO-340: this screen's tiled outer gap, falling back to the
-                // bar's own default inset when the store has no entry for it.
-                readonly property var edgeInset: BarGaps.insetFor(geometryStore.data, bar.screen.name, Theme.barInset * 2)
+                // LEO-340 + scene alignment: this screen's tiled outer gap.
+                // An opt-in scene (bar_follows_scene_gaps) subscribes to the
+                // resolved per-workspace gap hyprland publishes to the
+                // `geometry` store's `workspaces` map — quickshell never
+                // derives a gap, so the inset cannot drift from the tiling.
+                // A resting bar uses the monitor's published gap, then the
+                // default. The scene rung rides `scope.sceneByScreen`,
+                // refreshed by the compositor's workspace events; both store
+                // rungs ride the `geometry`/`hyprfocus` stores' watchChanges
+                // (hyprland re-publishes on a scene edit). Either change
+                // re-binds this live — a scene redraw or a workspace switch,
+                // no reload.
+                readonly property var edgeInset: BarGaps.insetFor(
+                    geometryStore.data, hyprfocusStore.data,
+                    scope.sceneByScreen[bar.screen.name], bar.screen.name, Theme.barInset * 2)
 
                 // left island: where am I.
                 Island {
