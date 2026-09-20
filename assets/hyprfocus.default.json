@@ -79,17 +79,19 @@
             "group": true,
             "share": 0.67,
             "spawn": {
-              "class": "zen-gaming-media",
-              "command": "zen-twilight -P GamingMedia --name zen-gaming-media"
+              "class": "zen-twilight-media",
+              "command": "zen-twilight -P Media --name zen-twilight-media --new-window",
+              "max_spawns": 1
             }
           },
           {
             "classes": [
-              "zen-gaming-media"
+              "zen-twilight-media"
             ],
             "order": 2,
             "share": 0.33,
-            "guard": "deny"
+            "guard": "deny",
+            "slot": "dofus/browser"
           }
         ],
         "barred": [
@@ -118,7 +120,7 @@
           },
           {
             "classes": [
-              "zen-gaming-media"
+              "zen-twilight-media"
             ],
             "slot": "pokemon/chat",
             "order": 2,
@@ -127,7 +129,7 @@
           },
           {
             "classes": [
-              "zen-gaming-media"
+              "zen-twilight-media"
             ],
             "slot": "pokemon/stream",
             "order": 3,
@@ -375,7 +377,7 @@
         "surface_alpha": 0.94,
         "density": "compact",
         "motion_energy": "instant",
-        "bar_autohide": true
+        "bar_autohide": false
       },
       "main": "code"
     },
@@ -407,7 +409,7 @@
         "surface_alpha": 0.94,
         "density": "compact",
         "motion_energy": "instant",
-        "bar_autohide": true
+        "bar_autohide": false
       },
       "main": "code"
     },

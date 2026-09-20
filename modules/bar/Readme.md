@@ -1,6 +1,33 @@
 # Bar
 
-One top bar per monitor (except the excluded portrait panel). Three isles:
+One top bar per monitor (except the excluded portrait panel). Four isles:
+
+## Isle registry (LEO-420)
+
+Every dockable isle carries a stable id — the vocabulary hypr's scene
+documents speak when they publish a placement into the `geometry` store's
+`docks[screen][isleId]` map (see [`../../services/DockPlacement.js`](../../services/DockPlacement.js)
+for the placement contract this repo consumes it against). Adding an isle to
+the bar means adding its id here in the same change.
+
+| id               | isle                                                 |
+| ---------------- | ---------------------------------------------------- |
+| `bar.workspaces` | left isle — workspaces, submap indicator, group chip |
+| `dofus.roster`   | Dofus roster (gaming workspace only)                 |
+| `bar.center`     | centre isle — media, brightness, volume              |
+| `bar.clock`      | right isle — clock, mode pill, calendar entry        |
+
+An isle with no published dock document keeps its resting (today's static)
+position — the hypr side does not need to publish every isle at once. A
+published document that sets the isle to `false` hides it entirely.
+
+The bar itself is now one transparent, click-through overlay `PanelWindow`
+per monitor, anchored on all four sides with `exclusiveZone: 0` (LEO-420 §2):
+a docked isle must reserve no space of its own, since the gutter it sits in
+is already carved by the scene's own gaps — a second reservation here would
+feed back into the tiling. Only the isles' own bounding rects are clickable
+(`mask: Region { Region { item: ... } ... }` in `Bar.qml`); everywhere else on
+the overlay passes clicks through to the window underneath.
 
 - **left** — where am I: workspaces, submap indicator, group chip, layout glyph.
   The workspace pill's order and icons come from the hyprfocus declaration,
