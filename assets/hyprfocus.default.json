@@ -107,7 +107,37 @@
         "drawers": [
           "ankama",
           "lutris"
-        ]
+        ],
+        "docks": {
+          "bar.workspaces": {
+            "at": "top-left",
+            "of": "block:1",
+            "fallback": {
+              "at": "top-left",
+              "of": "screen"
+            }
+          },
+          "dofus.roster": {
+            "at": "bottom-left",
+            "of": "block:1",
+            "fallback": {
+              "at": "top-center",
+              "of": "screen"
+            }
+          },
+          "bar.center": {
+            "at": "top-center",
+            "of": "screen"
+          },
+          "bar.clock": {
+            "at": "top-right",
+            "of": "slot:dofus/browser",
+            "fallback": {
+              "at": "top-right",
+              "of": "screen"
+            }
+          }
+        }
       },
       "pokemon": {
         "blocks": [
@@ -140,7 +170,30 @@
         "barred": [],
         "strays": "float",
         "icon": "\udb81\udf21",
-        "bindings": []
+        "bindings": [],
+        "docks": {
+          "bar.workspaces": {
+            "at": "top-left",
+            "of": "slot:pokemon/chat",
+            "fallback": {
+              "at": "top-left",
+              "of": "screen"
+            }
+          },
+          "bar.center": {
+            "at": "top-center",
+            "of": "block:1"
+          },
+          "bar.clock": {
+            "at": "top-right",
+            "of": "slot:pokemon/stream",
+            "fallback": {
+              "at": "top-right",
+              "of": "screen"
+            }
+          },
+          "dofus.roster": false
+        }
       },
       "steam-games": {
         "blocks": [
@@ -159,7 +212,19 @@
         "bindings": [],
         "drawers": [
           "steam"
-        ]
+        ],
+        "docks": {
+          "bar.workspaces": {
+            "at": "top-left",
+            "of": "screen"
+          },
+          "bar.center": false,
+          "bar.clock": {
+            "at": "top-right",
+            "of": "screen"
+          },
+          "dofus.roster": false
+        }
       },
       "media": {
         "blocks": [
@@ -176,7 +241,26 @@
         "barred": [],
         "strays": "float",
         "icon": "\uf16a",
-        "bindings": []
+        "bindings": [],
+        "docks": {
+          "bar.workspaces": {
+            "at": "top-left",
+            "of": "screen"
+          },
+          "bar.center": {
+            "at": "bottom-center",
+            "of": "block:1",
+            "fallback": {
+              "at": "top-center",
+              "of": "screen"
+            }
+          },
+          "bar.clock": {
+            "at": "top-right",
+            "of": "screen"
+          },
+          "dofus.roster": false
+        }
       },
       "code": {
         "blocks": [
@@ -213,7 +297,12 @@
               "Kitty-Main"
             ],
             "order": 5,
-            "group": false
+            "group": false,
+            "spawn": {
+              "class": "zen-twilight",
+              "command": "zen-twilight --name zen-twilight",
+              "max_spawns": 1
+            }
           },
           {
             "classes": [
@@ -249,7 +338,29 @@
               "firefox-developer-edition"
             ]
           }
-        ]
+        ],
+        "docks": {
+          "bar.workspaces": {
+            "at": "top-left",
+            "of": "block:5",
+            "fallback": {
+              "at": "top-left",
+              "of": "screen"
+            }
+          },
+          "bar.center": {
+            "at": "top-center",
+            "of": "screen"
+          },
+          "bar.clock": {
+            "at": "top-right",
+            "of": "block:6",
+            "fallback": {
+              "at": "top-right",
+              "of": "screen"
+            }
+          }
+        }
       },
       "obsidian-linear": {
         "blocks": [
@@ -273,7 +384,29 @@
         "icon": "\uf249",
         "bindings": [
           "obsidian"
-        ]
+        ],
+        "docks": {
+          "bar.workspaces": {
+            "at": "top-left",
+            "of": "block:1",
+            "fallback": {
+              "at": "top-left",
+              "of": "screen"
+            }
+          },
+          "bar.center": {
+            "at": "top-center",
+            "of": "screen"
+          },
+          "bar.clock": {
+            "at": "top-right",
+            "of": "block:2",
+            "fallback": {
+              "at": "top-right",
+              "of": "screen"
+            }
+          }
+        }
       },
       "proton": {
         "blocks": [
@@ -299,7 +432,21 @@
         "barred": [],
         "strays": "float",
         "icon": "\ueb1b",
-        "bindings": []
+        "bindings": [],
+        "docks": {
+          "bar.workspaces": {
+            "at": "top-left",
+            "of": "screen"
+          },
+          "bar.center": {
+            "at": "top-center",
+            "of": "screen"
+          },
+          "bar.clock": {
+            "at": "top-right",
+            "of": "screen"
+          }
+        }
       },
       "logs": {
         "blocks": [],
@@ -308,7 +455,26 @@
         "icon": "\ue64e",
         "bindings": [
           "logs"
-        ]
+        ],
+        "docks": {
+          "bar.workspaces": {
+            "at": "top-left",
+            "of": "block:1",
+            "fallback": {
+              "at": "top-left",
+              "of": "screen"
+            }
+          },
+          "bar.center": {
+            "at": "top-center",
+            "of": "screen"
+          },
+          "bar.clock": {
+            "at": "top-right",
+            "of": "screen"
+          },
+          "dofus.roster": false
+        }
       }
     },
     "wants": {
