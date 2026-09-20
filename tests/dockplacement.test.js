@@ -93,3 +93,20 @@ test("resolveDockMode: docked and fallback states pass through, unknown state re
   assert.equal(resolveDockMode({ "bar.workspaces": { state: "resting" } }, "bar.workspaces"), "resting");
   assert.equal(resolveDockMode({ "bar.workspaces": { state: "weird" } }, "bar.workspaces"), "resting");
 });
+
+test("an isle taller than its gutter keeps its along-edge alignment", () => {
+    // The desk's top gutter is thinner than a bar isle. Forfeiting the
+    // surplus must not also re-centre the isle horizontally: it still hangs
+    // off the corner the scene anchored it to.
+    const dock = {
+        region: { x: 100, y: 0, w: 800, h: 30 },
+        anchor: { x: 100, y: 30 },
+        grow: "up",
+        orientation: "horizontal",
+        state: "docked",
+    };
+    const placed = placeDock(dock, { width: 200, height: 48 }, { width: 2000, height: 1000 });
+    assert.equal(placed.x, 100, "still flush with the window's left edge");
+    assert.equal(placed.y, 0, "pinned against the screen edge the gutter faces");
+    assert.equal(placed.clamped, true);
+});

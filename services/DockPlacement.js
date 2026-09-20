@@ -62,17 +62,25 @@ function rawRect(anchor, grow, width, height) {
  */
 function placeDock(dock, isleSize, screenSize) {
   const region = dock.region;
-  const overflows = isleSize.width > region.w || isleSize.height > region.h;
+  const rect = rawRect(dock.anchor, dock.grow, isleSize.width, isleSize.height);
 
-  let x, y;
-  if (overflows) {
-    // Forfeit the surplus: centre in the gutter rather than honour the anchor.
-    x = region.x + (region.w - isleSize.width) / 2;
-    y = region.y + (region.h - isleSize.height) / 2;
-  } else {
-    const rect = rawRect(dock.anchor, dock.grow, isleSize.width, isleSize.height);
-    x = rect.x;
-    y = rect.y;
+  // Overflow is per axis, and only the growth axis gives way. An isle taller
+  // than its gutter still starts where the anchor says along the edge —
+  // centring both axes (what this did first) slid every isle into the middle
+  // of the window it was supposed to hang off the corner of.
+  const vertical = dock.grow === "up" || dock.grow === "down";
+  const overflowsGrowth = vertical ? isleSize.height > region.h : isleSize.width > region.w;
+
+  let x = rect.x;
+  let y = rect.y;
+  if (overflowsGrowth) {
+    // Forfeit the surplus toward the screen edge the gutter faces, keeping the
+    // along-edge alignment the anchor gave it.
+    if (vertical) {
+      y = dock.grow === "up" ? region.y : region.y + region.h - isleSize.height;
+    } else {
+      x = dock.grow === "left" ? region.x : region.x + region.w - isleSize.width;
+    }
   }
 
   const maxX = Math.max(0, screenSize.width - isleSize.width);
@@ -83,8 +91,9 @@ function placeDock(dock, isleSize, screenSize) {
   return {
     x: clampedX,
     y: clampedY,
-    clamped: overflows || clampedX !== x || clampedY !== y,
+    clamped: overflowsGrowth || clampedX !== rect.x || clampedY !== rect.y,
   };
+
 }
 
 /**
