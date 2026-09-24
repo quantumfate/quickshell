@@ -10,12 +10,27 @@ documents speak when they publish a placement into the `geometry` store's
 for the placement contract this repo consumes it against). Adding an isle to
 the bar means adding its id here in the same change.
 
-| id               | isle                                                                |
-| ---------------- | ------------------------------------------------------------------- |
-| `bar.workspaces` | left isle — workspaces, submap indicator, open projects, group chip |
-| `dofus.roster`   | Dofus roster (gaming workspace only)                                |
-| `bar.center`     | centre isle — media, brightness, volume                             |
-| `bar.clock`      | right isle — mode pill, clock, notifications entry, power button    |
+| id               | isle                                                                       |
+| ---------------- | -------------------------------------------------------------------------- |
+| `bar.workspaces` | left isle — scene, workspaces, submap indicator, open projects, group chip |
+| `dofus.roster`   | Dofus roster (gaming workspace only)                                       |
+| `bar.center`     | centre isle — media, brightness, volume                                    |
+| `bar.clock`      | right isle — mode pill, clock, notifications entry, power button           |
+
+### Scene
+
+`ScenePill` names the scene this screen is standing in, with the glyph the
+scene declares. A scene owns its workspace, its layout and its binding trees,
+so it is the answer to why the keys and the tiling behave the way they do
+right now — the workspace row beside it says WHERE you are among the row,
+this says WHAT that place is. Per screen, never per desk: a mode places
+several scenes on several monitors at once.
+
+It reads `PanelBus.sceneByScreen`, which is fed by the compositor's raw
+workspace events AND seeded once at startup from `hyprctl monitors` — the
+map is event-driven, so a shell that just started has missed every event and
+would otherwise render nothing until the first workspace change. A workspace
+no scene claims says so rather than blanking.
 
 ### Open projects
 

@@ -254,6 +254,7 @@ Scope {
                 restingX: bar.edgeInset.left
                 restingY: bar.restingY
 
+                ScenePill { screenName: bar.screen.name }
                 Workspaces { screen: bar.screen }
                 SubmapIndicator {}
                 OpenProjects { screenName: bar.screen.name }

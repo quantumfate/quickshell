@@ -54,6 +54,34 @@ Item {
     // raw-event listener.
     property var sceneByScreen: ({})
 
+    // Seeded once at startup, because the map above is fed by EVENTS and a
+    // shell that just started has missed all of them: until the first
+    // workspace change, every surface reading it sees an empty map and
+    // renders nothing at all — which looks like a broken widget rather than
+    // like "no scene". `hyprctl monitors` is the same answer the events
+    // carry, just asked for rather than waited for.
+    Process {
+        id: sceneSeed
+        running: true
+        command: ["hyprctl", "monitors", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let monitors = [];
+                try { monitors = JSON.parse(this.text || "") || []; }
+                catch (e) { return; }   // a bad read just leaves the events to fill it in
+                const next = Object.assign({}, root.sceneByScreen);
+                for (const m of monitors) {
+                    // Never overwrite: an event that landed while this was in
+                    // flight is newer than the snapshot it raced.
+                    if (m.name && m.activeWorkspace?.name && !next[m.name])
+                        next[m.name] = m.activeWorkspace.name;
+                }
+                root.sceneByScreen = next;
+            }
+        }
+        stderr: StdioCollector {}
+    }
+
     // The focused Hyprland monitor's output name, for workspace events that do
     // not carry their own screen.
     function _focusedScreen() {
