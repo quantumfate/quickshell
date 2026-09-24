@@ -24,7 +24,7 @@ Text {
 
     MouseArea {
         anchors.fill: parent
-        onClicked: PanelBus.toggle("projects", root.screenName, root.mapToItem(null, root.width / 2, 0).x)
+        onClicked: PanelBus.toggle("projects", root.screenName, root.mapToItem(null, root.width / 2, 0).x, "bar.workspaces")
     }
 
     HoverHandler { id: hover }

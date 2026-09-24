@@ -30,6 +30,15 @@
 // HoverDetail.qml, shared with MoodPanel so both surfaces solve "many
 // palettes" and "hover never resizes the panel" exactly once.
 //
+// Responsiveness is part of the contract here. Every dial follows the pointer
+// while it is dragged (DialSlider tracks its own `_drag`) and commits its value
+// through a short debounce, because a scale write relayouts the whole shell and
+// a volume write forks a process. The wallpaper browser reads each monitor's
+// live pick straight from the `wallpapers` key `,theme.sh` writes — which the
+// store already watches — instead of its own ~1s `wallpaper list`, and the
+// mutations are queued in Theme.qml so two quick arrow presses each count
+// rather than the second overwriting the one in flight.
+//
 // Toggle from Hyprland:  qs -c quantumfate ipc call control toggle
 pragma ComponentBehavior: Bound
 import Quickshell
@@ -97,6 +106,39 @@ Scope {
 
     readonly property var paletteNames: Object.keys(Theme.palettes)
 
+    // Dial writes are debounced. A scale write relayouts every surface in the
+    // shell, and a volume write forks a process to talk to mpv; firing one per
+    // mouse-move is what made the dials feel like they were fighting the
+    // pointer. The dial itself still follows the pointer regardless
+    // (DialSlider tracks `_drag` while pressed), so nothing visible waits here.
+    Timer {
+        id: scaleDebounce; interval: 80; repeat: false
+        property real v: 1
+        onTriggered: scope.setScale(scaleDebounce.v)
+    }
+    Timer {
+        id: transparencyDebounce; interval: 80; repeat: false
+        property real v: 1
+        onTriggered: scope.setTransparency(transparencyDebounce.v)
+    }
+    Timer {
+        id: volumeDebounce; interval: 80; repeat: false
+        property real v: 0.5
+        onTriggered: Sound.setVolume(volumeDebounce.v)
+    }
+
+    // The live wallpaper pick for one output, straight from the `wallpapers`
+    // key `,theme.sh` writes to theme.json — which the store already watches.
+    // The browser used to show `wallpaper list`'s snapshot instead, and that
+    // list costs about a second, so every arrow press sat behind it. The script
+    // remains the only writer; this only reads back what it wrote. The value is
+    // either `{output: "palette/file"}` (multi-monitor) or a bare "palette/file".
+    function currentFor(palette, output) {
+        const w = Theme.wallpapers?.[palette];
+        if (w && typeof w === "object") return w[output] ?? w["*"] ?? "";
+        return typeof w === "string" ? w : "";
+    }
+
     // Small reusable click-to-pick swatch used by the day/night pills. Kept
     // for those (a lighter footprint than the full PalettePicker fits their
     // inline row); the main theme grid below uses PalettePicker/HoverDetail.
@@ -161,7 +203,13 @@ Scope {
         Layout.fillWidth: true
         implicitHeight: Theme.space.lg
 
-        readonly property real fraction: ControlLogic.clamp((slider.value - slider.min) / (slider.max - slider.min), 0, 1)
+        // While the pointer is down the handle follows the cursor exactly; the
+        // caller's `value` only takes over again on release. Binding the handle
+        // straight to `value` made it trail a store round-trip behind the
+        // pointer — the "wonky" the dials were accused of.
+        property real _drag: 0
+        readonly property real shown: area.pressed ? slider._drag : slider.value
+        readonly property real fraction: ControlLogic.clamp((slider.shown - slider.min) / (slider.max - slider.min), 0, 1)
 
         Rectangle {
             id: track
@@ -190,17 +238,57 @@ Scope {
         }
 
         MouseArea {
+            id: area
             anchors.fill: parent
-            onPositionChanged: (mouse) => {
-                if (pressed) slider.moved(slider.min + ControlLogic.clamp(mouse.x / track.width, 0, 1) * (slider.max - slider.min));
+            function valueAt(x) {
+                return slider.min + ControlLogic.clamp(x / track.width, 0, 1) * (slider.max - slider.min);
             }
-            onPressed: (mouse) => slider.moved(slider.min + ControlLogic.clamp(mouse.x / track.width, 0, 1) * (slider.max - slider.min))
+            onPressed: (mouse) => { slider._drag = valueAt(mouse.x); slider.moved(slider._drag); }
+            onPositionChanged: (mouse) => {
+                if (!pressed) return;
+                slider._drag = valueAt(mouse.x);
+                slider.moved(slider._drag);
+            }
         }
     }
 
     component SectionTitle: Text {
         color: Theme.accentAlt
         font { pixelSize: Theme.fs.sm; bold: true; letterSpacing: 1 }
+    }
+
+    // One wallpaper-browser arrow. Hover and press are visible so a click reads
+    // as registered the instant it lands; the mutation behind it is a script
+    // round-trip, and the queue in Theme.qml is what makes repeated clicks each
+    // count instead of overwriting the one in flight.
+    component StepButton: Rectangle {
+        id: step
+        required property string label
+        signal stepped()
+
+        implicitWidth: stepLabel.implicitWidth + Theme.space.lg
+        implicitHeight: stepLabel.implicitHeight + Theme.space.sm
+        radius: Theme.radiusSmall
+        color: area.pressed ? Theme.withAlpha(Theme.accent, 0.3)
+             : area.containsMouse ? Theme.surfaceAlt
+             : Theme.surface
+        border { width: 1; color: area.containsMouse ? Theme.accent : Theme.border }
+
+        Text {
+            id: stepLabel
+            anchors.centerIn: parent
+            text: step.label
+            color: Theme.text
+            font.pixelSize: Theme.fs.sm
+        }
+
+        MouseArea {
+            id: area
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: step.stepped()
+        }
     }
 
     PanelWindow {
@@ -338,7 +426,8 @@ Scope {
                                     implicitWidth: modeText.implicitWidth + Theme.space.lg
                                     implicitHeight: modeText.implicitHeight + Theme.space.sm
                                     radius: Theme.radiusSmall
-                                    color: modeBtn.active ? Theme.withAlpha(Theme.accent, 0.3) : Theme.surface
+                                    color: modeBtn.active ? Theme.withAlpha(Theme.accent, 0.3)
+                                        : modeHover.hovered ? Theme.surfaceAlt : Theme.surface
                                     border { width: 1; color: modeBtn.active ? Theme.accent : Theme.border }
                                     Text {
                                         id: modeText
@@ -347,7 +436,12 @@ Scope {
                                         color: Theme.text
                                         font.pixelSize: Theme.fs.sm
                                     }
-                                    MouseArea { anchors.fill: parent; onClicked: scope.setMode(modeBtn.modelData) }
+                                    HoverHandler { id: modeHover }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: scope.setMode(modeBtn.modelData)
+                                    }
                                 }
                             }
                         }
@@ -410,11 +504,11 @@ Scope {
                                 Layout.fillWidth: true
                                 min: 0.8; max: 2.5
                                 value: Theme.scale
-                                onMoved: (v) => scope.setScale(v)
+                                onMoved: (v) => { scaleDebounce.v = v; scaleDebounce.restart(); }
                             }
                             Text {
                                 Layout.preferredWidth: Theme.fs.xl * 2
-                                text: Theme.scale.toFixed(2)
+                                text: (scaleDebounce.running ? scaleDebounce.v : Theme.scale).toFixed(2)
                                 color: Theme.subtext
                                 font.pixelSize: Theme.fs.sm
                             }
@@ -427,11 +521,11 @@ Scope {
                                 Layout.fillWidth: true
                                 min: 0; max: 1
                                 value: Theme.transparency
-                                onMoved: (v) => scope.setTransparency(v)
+                                onMoved: (v) => { transparencyDebounce.v = v; transparencyDebounce.restart(); }
                             }
                             Text {
                                 Layout.preferredWidth: Theme.fs.xl * 2
-                                text: Theme.transparency.toFixed(2)
+                                text: (transparencyDebounce.running ? transparencyDebounce.v : Theme.transparency).toFixed(2)
                                 color: Theme.subtext
                                 font.pixelSize: Theme.fs.sm
                             }
@@ -462,6 +556,13 @@ Scope {
                                     id: monRow
                                     required property string modelData
                                     readonly property var pick: Theme.wallpaperSet.monitors[monRow.modelData] ?? ({})
+                                    // What this output is showing RIGHT NOW, from
+                                    // the store the script writes — not from the
+                                    // `wallpaper list` snapshot, which is a
+                                    // second behind. `pick.current` remains the
+                                    // fallback for the first paint, before the
+                                    // list has answered at all.
+                                    readonly property string current: scope.currentFor(scope.previewPalette, monRow.modelData) || (monRow.pick.current ?? "")
                                     // "*" is the one-wallpaper-for-everything
                                     // surface name ,theme.sh records applied/
                                     // pending/failed under (see apply_wallpaper
@@ -481,7 +582,7 @@ Scope {
                                         clip: true
                                         Image {
                                             anchors.fill: parent
-                                            source: monRow.pick.current ? "file://" + Theme.wallpaperRoot + "/" + monRow.pick.current : ""
+                                            source: monRow.current ? "file://" + Theme.wallpaperRoot + "/" + monRow.current : ""
                                             fillMode: Image.PreserveAspectCrop
                                             asynchronous: true
                                             visible: status === Image.Ready
@@ -497,7 +598,7 @@ Scope {
                                             font.pixelSize: Theme.fs.sm
                                         }
                                         Text {
-                                            text: monRow.pick.current ? monRow.pick.current.split("/").pop() : "none bound"
+                                            text: monRow.current ? monRow.current.split("/").pop() : "none bound"
                                             color: Theme.subtext
                                             font.pixelSize: Theme.fs.xs
                                             elide: Text.ElideMiddle
@@ -514,23 +615,43 @@ Scope {
                                         }
                                     }
 
-                                    Rectangle {
-                                        implicitWidth: prevLabel.implicitWidth + Theme.space.lg
-                                        implicitHeight: prevLabel.implicitHeight + Theme.space.sm
-                                        radius: Theme.radiusSmall
-                                        color: Theme.surface
-                                        border { width: 1; color: Theme.border }
-                                        Text { id: prevLabel; anchors.centerIn: parent; text: "prev"; color: Theme.text; font.pixelSize: Theme.fs.sm }
-                                        MouseArea { anchors.fill: parent; onClicked: Theme.wallpaperPrev(scope.previewPalette, monRow.modelData) }
+                                    RowLayout {
+                                        spacing: Theme.space.xs
+                                        Text { text: "Blur"; color: Theme.subtext; font.pixelSize: Theme.fs.xs }
+                                        DialSlider {
+                                            Layout.preferredWidth: Theme.fs.xl * 5
+                                            min: 0; max: 48
+                                            value: Theme.blurForOutput(monRow.modelData)
+                                            onMoved: (v) => {
+                                                blurDebounce.targetValue = Math.round(v);
+                                                blurDebounce.restart();
+                                            }
+                                        }
+                                        Text {
+                                            Layout.preferredWidth: Theme.fs.xl * 2
+                                            text: {
+                                                const b = blurDebounce.running ? blurDebounce.targetValue : Theme.blurForOutput(monRow.modelData);
+                                                return b === 0 ? "off" : b.toString();
+                                            }
+                                            color: Theme.subtext
+                                            font.pixelSize: Theme.fs.xs
+                                        }
+                                        Timer {
+                                            id: blurDebounce
+                                            interval: 200
+                                            repeat: false
+                                            property int targetValue: 18
+                                            onTriggered: Theme.setWallpaperBlur(scope.previewPalette, monRow.modelData, targetValue)
+                                        }
                                     }
-                                    Rectangle {
-                                        implicitWidth: nextLabel.implicitWidth + Theme.space.lg
-                                        implicitHeight: nextLabel.implicitHeight + Theme.space.sm
-                                        radius: Theme.radiusSmall
-                                        color: Theme.surface
-                                        border { width: 1; color: Theme.border }
-                                        Text { id: nextLabel; anchors.centerIn: parent; text: "next"; color: Theme.text; font.pixelSize: Theme.fs.sm }
-                                        MouseArea { anchors.fill: parent; onClicked: Theme.wallpaperNext(scope.previewPalette, monRow.modelData) }
+
+                                    StepButton {
+                                        label: "prev"
+                                        onStepped: Theme.wallpaperPrev(scope.previewPalette, monRow.modelData)
+                                    }
+                                    StepButton {
+                                        label: "next"
+                                        onStepped: Theme.wallpaperNext(scope.previewPalette, monRow.modelData)
                                     }
                                 }
                             }
@@ -592,7 +713,8 @@ Scope {
                                     implicitWidth: soundText.implicitWidth + Theme.space.lg
                                     implicitHeight: soundText.implicitHeight + Theme.space.sm
                                     radius: Theme.radiusSmall
-                                    color: soundBtn.active ? Theme.withAlpha(Theme.accent, 0.3) : Theme.surface
+                                    color: soundBtn.active ? Theme.withAlpha(Theme.accent, 0.3)
+                                        : soundHover.hovered ? Theme.surfaceAlt : Theme.surface
                                     border { width: 1; color: soundBtn.active ? Theme.accent : Theme.border }
                                     Text {
                                         id: soundText
@@ -601,8 +723,10 @@ Scope {
                                         color: Theme.text
                                         font.pixelSize: Theme.fs.sm
                                     }
+                                    HoverHandler { id: soundHover }
                                     MouseArea {
                                         anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
                                         onClicked: soundBtn.modelData === "off" ? Sound.stop() : Sound.play(soundBtn.modelData)
                                     }
                                 }
@@ -624,11 +748,11 @@ Scope {
                                 Layout.fillWidth: true
                                 min: 0; max: 1
                                 value: Sound.volume
-                                onMoved: (v) => Sound.setVolume(v)
+                                onMoved: (v) => { volumeDebounce.v = v; volumeDebounce.restart(); }
                             }
                             Text {
                                 Layout.preferredWidth: Theme.fs.xl * 2
-                                text: Sound.volume.toFixed(2)
+                                text: (volumeDebounce.running ? volumeDebounce.v : Sound.volume).toFixed(2)
                                 color: Theme.subtext
                                 font.pixelSize: Theme.fs.sm
                             }

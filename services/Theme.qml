@@ -35,6 +35,8 @@ Singleton {
             night: "macchiato",
             scale: 1.25,            // UI scale; see `fs` and `space` below
             transparency: 1.0,      // global window-transparency dial (0 = opaque)
+            wallpaper_blur: 18,     // wallpaper backdrop sigma; 0 = no blur
+            wallpaper_blurs: ({}),  // output -> blur sigma
             wallpaper: "",          // "" = the palette's default, resolved by ,theme.sh
             wallpapers: ({}),       // palette -> wallpaper; `wallpaper` is the fallback
         })
@@ -124,6 +126,20 @@ Singleton {
     // you turn DOWN to get transparency reads backwards every time.
     readonly property real transparency: store.get("transparency") ?? 1.0
 
+    // The wallpaper backdrop blur sigma, 0..48, 0 = no blur. The render is
+    // owned by ,theme.sh's process_wallpaper, which reads this same key and
+    // bakes the value into its cache stamp — the shell only dials it.
+    readonly property int wallpaperBlur: store.get("wallpaper_blur") ?? 18
+
+    // Per-output wallpaper blur overrides (output -> sigma). Falls back to
+    // wallpaperBlur (and ultimately 18) for any monitor not explicitly keyed.
+    readonly property var wallpaperBlurs: store.get("wallpaper_blurs") ?? ({})
+    function blurForOutput(output) {
+        return (output && root.wallpaperBlurs[output] !== undefined)
+            ? root.wallpaperBlurs[output]
+            : root.wallpaperBlur;
+    }
+
     // "" means the palette decides; `,theme.sh` resolves and applies it.
     readonly property string wallpaper: store.get("wallpaper") ?? ""
 
@@ -208,7 +224,15 @@ Singleton {
     // every mood change with no call to `applyToSystem()` — see that
     // function's comment for the one case that genuinely needs the explicit
     // call instead of a binding.
-    readonly property color accent:        c[Focus.accentRole] ?? c.mauve
+    //
+    // The light-palette contrast guard lives in `roleFor`, and is the same
+    // set colors.lua and ,theme.sh's accent_role pin: on latte only mauve and
+    // blue clear the accent-on-base target, so a pale role (lavender, peach,
+    // yellow, …) stands in as mauve; dark palettes pass every role.
+    function roleFor(palette, role) {
+        return (palette === "latte" && role !== "mauve" && role !== "blue") ? "mauve" : role;
+    }
+    readonly property color accent:        c[roleFor(name, Focus.accentRole)] ?? c.mauve
     readonly property color accentAlt:     c.lavender
     readonly property color success:       c.green
     readonly property color warning:       c.yellow
@@ -295,11 +319,30 @@ Singleton {
     readonly property int gap: space.lg
     readonly property int pad: space.xl
 
+    // Motion roles. One place a duration is named, gated by the mood's motion
+    // contract (`Focus.motionEnergy`): an `instant` mood collapses every
+    // duration to zero — no motion, not a smaller number — while `base` keeps
+    // the felt timings. `exit` is shorter than `enter` on purpose: leaving
+    // should never feel like it is being watched. Widgets that animate read
+    // these rather than carrying their own milliseconds.
+    readonly property var motion: ({
+        fast: Focus.motionEnergy === "instant" ? 0 : 90,
+        base: Focus.motionEnergy === "instant" ? 0 : 150,
+        slow: Focus.motionEnergy === "instant" ? 0 : 220,
+        exit: Focus.motionEnergy === "instant" ? 0 : 120,
+        ease: Easing.OutCubic
+    })
+
+    // Toast stack width, and the history panel's ceiling. Named here so the
+    // notification surfaces stay one size across moods and scale together.
+    readonly property int toastWidth: Math.round(380 * scale)
+    readonly property int historyWidth: Math.round(640 * scale)
+
     // How tall the bar stands. Anything that has to sit clear of it reads this
     // rather than repeating a number: three surfaces used to carry their own
     // copy, and all three silently overlapped the bar the first time its height
     // changed.
-    readonly property int barHeight: Math.round(30 * scale)
+    readonly property int barHeight: Math.round(26 * scale)
 
     // How far the islands float clear of the screen edge, and therefore how much
     // room anything anchored below the bar has to leave.
@@ -338,32 +381,52 @@ Singleton {
         wallpaperLister.running = true;
     }
 
-    // One mutator process for next/prev/random/pick, re-listing on exit so
-    // callers see the script's own resolution (shuffle position, the file it
-    // actually picked) rather than guessing it client-side.
+    // One mutator process for next/prev/random/pick/blur, with a QUEUE behind
+    // it. A single slot used to mean two quick "next" clicks overwrote the
+    // command of the process already running — the second click silently did
+    // nothing, which is what made the browser's arrows feel wonky. Mutations
+    // now run in order.
+    //
+    // It deliberately does NOT re-list on exit any more. `wallpaper list` costs
+    // ~1s (it scans every palette folder and each image's real pixel size), and
+    // running it after every step put that second between the click and the
+    // thumbnail. The panel reads the live pick straight from the `wallpapers`
+    // key the script writes to theme.json (see ControlPanel's `currentFor`),
+    // which the store already watches; the expensive list is refreshed only
+    // when the browser opens or its palette changes.
     Process {
         id: wallpaperMutator
-        property string palette: ""
-        onExited: root.wallpaperRefresh(wallpaperMutator.palette)
+        property var queue: []
+        onExited: {
+            if (wallpaperMutator.queue.length > 0) {
+                wallpaperMutator.command = wallpaperMutator.queue.shift();
+                wallpaperMutator.running = true;
+            }
+        }
     }
-    function _runWallpaper(args, palette) {
-        wallpaperMutator.palette = palette;
-        wallpaperMutator.command = [",theme.sh", "wallpaper"].concat(args);
-        wallpaperMutator.running = true;
+    function _runWallpaper(args) {
+        const command = [",theme.sh", "wallpaper"].concat(args);
+        if (wallpaperMutator.running) wallpaperMutator.queue.push(command);
+        else { wallpaperMutator.command = command; wallpaperMutator.running = true; }
     }
     function wallpaperNext(palette, output) {
-        root._runWallpaper(output ? ["next", palette, "--output", output] : ["next", palette], palette);
+        root._runWallpaper(output ? ["next", palette, "--output", output] : ["next", palette]);
     }
     function wallpaperPrev(palette, output) {
-        root._runWallpaper(output ? ["prev", palette, "--output", output] : ["prev", palette], palette);
+        root._runWallpaper(output ? ["prev", palette, "--output", output] : ["prev", palette]);
     }
     function wallpaperRandom(palette, output) {
-        root._runWallpaper(output ? ["random", palette, "--output", output] : ["random", palette], palette);
+        root._runWallpaper(output ? ["random", palette, "--output", output] : ["random", palette]);
+    }
+    // Sets blur sigma for one monitor (or globally when output is omitted/empty),
+    // persisting to theme.json and repainting live through ,theme.sh.
+    function setWallpaperBlur(palette, output, sigma) {
+        root._runWallpaper(output ? ["blur", sigma.toString(), palette, "--output", output] : ["blur", sigma.toString(), palette]);
     }
     // Binds one specific file (validated by the script against the palette's
     // set folder) — the `--action` target for the feh viewer below.
     function wallpaperPick(file, palette) {
-        root._runWallpaper([file, palette], palette);
+        root._runWallpaper([file, palette]);
     }
 
     // The full-size viewer (LEO-366): feh over the palette's own set folder,

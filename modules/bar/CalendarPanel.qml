@@ -2,8 +2,8 @@
 // §6.5): today's timeline, an upcoming list (the focus mode each
 // event implies is disabled — CalendarSource.impliedMode always returns
 // null, so the mode chip and Enter-to-adopt both stay dormant), and a
-// collapsed month grid. Opened from CalendarPill, same PanelBus-driven
-// single-window pattern as ProjectsDashboard/SysPanel.
+// collapsed month grid. Opened from the bar's clock (LEO-425), same
+// PanelBus-driven single-window pattern as ProjectsDashboard/SysPanel.
 //
 // Adopting a mode from Upcoming shells out to the `focus` IPC target
 // (services/Focus.qml's `set(mode, minutes)`) rather than importing the
@@ -22,7 +22,7 @@ import "CalendarSource.js" as CalendarSource
 Scope {
     id: scope
 
-    readonly property var _clock: SystemClock { precision: SystemClock.Minute }
+    readonly property var _clock: SystemClock { precision: SystemClock.Minutes }
     readonly property string todayIso: Qt.formatDate(scope._clock.date, "yyyy-MM-dd")
     readonly property string nowTime: Qt.formatTime(scope._clock.date, "hh:mm")
 

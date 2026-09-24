@@ -95,7 +95,7 @@ Singleton {
             neutral: {
                 name: "Neutral", surface_alpha: 0.84,
                 density: "comfortable", motion_energy: "base", bar_autohide: false,
-                notifications: { policy: "all", position: "top-right", timeout: 6000, queue: false, digest_on_exit: false },
+                notifications: { policy: "all", position: "top-center", timeout: 6000, queue: false, digest_on_exit: false },
                 launches: { aggression: "soft", block: [], override: false },
                 background: { defer: [], prevent: [] },
                 scenes: {}
@@ -103,7 +103,7 @@ Singleton {
             work: {
                 name: "Work", surface_alpha: 0.94,
                 density: "compact", motion_energy: "instant", bar_autohide: true,
-                notifications: { policy: "critical-only", position: "top-right", timeout: 0, queue: true, digest_on_exit: true },
+                notifications: { policy: "critical-only", position: "top-center", timeout: 0, queue: true, digest_on_exit: true },
                 launches: { aggression: "firm", block: ["media", "game"], override: true },
                 background: { defer: [], prevent: [] },
                 scenes: { gaming: "blocked", media: "blocked" }
@@ -111,7 +111,7 @@ Singleton {
             study: {
                 name: "Study", surface_alpha: 0.94,
                 density: "compact", motion_energy: "instant", bar_autohide: true,
-                notifications: { policy: "critical-only", position: "top-right", timeout: 0, queue: true, digest_on_exit: true },
+                notifications: { policy: "critical-only", position: "top-center", timeout: 0, queue: true, digest_on_exit: true },
                 launches: { aggression: "firm", block: ["media", "game"], override: true },
                 background: { defer: [], prevent: [] },
                 scenes: { gaming: "blocked", media: "blocked" }
@@ -119,7 +119,7 @@ Singleton {
             gaming: {
                 name: "Gaming", surface_alpha: 0.96,
                 density: "compact", motion_energy: "instant", bar_autohide: false,
-                notifications: { policy: "none", position: "top-right", timeout: 0, queue: true, digest_on_exit: false },
+                notifications: { policy: "none", position: "top-center", timeout: 0, queue: true, digest_on_exit: false },
                 launches: { aggression: "firm", block: [], override: true },
                 background: { defer: [], prevent: [] },
                 scenes: { gaming: "reachable" }
@@ -293,10 +293,15 @@ Singleton {
     // cheap fallback that covers writers outside the shell; this trigger is
     // what keeps mode entry synchronous with the mood centre rather than
     // waiting for the desk's next event.
+    //
+    // Use the package name `hypr.hyprfocus`, never `hypr.hyprfocus.init`:
+    // Lua caches by the exact string given, and the watcher uses the package
+    // name, so a file-path require would load a second copy with its own apply
+    // guard and let two transitions run at once.
     // Fails open: no hyprctl / wrong eval never blocks the pointer.
     Process { id: converge; command: ["hyprctl", "eval", ""] }
     function runConverge(mode) {
-        converge.command = ["hyprctl", "eval", 'require("hypr.hyprfocus.init").converge("' + mode + '")'];
+        converge.command = ["hyprctl", "eval", 'require("hypr.hyprfocus").converge("' + mode + '")'];
         converge.running = true;
     }
 

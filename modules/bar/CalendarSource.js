@@ -2,7 +2,7 @@
 // Pure calendar math + entry lookup, kept separate from the QML so a future
 // CalDAV source only has to produce the same `entries` shape — [{ date:
 // "YYYY-MM-DD", time, title }] — that this file already knows how to grid and
-// filter. Local-only for now (CalendarPill.qml reads a plain JSON file).
+// filter. Local-only for now (the bar's Clock.qml reads a plain JSON file).
 
 function pad2(n) { return String(n).padStart(2, "0"); }
 function isoDate(y, m, d) { return y + "-" + pad2(m + 1) + "-" + pad2(d); }

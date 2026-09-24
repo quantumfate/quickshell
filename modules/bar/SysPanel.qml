@@ -27,7 +27,7 @@ Scope {
         color: "transparent"
 
         anchors { top: true; left: true; right: true }
-        margins { top: Theme.barReserved + Theme.space.xs }
+        margins { top: Theme.barReserved + Theme.space.md }
         implicitHeight: card.implicitHeight
 
         WlrLayershell.layer: WlrLayer.Overlay
@@ -141,8 +141,10 @@ Scope {
 
                 Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
 
-                // ---- Background apps / diagnostics / the way out: every
-                // other always-on bar entry the persistent bar shed. ----
+                // ---- Background apps / diagnostics: the always-on bar entries
+                // the persistent bar shed. The notification bell and the power
+                // button moved back out to the bar's right isle (LEO-425) —
+                // they are glance-and-act entries, not panel content. ----
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Theme.space.lg
@@ -152,9 +154,7 @@ Scope {
                     Submap {}
                     ModePill { screenName: SysMon.activeScreen }
                     ProjectsPill { screenName: SysMon.activeScreen }
-                    NotifIndicator { screenName: SysMon.activeScreen }
                     Battery { screenName: SysMon.activeScreen }
-                    Wlogout {}
                 }
 
                 Text {

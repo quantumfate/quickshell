@@ -27,10 +27,9 @@ pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
-import "../../services"   // Theme, Hyprfocus
+import "../../services"   // Theme, Hyprfocus, PanelBus
 import "../../services/BarGaps.js" as BarGaps
 import "../../services/DockPlacement.js" as Dock
 import "../common"        // Surface
@@ -57,48 +56,62 @@ Scope {
         function reveal(): void { scope.revealTick++; }
     }
 
-    // The workspace name active on EACH bar's screen, fed by the compositor's
-    // own raw `workspace`/`workspacev2`/`focusedmon` events — the refresh
-    // signal for the inset's scene rung. Same source and parsing Workspaces.qml
-    // root-caused in its `_activeWsName` header (raw events are fresh where
-    // the monitor's cached activeWorkspace lags); lifted here so every bar
-    // shares one listener instead of one Process per bar. A scene *edit*
+    // The workspace name active on each bar's screen is tracked in PanelBus
+    // (singleton) so gap-aware surfaces outside the bar, like Toasts, can read
+    // the same value without duplicating the raw-event listener. A scene edit
     // needs no event at all: the `hyprfocus` Store (above) re-reads the file
     // live, so `edgeInset` re-binds on either change — no reload, no poll.
-    property var sceneByScreen: ({})                        // screen name -> scene name
-    Connections {
-        target: Hyprland
-        function onRawEvent(event) {
-            const data = event.data ?? "";
-            const comma = data.indexOf(",");
-            let name = null, screen = null;
-            if (event.name === "workspace" || event.name === "workspacev2") {
-                // payload: "name" (workspace) or "name,displayName" (workspacev2)
-                name = comma === -1 ? data : data.slice(0, comma);
-                // The event is for the monitor whose workspace object says so;
-                // when the workspace has no live object yet, it is the focused
-                // monitor — the same fallback Workspaces.qml uses.
-                const live = (Hyprland.workspaces?.values ?? []).find(w => w.name === name);
-                if (live?.monitor?.name !== undefined) screen = live.monitor.name;
-                else screen = (Quickshell.screens.find(s => Hyprland.monitorFor(s)?.focused) ?? {}).name;
-            } else if (event.name === "focusedmon" || event.name === "focusedmonv2") {
-                // payload: "monitorName,workspaceNameOrAddress"
-                if (comma === -1) return;
-                screen = data.slice(0, comma);
-                name = data.slice(comma + 1);
-            }
-            if (screen && name) {
-                const next = Object.assign({}, scope.sceneByScreen);
-                next[screen] = name;
-                scope.sceneByScreen = next;
-            }
-        }
-    }
 
     // Tooltip surfaces, one per bar screen (drawn below the bar by TipLayer).
     Variants {
         model: Quickshell.screens.filter(s => !scope.excludedScreens.includes(s.name))
         TipLayer { required property var modelData; screen: modelData }
+    }
+
+    // The strip the isles stand in, reserved from the tiling.
+    //
+    // A docked bar is one full-monitor, click-through overlay so an isle can
+    // sit anywhere on the screen — and a full-monitor surface cannot also
+    // reserve a top strip, since a layer surface's exclusive zone belongs to
+    // the ONE edge it is anchored to. With the overlay reserving nothing, the
+    // only thing carving a gutter for the isles was the scene's own top gap,
+    // and a scene whose gap is thinner than an isle (obsidian-linear carved
+    // 24px for a 54px isle) had its windows tiled straight under the bar.
+    //
+    // So the reservation moves to its own surface: zero-size, invisible,
+    // click-through, anchored to the top edge, carrying nothing but the
+    // exclusive zone. The compositor carves the strip, every scene's top
+    // gutter clears an isle by construction, and the overlay stays free to
+    // place isles wherever the desk publishes them. Only while docked — an
+    // undocked bar is still the strip it always was and reserves its own.
+    Variants {
+        model: Quickshell.screens.filter(s => !scope.excludedScreens.includes(s.name))
+
+        PanelWindow {
+            id: reserve
+            required property var modelData
+            screen: modelData
+
+            readonly property var docksForScreen: (geometryStore.data?.docks || {})[reserve.screen.name]
+            readonly property bool docked: {
+                const docks = reserve.docksForScreen;
+                if (!docks) return false;
+                for (const id in docks) if (Dock.isPlaced(Dock.resolveDockMode(docks, id))) return true;
+                return false;
+            }
+
+            visible: reserve.docked
+            anchors { top: true; left: true; right: true }
+            implicitHeight: 0
+            exclusiveZone: reserve.docked ? Theme.barReserved : 0
+            color: "transparent"
+            WlrLayershell.layer: WlrLayer.Top
+            WlrLayershell.namespace: "quickshell-bar-reserve"
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+            // Nothing here is ever clickable: an empty mask, not merely a
+            // transparent surface, or it would eat the top edge of the screen.
+            mask: Region {}
+        }
     }
 
     Variants {
@@ -130,13 +143,27 @@ Scope {
             }
             implicitHeight: bar.docked ? 0 : Theme.barReserved
             exclusiveZone: bar.docked ? 0 : Theme.barReserved
+            // Reserving nothing is not the same as being positioned as if
+            // nothing were reserved. A four-sided layer surface is shrunk by
+            // every OTHER surface's exclusive zone -- the reserve strip above
+            // is one, so this overlay's origin sat 58px below the monitor's
+            // while hypr publishes monitor-local coordinates. Every isle was
+            // drawn that far down, flush onto the window edge, and only the
+            // vertical axis was wrong because the side zones are zero. Ignore
+            // makes the overlay the whole output again, which is the frame
+            // the published geometry is written in.
+            exclusionMode: bar.docked ? ExclusionMode.Ignore : ExclusionMode.Normal
             color: "transparent"
 
-            // This screen has at least one isle the desk placed for it.
+            // This screen has at least one isle the desk actually placed.
+            // Counting every key (what this did first) counted `hidden` and
+            // `resting` documents too, so a scene that publishes an isle it
+            // withholds still dropped the reserved strip and let the windows
+            // tile under the bar. Only a mode that carries geometry counts.
             readonly property bool docked: {
                 const docks = bar.docksForScreen;
                 if (!docks) return false;
-                for (const id in docks) if (docks[id]) return true;
+                for (const id in docks) if (Dock.isPlaced(Dock.resolveDockMode(docks, id))) return true;
                 return false;
             }
 
@@ -212,7 +239,7 @@ Scope {
             // no reload.
             readonly property var edgeInset: BarGaps.insetFor(
                 geometryStore.data, hyprfocusStore.data,
-                scope.sceneByScreen[bar.screen.name], bar.screen.name, Theme.barInset * 2)
+                PanelBus.sceneByScreen[bar.screen.name], bar.screen.name, Theme.barInset * 2)
 
             // The vertical centre of the old top strip — every isle's resting
             // (undocked) position keeps living there, unchanged from before
@@ -241,9 +268,13 @@ Scope {
                 bar: bar
                 restingX: leftIsland.x + leftIsland.width + Theme.barInset * 2
                 restingY: bar.restingY
-                active: roster.visible
+                active: roster.shouldShow
 
-                DofusRoster { id: roster; screen: bar.screen }
+                DofusRoster {
+                    id: roster
+                    screen: bar.screen
+                    activeWorkspaceName: PanelBus.sceneByScreen[bar.screen.name] ?? ""
+                }
             }
 
             // --- centre isle: bar.center ---
@@ -259,7 +290,10 @@ Scope {
                 Pulseaudio { screenName: bar.screen.name }
             }
 
-            // --- right isle: bar.clock ---
+            // --- right isle: bar.clock (LEO-425) ---
+            // mode pill · clock · notifications · power. The mood pill leads:
+            // it carries the countdown until the mood ends, which is the one
+            // thing you want while the rest of the bar drops away on autohide.
             DockedIsle {
                 id: rightIsland
                 isleId: "bar.clock"
@@ -267,12 +301,10 @@ Scope {
                 restingX: bar.screen.width - bar.edgeInset.right - width
                 restingY: bar.restingY
 
-                Clock {}
-                // The mood pill stays even while the bar autohides: it
-                // carries the countdown until the mood ends, which is the
-                // one thing you want while the rest of the bar drops away.
                 ModePill { screenName: bar.screen.name }
-                CalendarPill { screenName: bar.screen.name }
+                Clock { screenName: bar.screen.name }
+                NotifIndicator { screenName: bar.screen.name }
+                Wlogout {}
             }
 
             // Thin always-present strip at the true top edge: catches the
@@ -292,11 +324,13 @@ Scope {
     }
 
     // One isle, dock-aware. Wraps the island card (Surface + layout) with
-    // LEO-420 placement: docked reads `bar.docksForScreen[isleId]` through
-    // DockPlacement.placeDock; fallback freezes the isle at its last docked
-    // rect; resting (no document, or state "resting") uses the caller's
-    // restingX/restingY — today's static layout, untouched. `hidden`
-    // (the scene declared this isle `false`) renders nothing.
+    // LEO-420 placement: docked AND fallback both read
+    // `bar.docksForScreen[isleId]` through DockPlacement.placeDock -- the
+    // publisher resolves both to a full region/anchor/grow, and "fallback"
+    // only says which rung of the ladder answered. Resting (no document, or
+    // state "resting") uses the caller's restingX/restingY -- today's static
+    // layout, untouched. `hidden` (the scene declared this isle `false`)
+    // renders nothing.
     //
     // Autohide keeps riding the same y-slide it always has: it is applied
     // here as an offset on top of whatever placement mode chose, so a docked
@@ -318,11 +352,6 @@ Scope {
         readonly property var dockDoc: slot.bar.docksForScreen ? slot.bar.docksForScreen[slot.isleId] : undefined
         readonly property string mode: Dock.resolveDockMode(slot.bar.docksForScreen, slot.isleId)
 
-        // The last rect placeDock computed while docked, kept for "fallback"
-        // to freeze against. Reset to null whenever the isle stops being
-        // docked so a later dock starts clean rather than snapping to a
-        // stale rect from a previous window.
-        property var frozenRect: null
         // Whether the isle was clamped last time it was placed — the edge
         // `shouldWarnClamp` needs, and the only way to warn once per state
         // change rather than once per frame.
@@ -331,22 +360,30 @@ Scope {
         // Pure — no side effects in the binding itself, so it can be
         // re-evaluated freely. The clamp-warning bookkeeping below reacts to
         // its value instead of living inside it.
-        readonly property var placed: (slot.mode === "docked" && slot.dockDoc)
+        readonly property var placed: (Dock.isPlaced(slot.mode) && slot.dockDoc)
             ? Dock.placeDock(
                 slot.dockDoc,
                 { width: island.implicitWidth, height: island.implicitHeight },
-                { width: slot.bar.screen.width, height: slot.bar.screen.height })
+                { width: slot.bar.screen.width, height: slot.bar.screen.height },
+                slot.bar.restingY)
             : null
 
         onPlacedChanged: {
             if (!slot.placed) return;
             if (Dock.shouldWarnClamp(slot.wasClamped, slot.placed.clamped)) {
-                console.warn("dock " + slot.isleId + ": misconfig exceeds bounds");
+                // Name the numbers. "exceeds bounds" alone said nothing about
+                // WHICH bound, so the only way to act on it was to go read the
+                // published document by hand — and the usual cause is mundane:
+                // a scene's outer gap a few pixels thinner than the isle.
+                const r = slot.dockDoc.region;
+                console.warn("dock " + slot.isleId + ": isle "
+                    + Math.round(island.implicitWidth) + "x" + Math.round(island.implicitHeight)
+                    + " does not fit its gutter " + Math.round(r.w) + "x" + Math.round(r.h)
+                    + " (scene gap minus standoff); it sits flush to the screen edge instead");
             }
             slot.wasClamped = slot.placed.clamped;
-            slot.frozenRect = slot.placed;
         }
-        onModeChanged: if (slot.mode !== "docked") slot.wasClamped = false;
+        onModeChanged: if (!Dock.isPlaced(slot.mode)) slot.wasClamped = false;
 
         visible: slot.active && slot.mode !== "hidden"
         // Plain Items (unlike Layout-managed ones) never self-size from
@@ -357,12 +394,8 @@ Scope {
         width: implicitWidth
         height: implicitHeight
 
-        readonly property real targetX: slot.mode === "docked" ? (slot.placed?.x ?? slot.restingX)
-            : slot.mode === "fallback" ? (slot.frozenRect?.x ?? slot.restingX)
-            : slot.restingX
-        readonly property real targetY: slot.mode === "docked" ? (slot.placed?.y ?? slot.restingY)
-            : slot.mode === "fallback" ? (slot.frozenRect?.y ?? slot.restingY)
-            : slot.restingY
+        readonly property real targetX: slot.placed ? slot.placed.x : slot.restingX
+        readonly property real targetY: slot.placed ? slot.placed.y : slot.restingY
 
         // One animated transition for every state change (LEO-420 §5) — the
         // snap when a target window appears, disappears, or the isle falls
@@ -371,8 +404,8 @@ Scope {
         // over the property.
         x: slot.targetX
         y: slot.targetY + ((slot.bar.autohideOn && !slot.bar.revealed) ? -Theme.barReserved : 0)
-        Behavior on x { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-        Behavior on y { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+        Behavior on x { NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease } }
+        Behavior on y { NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease } }
 
         HoverHandler { onHoveredChanged: if (hovered) slot.bar.wake() }
 
@@ -399,8 +432,11 @@ Scope {
         property bool active: true
 
         elevation: "island"
-        implicitWidth: grid.implicitWidth + Theme.space.lg * 2
-        implicitHeight: Math.max(Theme.barHeight, grid.implicitHeight + Theme.space.lg * 2)
+        // Lean: the card is the content plus a hairline of breathing room,
+        // not a strip. The floor keeps every isle the same height whatever
+        // its contents, so the row still reads as one bar.
+        implicitWidth: grid.implicitWidth + Theme.space.md * 2
+        implicitHeight: Math.max(Theme.barHeight, grid.implicitHeight + Theme.space.xs * 2)
         width: implicitWidth
         height: implicitHeight
 
@@ -408,16 +444,16 @@ Scope {
             id: grid
             anchors {
                 fill: parent
-                leftMargin: Theme.space.lg
-                rightMargin: Theme.space.lg
-                topMargin: Theme.space.lg
-                bottomMargin: Theme.space.lg
+                leftMargin: Theme.space.md
+                rightMargin: Theme.space.md
+                topMargin: Theme.space.xs
+                bottomMargin: Theme.space.xs
             }
             flow: island.orientation === "vertical" ? GridLayout.TopToBottom : GridLayout.LeftToRight
             rows: island.orientation === "vertical" ? -1 : 1
             columns: island.orientation === "vertical" ? 1 : -1
-            rowSpacing: Theme.space.lg
-            columnSpacing: Theme.space.lg
+            rowSpacing: Theme.space.md
+            columnSpacing: Theme.space.md
         }
     }
 }

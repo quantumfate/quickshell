@@ -28,6 +28,32 @@
 // evidence on why raw events, not the monitor's cached activeWorkspace).
 
 /**
+ * The active scene's resolved four-side gap, whole — but only when the scene
+ * opts in (`bar_follows_scene_gaps`). `null` otherwise, so a caller can keep
+ * its own resting default rather than guessing. This is the same opt-in rule
+ * `insetFor` applies to the bar's sides, spelled for surfaces (Toasts) that
+ * also need the top/bottom the bar itself never reads.
+ *
+ * @param {object|null} geometryStore the `geometry` Store's decoded document
+ * @param {object|null} hyprfocusStore the `hyprfocus` Store's decoded document
+ * @param {string|null} activeSceneName the workspace name active on this screen
+ * @returns {{top: number, right: number, bottom: number, left: number}|null}
+ */
+function sceneGapsFor(geometryStore, hyprfocusStore, activeSceneName) {
+  var scenes = hyprfocusStore && hyprfocusStore.base && hyprfocusStore.base.scenes;
+  var scene = activeSceneName && scenes && scenes[activeSceneName];
+  if (!scene || scene.bar_follows_scene_gaps !== true) return null;
+  var workspaces = (geometryStore && geometryStore.workspaces) || {};
+  var gap = workspaces[activeSceneName];
+  if (gap
+    && typeof gap.top === "number" && typeof gap.right === "number"
+    && typeof gap.bottom === "number" && typeof gap.left === "number") {
+    return { top: gap.top, right: gap.right, bottom: gap.bottom, left: gap.left };
+  }
+  return null;
+}
+
+/**
  * One screen's left/right bar inset.
  *
  * Subscribed when the active scene opts in (`bar_follows_scene_gaps`): the

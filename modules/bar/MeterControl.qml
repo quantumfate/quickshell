@@ -68,7 +68,7 @@ Item {
                 color: Theme.subtext
                 font { family: Theme.fontFamily; pixelSize: Theme.fs.xs }
                 opacity: root._flash ? 1.0 : 0.0
-                Behavior on opacity { NumberAnimation { duration: 400 } }
+                Behavior on opacity { NumberAnimation { duration: Theme.motion.slow } }
             }
         }
     }

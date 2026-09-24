@@ -35,6 +35,11 @@ Text {
     readonly property string name: Hyprfocus.known ? Hyprfocus.label(Hyprfocus.mode)
         : Hyprfocus.mode + " (undeclared)"
 
+    // The mode's declared glyph (LEO-425): every mode names an icon in the
+    // hyprfocus declaration, shown next to its name in the same tint. A mode
+    // without one degrades to the name alone, never a broken glyph.
+    readonly property string icon: (Hyprfocus.data.modes?.[Hyprfocus.mode]?.icon) || ""
+
     // Automation gets its own colour. A desk that changed by itself should not
     // look identical to one you changed, or the pill answers the wrong half of
     // the question.
@@ -44,11 +49,11 @@ Text {
     color: hover.hovered ? Theme.text : root.tint
     font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
     leftPadding: Theme.space.md; rightPadding: Theme.space.md
-    text: root.name + (root.remaining ? " · " + root.remaining : "")
+    text: (root.icon ? root.icon + " " : "") + root.name + (root.remaining ? " · " + root.remaining : "")
 
     MouseArea {
         anchors.fill: parent
-        onClicked: PanelBus.toggle("mood", root.screenName, root.mapToItem(null, root.width / 2, 0).x)
+        onClicked: PanelBus.toggle("mood", root.screenName, root.mapToItem(null, root.width / 2, 0).x, "bar.clock")
     }
 
     HoverHandler { id: hover }

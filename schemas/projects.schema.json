@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/quantumfate/quickshell/schemas/projects.schema.json",
   "title": "projects.json",
-  "description": "The source of truth for which projects exist and what each one opens: a project is a set of kitty windows in one Hyprland group on the `code` scene, and `path`/`windows`/`workspace` here are the template `,proj.sh open` reads at runtime. `,proj.sh sync` is the only writer of those three fields — it rescans the tms config's project roots plus bookmarks (tms's own project definition) and each project's `.proj.toml`, so this file and tms's picker cannot disagree about where a project lives. The dashboard fields (`kind`/`study`/`priority`) are hand-edited or set by another tool and `sync` never touches them for a project it already knows. `path` is deliberately NOT required: a machine-specific absolute path has no business in a shipped seed (`assets/projects.default.json` pre-seeds dashboard metadata for well-known names before anyone has ever synced on a given machine), and `,proj.sh open` on an entry with no `path` yet fails with its own clear message pointing at `sync` rather than the schema pretending every entry is immediately usable. Before this became the runtime source, `path` lived only in `,proj.sh`'s own filesystem scan and this schema carried no `path` field at all — an existing store gains it the first time `,proj.sh sync` runs after upgrading.",
+  "description": "The source of truth for which projects exist and what each one opens: a project is a set of kitty windows in one Hyprland group on the `code` scene, and `path`/`windows`/`workspace` here are the template `,proj.sh open` reads at runtime. The list is hand-curated and nothing discovers projects: `,proj.sh add <name> [path]` is the deliberate inclusion of a directory (it also folds the repo's own `.proj.toml` in), `drop` removes one, and `,proj.sh sync` only refreshes what each stored project's own `.proj.toml` declares (`windows`/`workspace`/`scopes`) — it scans nothing, so a directory that was never added stays invisible. The dashboard fields (`kind`/`study`/`priority`) are hand-edited or set by another tool and `sync` never touches them for a project it already knows. `path` is deliberately NOT required: a machine-specific absolute path has no business in a shipped seed (`assets/projects.default.json` pre-seeds dashboard metadata for well-known names before anyone has ever added them on a given machine), and `,proj.sh open` on an entry with no `path` yet fails with its own clear message pointing at `add` rather than the schema pretending every entry is immediately usable.",
   "classification": "declaration",
   "type": "object",
   "additionalProperties": false,
@@ -24,11 +24,11 @@
         ],
         "properties": {
           "path": {
-            "description": "Absolute path to the project's directory, written only by `,proj.sh sync`. Absent on an entry nothing has synced yet (e.g. a shipped seed name not present on this machine) — `,proj.sh open` refuses with its own message rather than opening a project with nowhere to open.",
+            "description": "Absolute path to the project's directory, written by `,proj.sh add` (and re-pointed by `sync`). Absent on an entry nothing has added yet (e.g. a shipped seed name not present on this machine) — `,proj.sh open` refuses with its own message rather than opening a project with nowhere to open.",
             "type": "string"
           },
           "windows": {
-            "description": "The kitty window template, in open order: one project window per entry, each launched with role tag `slot:<entry>` (`,proj.sh`'s `stamp_slot`). `nvim` is the one recognized role with a special launch command (`nvim --listen <sock> .`, for the graceful-quit path — see `,proj.sh`'s header comment); every other entry opens a plain shell. Source: `.proj.toml`'s `windows =` (repo root) or the tms config's `[projects.<name>] windows =`, defaulting to `[\"nvim\", \"zsh\", \"run\"]`.",
+            "description": "The kitty window template, in open order — the project's tabs: one project window per entry, each launched with role tag `slot:<entry>` (`,proj.sh`'s `stamp_slot`). `nvim` gets a control socket for the graceful-quit path and `yazi` runs as the tab it opens (quitting yazi ends the window — see `,proj.sh`'s header comment); every other entry opens a plain shell. Source: `.proj.toml`'s `windows =` (repo root), defaulting to `[\"nvim\", \"yazi\", \"zsh\", \"run\"]`.",
             "type": "array",
             "items": {
               "type": "string"
@@ -40,7 +40,7 @@
             "type": "string"
           },
           "scopes": {
-            "description": "A project's own working contexts beyond the fixed `windows` template — \"like scenes but for projects\": name to shell command, each spawned with role tag `slot:<name>` (the same tag vocabulary `windows` entries carry) and joined into the project's group by class. Source: `.proj.toml`'s `[scopes]` table (repo root) or the tms config's `[projects.<name>.scopes]`, one plain `name = \"command\"` per line; absent or `{}` means the project declares none. `,proj.sh scope <name>` / `pick-scope` resolve against whichever project's group is focused, never a hardcoded name.",
+            "description": "A project's own working contexts beyond the fixed `windows` template — \"like scenes but for projects\": name to shell command, each spawned with role tag `slot:<name>` (the same tag vocabulary `windows` entries carry) and joined into the project's group by class. Source: `.proj.toml`'s `[scopes]` table (repo root), one plain `name = \"command\"` per line; absent or `{}` means the project declares none. `,proj.sh scope <name>` / `pick-scope` resolve against whichever project's group is focused, never a hardcoded name.",
             "type": "object",
             "additionalProperties": {
               "type": "string"

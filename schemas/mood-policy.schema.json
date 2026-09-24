@@ -95,9 +95,14 @@
           ]
         },
         "position": {
+          "description": "Where the toast stack stands on the focused monitor (LEO-424). Resolved by services/NotifyPlacement.js; an unknown value falls back to top-center.",
           "type": "string",
           "enum": [
+            "top-left",
+            "top-center",
             "top-right",
+            "bottom-left",
+            "bottom-center",
             "bottom-right"
           ]
         },

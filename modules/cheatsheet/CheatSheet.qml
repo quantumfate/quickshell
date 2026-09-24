@@ -122,7 +122,7 @@ Scope {
                     reservedHeight = contentHeight;
                 }
             }
-            Behavior on reservedHeight { id: reservedBehavior; NumberAnimation { duration: 110; easing.type: Easing.OutQuad } }
+            Behavior on reservedHeight { id: reservedBehavior; NumberAnimation { duration: Theme.motion.base; easing.type: Easing.OutQuad } }
 
             height: Math.min(parent.height * 0.85, reservedHeight + 2 * Theme.pad)
             elevation: "modal"

@@ -13,6 +13,7 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Notify, PanelBus, Theme
+import "../../services/BarGaps.js" as BarGaps
 import "../../services/NotifyCards.js" as NotifyCards
 import "../common"        // Surface
 
@@ -20,11 +21,25 @@ Scope {
     id: scope
     // Panel visibility is owned by Notify (shared with the bar bell).
     readonly property bool shown: Notify.historyOpen
+    // Kept mapped through the exit animation, then unmapped by the timer below
+    // (LEO-424): `shown` alone would cut the slide off at the first frame.
+    property bool _mounted: false
+    Component.onCompleted: if (scope.shown) scope._mounted = true
+    onShownChanged: {
+        if (scope.shown) { scope._mounted = true; unmount.stop(); }
+        else if (scope._mounted) unmount.restart();
+    }
+    Timer {
+        id: unmount
+        interval: Theme.motion.exit + 30
+        repeat: false
+        onTriggered: scope._mounted = false
+    }
 
     IpcHandler {
         target: "notifications"
-        function toggle(): void { Notify.toggleHistory(); }
-        function show(): void { Notify.showHistory(); }
+        function toggle(): void { PanelBus.anchorScreen = PanelBus.activeScreen; Notify.toggleHistory(); }
+        function show(): void { PanelBus.anchorScreen = PanelBus.activeScreen; Notify.showHistory(); }
         function hide(): void { Notify.hideHistory(); }
     }
 
@@ -45,13 +60,26 @@ Scope {
     readonly property var _suppressed: NotifyCards.suppressed(Notify.history)
 
     PanelWindow {
-        visible: scope.shown
-        screen: PanelBus.screenObject(PanelBus.anchorScreen)
+        id: win
+        visible: scope._mounted
+        screen: PanelBus.screenObject(PanelBus.anchorScreen || PanelBus.activeScreen)
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "quickshell-notifications"
+
+        Store { id: geometryStore; name: "geometry" }
+        Store { id: hyprfocusStore; name: "hyprfocus" }
+        readonly property string _screenName: win.screen?.name ?? ""
+        readonly property string _sceneName: PanelBus.sceneByScreen[win._screenName] ?? ""
+        readonly property var _sceneGaps: BarGaps.sceneGapsFor(
+            geometryStore.data, hyprfocusStore.data, win._sceneName)
+        readonly property int _smallGap: Theme.space.xs
+        readonly property int _topGap: Theme.barReserved + (win._sceneGaps ? win._sceneGaps.top : 0) + win._smallGap
+        readonly property int _bottomGap: (win._sceneGaps ? win._sceneGaps.bottom : 0) + win._smallGap
+        readonly property int _rightGap: (win._sceneGaps ? win._sceneGaps.right : 0)
+        readonly property int _leftGap: (win._sceneGaps ? win._sceneGaps.left : 0)
 
         // No dim backdrop (LEO-240): the panel is information, not a modal.
         // A click outside the panel still dismisses it.
@@ -60,9 +88,29 @@ Scope {
         Surface {
             id: panel
             anchors { top: parent.top; bottom: parent.bottom; right: parent.right }
-            width: Math.min(parent.width * 0.32, 460)
-            radius: 0
+            anchors.topMargin: win._topGap
+            anchors.bottomMargin: win._bottomGap
+            anchors.rightMargin: win._rightGap
+            // Keep the panel compact: never wider than the history width and
+            // always leave the published left gap clear.
+            width: Math.min(Theme.historyWidth, parent.width - win._leftGap - win._rightGap)
+            radius: Theme.radius
             elevation: "modal"
+            // Slide in from the right edge; the exit is the shorter move.
+            x: scope.shown ? 0 : panel.width
+            Behavior on x {
+                NumberAnimation {
+                    duration: scope.shown ? Theme.motion.base : Theme.motion.exit
+                    easing.type: Theme.motion.ease
+                }
+            }
+            opacity: scope.shown ? 1 : 0
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: scope.shown ? Theme.motion.base : Theme.motion.exit
+                    easing.type: Theme.motion.ease
+                }
+            }
             // Swallow clicks so they don't reach the dismiss backdrop.
             MouseArea { anchors.fill: parent }
 

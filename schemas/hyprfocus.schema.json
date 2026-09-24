@@ -44,6 +44,41 @@
       "pattern": "^[a-z0-9][a-z0-9-]*$",
       "maxLength": 64
     },
+    "spawn": {
+      "description": "One companion a block's presence keeps alive: launched when the block has a member and fewer than `max_spawns` of its class are on the desk, closed when the last member leaves. With `auto_start` it also opens whenever the scene is active, even before the member maps. Not a claim \u2014 presence is derived from live windows, never remembered. The engine folds the singular block `spawn` into the same shape.",
+      "type": "object",
+      "required": ["class", "command"],
+      "additionalProperties": false,
+      "properties": {
+        "class": {
+          "description": "The companion's identity, matched against live windows.",
+          "type": "string"
+        },
+        "command": {
+          "description": "What runs the first time in (spawned through uwsm).",
+          "type": "string"
+        },
+        "max_spawns": {
+          "description": "Cap on how many of `class` the engine keeps alive while the block has a member.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "auto_start": {
+          "description": "Keep the companion alive whenever the running mode admits this scene, even with no member window currently present.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "spawns": {
+      "description": "Several companions sharing one block's presence, as a list of `spawn` entries \u2014 one block naming a console and each of its browsers, say. The singular `spawn` and this list fold into the same normalized `block.spawns` in the engine, so a consumer reads one shape.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/spawn"
+      },
+      "minItems": 1
+    },
     "desk": {
       "description": "A complete desk: every resource that exists, named. This is both the shape of `base` and the shape a resolver produces.",
       "type": "object",
@@ -297,18 +332,10 @@
           "default": "hold"
         },
         "spawn": {
-          "description": "The companion this block's presence keeps alive: launched when the block has no window. Not a claim.",
-          "type": "object",
-          "required": ["class", "command"],
-          "additionalProperties": false,
-          "properties": {
-            "class": {
-              "type": "string"
-            },
-            "command": {
-              "type": "string"
-            }
-          }
+          "$ref": "#/$defs/spawn"
+        },
+        "spawns": {
+          "$ref": "#/$defs/spawns"
         }
       }
     },
@@ -357,6 +384,10 @@
       "properties": {
         "name": {
           "description": "Human-readable label for the shell.",
+          "type": "string"
+        },
+        "icon": {
+          "description": "The glyph the bar's mode pill shows next to this mode's name (LEO-425), from the same icon font the bar already uses. Omit and the pill shows the name alone.",
           "type": "string"
         },
         "hidden": {

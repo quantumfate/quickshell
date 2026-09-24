@@ -33,9 +33,11 @@ const PANELS = [
     "modules/common/WindowRename.qml",
 ];
 
-test("PanelBus resolves the active monitor", () => {
+test("PanelBus resolves the active monitor from Hyprland's own state", () => {
     assert.match(panelBus, /activeScreen/);
-    assert.match(panelBus, /hyprctl monitors -j/);
+    // LEO-424: event-driven, not a per-second `hyprctl` fork.
+    assert.match(panelBus, /Hyprland\.focusedMonitor/);
+    assert.doesNotMatch(panelBus, /hyprctl monitors -j/);
 });
 
 test("PanelBus exposes a screen object helper with active fallback", () => {
@@ -45,6 +47,16 @@ test("PanelBus exposes a screen object helper with active fallback", () => {
 
 test("PanelBus exposes an IPC opener", () => {
     assert.match(panelBus, /function openFromIpc\(/);
+});
+
+test("PanelBus carries the isle id for dock-aware panel anchoring", () => {
+    assert.match(panelBus, /property string anchorIsleId/);
+    assert.match(panelBus, /function toggle\([^)]*isleId/);
+});
+
+test("PanelBus shares the per-screen active scene map", () => {
+    assert.match(panelBus, /property var sceneByScreen/);
+    assert.match(panelBus, /onRawEvent\(/);
 });
 
 test("every listed panel binds its screen through PanelBus", () => {
@@ -72,4 +84,25 @@ test("no panel falls back to an arbitrary Quickshell.screens.find inline", () =>
 test("SysMon IPC routes to the active monitor", () => {
     const src = read("services/SysMon.qml");
     assert.match(src, /PanelBus\.activeScreen/);
+});
+
+test("Toasts frames itself with the bar's own gap resolution", () => {
+    const src = read("modules/bar/Toasts.qml");
+    assert.match(src, /Store\s*\{\s*id:\s*geometryStore;\s*name:\s*"geometry"/s);
+    assert.match(src, /PanelBus\.sceneByScreen\[/);
+    // The same opt-in rule the bar applies: BarGaps for the sides, the
+    // scene's resolved gap only when the scene opts in.
+    assert.match(src, /BarGaps\.insetFor\(/);
+    assert.match(src, /BarGaps\.sceneGapsFor\(/);
+    assert.match(src, /margins\s*\{[^}]*_topMargin/s);
+    assert.match(src, /_leftMargin/);
+    assert.match(src, /_rightMargin/);
+});
+
+test("Toasts stays below the transition veil and the detail panels", () => {
+    const src = read("modules/bar/Toasts.qml");
+    // Overlay is the veil's and the panels' layer; a transient card ranks
+    // with the bar, so it must never float above them.
+    assert.match(src, /WlrLayershell\.layer:\s*WlrLayer\.Top/);
+    assert.doesNotMatch(src, /WlrLayershell\.layer:\s*WlrLayer\.Overlay/);
 });

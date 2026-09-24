@@ -7,9 +7,20 @@ Shared state and monitor routing for bar-triggered and IPC-triggered panels.
 - `open` — which bar panel is currently open (`"projects"`, `"calendar"`,
   `"mood"`, or `""`).
 - `anchorScreen` / `anchorX` — the screen and horizontal anchor the bar pill
-  that opened the panel was on.
-- `activeScreen` — the currently focused Hyprland monitor, polled once per
-  second.
+  that opened the panel was on. When the caller also passes an `isleId`,
+  `anchorX` resolves from the isle's published dock document in the `geometry`
+  store so the panel tracks the isle's live position; otherwise it falls back
+  to the click coordinate.
+- `anchorIsleId` — the isle that opened the current panel (`""` for IPC/keybind
+  opens), used for dock-aware panel positioning.
+- `sceneByScreen` — per-screen active workspace/scene name, fed by raw
+  compositor events (`workspace`, `workspacev2`, `focusedmon`, `focusedmonv2`)
+  and shared with gap-aware surfaces such as Toasts. `workspacev2` carries
+  `WORKSPACEID,WORKSPACENAME`; `focusedmonv2` carries `MONNAME,WORKSPACEID`,
+  which is resolved to a name through `Hyprland.workspaces` before the map is
+  updated.
+- `activeScreen` — the currently focused Hyprland monitor, read reactively from
+  `Hyprland.focusedMonitor` (no polling).
 
 ## Monitor routing contract
 
@@ -23,9 +34,11 @@ Panels bind their `PanelWindow.screen` to `PanelBus.screenObject(...)` rather
 than resolving `Quickshell.screens` inline. `screenObject(name)` returns the
 named screen, or the active screen when the name is empty.
 
-Use `PanelBus.toggle(name, screen, x)` from bar pills and
+Use `PanelBus.toggle(name, screen, x, isleId)` from bar pills and
 `PanelBus.openFromIpc(name)` from IPC handlers so the anchor is set before the
-panel becomes visible.
+panel becomes visible. The `isleId` is the stable bar-isle identifier from
+`modules/bar/Readme.md`; omitting it makes the panel fall back to the click
+coordinate.
 
 ## Covered panels
 

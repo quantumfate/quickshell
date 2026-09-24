@@ -1,3 +1,6 @@
 *.qmlc
 *.jsc
 .qmlls.ini
+
+# Agent worktrees: local scratch, never content.
+.claude/worktrees/

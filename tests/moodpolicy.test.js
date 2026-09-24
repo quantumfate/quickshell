@@ -28,6 +28,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { loadLibrary } from "./qml.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = p => JSON.parse(readFileSync(join(root, p), "utf8"));
@@ -37,6 +38,7 @@ const defaults = read("assets/mood-policy.default.json");
 const focusSchema = read("schemas/focus.schema.json");
 const focusSrc = readFileSync(join(root, "services/Focus.qml"), "utf8");
 const moods = defaults.moods;
+const placement = loadLibrary("services/NotifyPlacement.js", ["resolve", "known", "names"]);
 
 const moodProps = Object.keys(schema.definitions.mood.properties);
 const moodEnum = focusSchema.properties.mode.enum;
@@ -134,6 +136,21 @@ test("launch policy reproduces Focus.canLaunch exactly", () => {
         assert.equal(moods[mode].launches.override, true,
             `${mode} firm refusal should honour an explicit override key`);
     }
+});
+
+test("notification positions match the placement resolver, top-centre by default", () => {
+    // LEO-424: the schema enum, the resolver's vocabulary and every shipped
+    // mood must name the same set; a divergence would let a mood select a
+    // position the toast surface cannot place.
+    const posEnum = schema.definitions.notificationPolicy.properties.position.enum;
+    assert.deepEqual([...posEnum].sort(), placement.names().sort(),
+        "mood-policy schema and NotifyPlacement.js disagree on positions");
+    for (const mode of moodEnum) {
+        const pos = moods[mode].notifications.position;
+        assert.ok(placement.known(pos), `mood "${mode}" names unknown position "${pos}"`);
+    }
+    assert.equal(moods.neutral.notifications.position, "top-center",
+        "the decided default is top-centre under the bar");
 });
 
 test("background defaults change nothing until configured", () => {

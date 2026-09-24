@@ -11,6 +11,7 @@ pragma Singleton
 //   - Panels render on `anchorScreen`; an empty/missing anchor falls back to
 //     the active monitor so nothing silently opens on an arbitrary screen.
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import QtQuick
 import "."
@@ -21,15 +22,100 @@ Item {
     // Which panel is open ("" = none): "projects" | "calendar" | "mood".
     property string open: ""
     property string anchorScreen: ""
-    property real anchorX: 0
+    // The isle that opened the current panel, when it came from a bar click.
+    // Panels derive their horizontal anchor from the isle's published dock
+    // document so they stay aligned with the isle even when it moves.
+    property string anchorIsleId: ""
+    property real _fallbackAnchorX: 0
 
-    // The currently focused Hyprland monitor name, polled so IPC/keybind
-    // invocations can anchor panels to the monitor the user is looking at.
-    property string activeScreen: ""
+    // Horizontal anchor for panels. When an isle opened the panel and the
+    // geometry store carries a dock for it, use the dock's anchor; otherwise
+    // fall back to the click coordinate passed to toggle(). Kept as a binding
+    // so the panel tracks a live dock move while it is open.
+    readonly property real anchorX: {
+        if (!root.anchorScreen || !root.anchorIsleId) return root._fallbackAnchorX;
+        const docks = geometryStore.data ? geometryStore.data.docks : undefined;
+        const screenDocks = docks ? docks[root.anchorScreen] : undefined;
+        const dock = screenDocks ? screenDocks[root.anchorIsleId] : undefined;
+        return (dock && dock.anchor) ? dock.anchor.x : root._fallbackAnchorX;
+    }
 
-    function toggle(name, screen, x) {
+    // The currently focused Hyprland monitor name, read from the compositor's
+    // own reactive state (LEO-424). This used to fork a monitor query through
+    // `hyprctl` every second, which meant a panel opened by IPC could anchor to
+    // whatever monitor was focused up to a second ago — a visible jump when
+    // the focus had moved. `focusedMonitor` is updated by the compositor's
+    // events, so the anchor is already current when the panel opens.
+    readonly property string activeScreen: Hyprland.focusedMonitor?.name ?? ""
+
+    // Per-screen active workspace/scene name, fed by the compositor's raw
+    // workspace events. Kept in this singleton so gap-aware surfaces (Toasts)
+    // and the bar itself share one source of truth instead of duplicating the
+    // raw-event listener.
+    property var sceneByScreen: ({})
+
+    // The focused Hyprland monitor's output name, for workspace events that do
+    // not carry their own screen.
+    function _focusedScreen() {
+        return (Quickshell.screens.find(s => Hyprland.monitorFor(s)?.focused) ?? {}).name ?? "";
+    }
+
+    // Resolve a numeric workspace id from focusedmonv2 to its live name. Match
+    // by screen first so duplicate auto ids (e.g. -1 for named workspaces) do
+    // not pick the wrong workspace.
+    function _workspaceById(id, screenName) {
+        if (id === undefined || id === null) return null;
+        const values = Hyprland.workspaces?.values ?? [];
+        return values.find(w => w.id === id && w.monitor?.name === screenName)
+            || values.find(w => w.id === id);
+    }
+
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            const data = event.data ?? "";
+            const comma = data.indexOf(",");
+            let name = null, screen = null;
+            if (event.name === "workspace") {
+                // payload: WORKSPACENAME
+                name = data;
+            } else if (event.name === "workspacev2") {
+                // payload: WORKSPACEID,WORKSPACENAME
+                if (comma === -1) return;
+                name = data.slice(comma + 1);
+            } else if (event.name === "focusedmon") {
+                // payload: MONNAME,WORKSPACENAME
+                if (comma === -1) return;
+                screen = data.slice(0, comma);
+                name = data.slice(comma + 1);
+            } else if (event.name === "focusedmonv2") {
+                // payload: MONNAME,WORKSPACEID
+                if (comma === -1) return;
+                screen = data.slice(0, comma);
+                const id = parseInt(data.slice(comma + 1), 10);
+                if (isNaN(id)) return;
+                name = root._workspaceById(id, screen)?.name ?? "";
+                if (!name) return; // do not overwrite the map with an unresolved id
+            }
+            if (!name) return;
+            if (!screen) {
+                const live = (Hyprland.workspaces?.values ?? []).find(w => w.name === name);
+                screen = live?.monitor?.name ?? root._focusedScreen();
+            }
+            if (screen && name) {
+                const next = Object.assign({}, root.sceneByScreen);
+                next[screen] = name;
+                root.sceneByScreen = next;
+            }
+        }
+    }
+
+    Store { id: geometryStore; name: "geometry" }
+
+    function toggle(name, screen, x, isleId) {
         root.anchorScreen = screen;
-        root.anchorX = x;
+        root._fallbackAnchorX = x;
+        root.anchorIsleId = isleId || "";
         root.open = (root.open === name) ? "" : name;
     }
     function close(name) { if (root.open === name) root.open = ""; }
@@ -38,7 +124,8 @@ Item {
     // as the anchor, then open the named panel.
     function openFromIpc(name) {
         root.anchorScreen = root.activeScreen;
-        root.anchorX = 0;
+        root._fallbackAnchorX = 0;
+        root.anchorIsleId = "";
         root.open = name;
     }
 
@@ -53,15 +140,7 @@ Item {
     }
 
     // ---- active monitor resolution -----------------------------------------
-    Process {
-        id: monitorProbe
-        command: ["bash", "-lc", "hyprctl monitors -j | jq -r '.[] | select(.focused) | .name'"]
-        stdout: StdioCollector { onStreamFinished: root.activeScreen = (this.text || "").trim(); }
-    }
-    Timer {
-        interval: 1000; running: true; repeat: true; triggeredOnStart: true
-        onTriggered: if (!monitorProbe.running) monitorProbe.running = true
-    }
+    // Provided by `Hyprland.focusedMonitor` above; nothing to poll.
 
     // projects-health.json, read directly (not via Store — produced by an
     // external repo-scan process, not owned/written by the shell). Missing or

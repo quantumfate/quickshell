@@ -22,13 +22,27 @@ Scope {
     property string query: ""
     property int highlighted: 0
 
-    // Live workspace/window snapshot, rebuilt on every compositor event while
-    // shown (no point paying for it while hidden).
+    // Live workspace/window snapshot, rebuilt on the compositor events that can
+    // actually move a row. Bumping on EVERY raw event rebuilt the whole list and
+    // re-created every delegate for focus and submap traffic that cannot change
+    // a row — see the filter below.
     property int _tick: 0
     Connections {
         target: Hyprland
         enabled: scope.shown
-        function onRawEvent(e) { scope._tick++; }
+        function onRawEvent(e) {
+            // Rows carry {id, name, icon, windows}: only events that change
+            // which workspaces exist, what is on them, or what they are called
+            // can move one. Focus, submap and monitor traffic cannot.
+            if (e.name === "openwindow" || e.name === "closewindow"
+                || e.name === "movewindow" || e.name === "movewindowv2"
+                || e.name === "windowtitle" || e.name === "windowtitlev2"
+                || e.name === "createworkspace" || e.name === "destroyworkspace"
+                || e.name === "renameworkspace" || e.name === "moveworkspace"
+                || e.name === "moveworkspacev2") {
+                scope._tick++;
+            }
+        }
     }
 
     readonly property var _rows: {
@@ -126,7 +140,12 @@ Scope {
                     clip: true
                     selectByMouse: true
                     text: scope.query
-                    onTextChanged: scope.query = text
+                    // `onTextEdited`, not `onTextChanged`: the latter fires for
+                    // programmatic changes too, so `text: scope.query` plus an
+                    // assignment on every change was a binding loop that
+                    // re-entered on each keystroke. `onTextEdited` only fires
+                    // for user input.
+                    onTextEdited: scope.query = text
 
                     Text {
                         visible: input.text === ""

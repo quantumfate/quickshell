@@ -6,60 +6,30 @@
   "classification": "declaration",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "palette",
-    "mode",
-    "day",
-    "night",
-    "scale",
-    "transparency"
-  ],
+  "required": ["palette", "mode", "day", "night", "scale", "transparency"],
   "properties": {
     "palette": {
       "description": "The active palette. Must name a table in Theme.qml.",
       "type": "string",
-      "enum": [
-        "latte",
-        "frappe",
-        "macchiato",
-        "mocha"
-      ]
+      "enum": ["latte", "frappe", "macchiato", "mocha"]
     },
     "resolved": {
       "description": "The palette in effect right now: the lease's when a mode holds one, the baseline otherwise. Written by ,theme.sh apply on every pass; readers that cannot run the lease resolver themselves (nvim) follow this and fall back to `palette` when it is absent.",
       "type": "string",
-      "enum": [
-        "latte",
-        "frappe",
-        "macchiato",
-        "mocha"
-      ]
+      "enum": ["latte", "frappe", "macchiato", "mocha"]
     },
     "mode": {
       "description": "auto follows the sun timer; manual pins `palette` until it is handed back.",
       "type": "string",
-      "enum": [
-        "auto",
-        "manual"
-      ]
+      "enum": ["auto", "manual"]
     },
     "day": {
       "type": "string",
-      "enum": [
-        "latte",
-        "frappe",
-        "macchiato",
-        "mocha"
-      ]
+      "enum": ["latte", "frappe", "macchiato", "mocha"]
     },
     "night": {
       "type": "string",
-      "enum": [
-        "latte",
-        "frappe",
-        "macchiato",
-        "mocha"
-      ]
+      "enum": ["latte", "frappe", "macchiato", "mocha"]
     },
     "scale": {
       "description": "UI scale. Bounds match the IPC clamp, so the file cannot hold a value the shell would refuse.",
@@ -76,6 +46,22 @@
       "type": "number",
       "minimum": 0.0,
       "maximum": 1.0
+    },
+    "wallpaper_blur": {
+      "description": "Wallpaper backdrop Gaussian sigma in 0.12-style units, applied by ,theme.sh's process_wallpaper. 0 disables the blur and shows the source image straight; the shell's control panel dial clamps to the same 0..48 range this key documents.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 48,
+      "default": 18
+    },
+    "wallpaper_blurs": {
+      "description": "Per-output wallpaper backdrop Gaussian sigma (0..48; 0 disables blur). Falls back to wallpaper_blur.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 48
+      }
     },
     "wallpapers": {
       "description": "Wallpaper per palette. A palette absent here falls back to `wallpaper`, then to <palette>.jpg in the wallpaper directory.",

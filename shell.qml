@@ -9,6 +9,7 @@ import "modules/dofus"
 import "modules/obsidian"
 import "modules/control"
 import "modules/whichkey"
+import "modules/transition"
 
 ShellRoot {
     // `qs -c quantumfate ipc call help all` — annotated IPC overview.
@@ -18,9 +19,10 @@ ShellRoot {
     Bar {}
 
     // Notification toasts + persisted history panel (Notify is now the system
-    // notification daemon). Toasts show on the wide screen; the center is docked
-    // wherever it's toggled.
-    Toasts { screen: Quickshell.screens.find(s => s.name === "DP-1") ?? null }
+    // notification daemon). Both route through PanelBus like every other
+    // panel: the toast stack follows the focused monitor rather than a pinned
+    // output, so a second monitor and the laptop behave the same.
+    Toasts {}
     NotificationCenter {}
 
     // System-monitor detail popout (CPU/RAM/disk/net), driven by the SysMon bus.
@@ -67,4 +69,9 @@ ShellRoot {
     // backends that otherwise have no UI. Toggled via IPC.
     ControlPanel {}
     SystemCenter {}
+
+    // Mode transition scrim (LEO-423): the frost that covers a hyprfocus mode
+    // apply. Mounted last so it sits over every other overlay for the brief
+    // window it is visible, then unmaps.
+    TransitionOverlay {}
 }

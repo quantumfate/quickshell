@@ -174,10 +174,17 @@ Singleton {
         stdout: StdioCollector { onStreamFinished: root._parseGpu(this.text || "") }
     }
     Timer {
-        interval: 2000; running: true; repeat: true; triggeredOnStart: true
+        interval: 2000
+        // One probe answers whether an NVIDIA GPU exists; after that the timer
+        // only keeps running while one does, instead of forking nvidia-smi
+        // every two seconds on a machine that will never answer (LEO-424).
+        running: !root._gpuChecked || root.gpuPresent
+        repeat: true; triggeredOnStart: true
         onTriggered: if (!gpuProbe.running) gpuProbe.running = true
     }
+    property bool _gpuChecked: false
     function _parseGpu(text) {
+        root._gpuChecked = true;
         const f = (text || "").trim().split(",").map(x => Number(x));
         if (f.length < 4 || isNaN(f[0])) { root.gpuPresent = false; return; }
         root.gpuPresent = true;

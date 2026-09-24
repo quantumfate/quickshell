@@ -1,4 +1,4 @@
-// Pure calendar math backing CalendarPill/CalendarPanel — month grid layout
+// Pure calendar math backing Clock/CalendarPanel — month grid layout
 // and entry lookup, decoupled from wherever entries eventually come from
 // (local JSON today, CalDAV later) so both sides can be tested independently.
 import { test } from "node:test";

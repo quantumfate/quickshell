@@ -174,23 +174,29 @@ test("ankama and lutris are dofus's drawers, steam is steam-games's, per the pro
 
 test("the lint catches two active scenes claiming one class", () => {
     // Strip the slot: a bare shared class (no identity tag to disambiguate)
-    // is genuinely ambiguous, unlike pokemon's real slotted blocks below.
+    // is genuinely ambiguous, unlike dofus's real slotted browser block.
     const broken = structuredClone(declaration);
-    delete broken.base.scenes.pokemon.blocks[1].slot;
+    delete broken.base.scenes.dofus.blocks[1].slot;
     assert.deepEqual(lint(broken), [
-        "gaming.scenes: class 'zen-twilight-media' claimed by pokemon and media",
+        "gaming.scenes: class 'zen-twilight-media' claimed by dofus and media",
     ]);
 });
 
-test("slots let dofus, pokemon and media share the one media profile", () => {
-    // One zen profile per identity (LEO-412): every scene's browser window is
-    // a window of `-P Media`, so they all carry class `zen-twilight-media` and
-    // are told apart by the slot each block claims. media's own tile is the
-    // unslotted one, which is what an unclaimed media window falls to.
+test("slots let dofus and media share the one media profile; pokemon owns its pair", () => {
+    // One zen profile per identity (LEO-412): dofus's browser is a window of
+    // `-P Media`, told apart from media's own unslotted tile by the slot its
+    // block claims. pokemon, in contrast, owns two named profiles (one per
+    // column, each its own WM_CLASS) whose slot blocks claim by class
+    // directly — no shared profile leaves pokemon to race a slot tag.
     assert.equal(declaration.base.scenes.dofus.blocks[1].classes[0], "zen-twilight-media");
     assert.equal(declaration.base.scenes.dofus.blocks[1].slot, "dofus/browser");
     for (const block of declaration.base.scenes.pokemon.blocks) {
-        if (block.classes.includes("zen-twilight-media")) assert.ok(block.slot);
+        if (block.classes.includes("zen-twilight-pokemon-left")) {
+            assert.equal(block.slot, "pokemon/chat");
+        }
+        if (block.classes.includes("zen-twilight-pokemon-right")) {
+            assert.equal(block.slot, "pokemon/stream");
+        }
     }
     assert.ok(declaration.base.scenes.media.blocks[0].classes.includes("zen-twilight-media"));
     assert.equal(declaration.base.scenes.media.blocks[0].slot, undefined);
@@ -247,6 +253,21 @@ test("the dofus tree is scene-scoped, not a base.requires dependency", () => {
         assert.ok(
             !addsDofus && !onlyDofus,
             `${mode} names dofus in its own bindings delta; it should follow the scene instead`,
+        );
+    }
+});
+
+test("the dofus scene carries its bar icon and follows scene gaps", () => {
+    assert.ok(declaration.base.scenes.dofus.icon, "dofus scene has no bar icon");
+    assert.equal(declaration.base.scenes.dofus.bar_follows_scene_gaps, true);
+});
+
+test("every shipped scene opts into scene-gap bar alignment", () => {
+    for (const [name, scene] of Object.entries(declaration.base.scenes)) {
+        assert.equal(
+            scene.bar_follows_scene_gaps,
+            true,
+            `${name} should follow its scene gaps so the bar and its panels align with the tiled window area`,
         );
     }
 });

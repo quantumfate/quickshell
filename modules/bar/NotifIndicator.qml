@@ -17,7 +17,8 @@ Text {
 
     // Left-click opens/closes the history panel, right-click toggles DND — both
     // drive Notify directly (its state is shared with the panel + keybinds).
-    // The panel opens on the monitor the bell lives on.
+    // The panel opens on the monitor the bell lives on and anchors to the
+    // bar.clock isle so it follows a live dock placement (LEO-425 regression).
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -26,6 +27,8 @@ Text {
                 Notify.toggleDnd();
             } else {
                 PanelBus.anchorScreen = root.screenName;
+                PanelBus.anchorIsleId = "bar.clock";
+                PanelBus._fallbackAnchorX = root.mapToGlobal(root.width / 2, 0).x;
                 Notify.toggleHistory();
             }
         }

@@ -5,6 +5,8 @@
   "night": "macchiato",
   "scale": 1.25,
   "transparency": 1.0,
+  "wallpaper_blur": 18,
+  "wallpaper_blurs": {},
   "wallpaper": "",
   "wallpapers": {}
 }

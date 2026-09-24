@@ -38,8 +38,8 @@ Scope {
     readonly property real maxCardHeight: Theme.fs.xl * 34
     readonly property real maxCardWidth: Theme.fs.xl * 26
 
-    function adopt(id) { Focus.set(id, 0); }
-    function stop() { Focus.stop(); }
+    function adopt(id) { Focus.set(id, 0); closePanel(); }
+    function stop() { Focus.stop(); closePanel(); }
     function closePanel() { PanelBus.close("mood"); }
 
     function untilLabel() {
@@ -102,7 +102,7 @@ Scope {
         color: "transparent"
 
         anchors { top: true; left: true; right: true }
-        margins { top: Theme.barReserved + Theme.space.xs }
+        margins { top: Theme.barReserved + Theme.space.md }
         implicitHeight: card.implicitHeight
 
         WlrLayershell.layer: WlrLayer.Overlay
@@ -341,7 +341,7 @@ Scope {
                         PalettePicker {
                             id: palettePicker
                             readonly property var raw: (Hyprfocus.current.presentation || {}).palette
-                            readonly property bool isPair: raw && typeof raw === "object"
+                            readonly property bool isPair: !!raw && typeof raw === "object"
                             Layout.fillWidth: true
                             entries: [{ name: "none", swatch: Theme.withAlpha(Theme.subtext, 0.3) }]
                                 .concat(Object.keys(Theme.palettes).map(n => ({ name: n, swatch: Theme.palettes[n].base })))

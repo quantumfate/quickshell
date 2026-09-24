@@ -8,7 +8,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { insetFor } = loadLibrary("services/BarGaps.js");
+const { insetFor, sceneGapsFor } = loadLibrary("services/BarGaps.js");
 
 const monitors = {
   "DP-1": { left: 40, right: 40 },
@@ -159,4 +159,36 @@ test("an explicit published zero is a real gap, not a fallback signal", () => {
     left: 0,
     right: 0,
   });
+});
+
+// sceneGapsFor: the four-side resolved gap for surfaces that need the
+// top/bottom the bar never reads (Toasts) — same opt-in rule, null otherwise.
+test("sceneGapsFor: an opt-in scene gets its resolved four-side gap, whole", () => {
+  const store = {
+    workspaces: { media: { top: 12, right: 60, bottom: 40, left: 25 } },
+  };
+  const s = scenes({ media: { bar_follows_scene_gaps: true } });
+  assert.deepEqual(sceneGapsFor(store, s, "media"), {
+    top: 12,
+    right: 60,
+    bottom: 40,
+    left: 25,
+  });
+});
+
+test("sceneGapsFor: a scene that does not opt in reads as null, never a guess", () => {
+  const store = {
+    workspaces: { media: { top: 12, right: 60, bottom: 40, left: 25 } },
+  };
+  assert.equal(sceneGapsFor(store, scenes({ media: { gaps_out: 91 } }), "media"), null);
+  assert.equal(sceneGapsFor(store, {}, "media"), null);
+  assert.equal(sceneGapsFor(store, null, "media"), null);
+  assert.equal(sceneGapsFor(store, scenes({ media: { bar_follows_scene_gaps: true } }), null), null);
+});
+
+test("sceneGapsFor: a missing or partial published entry is null, not a partial frame", () => {
+  const s = scenes({ media: { bar_follows_scene_gaps: true } });
+  assert.equal(sceneGapsFor({ workspaces: {} }, s, "media"), null);
+  assert.equal(sceneGapsFor({ workspaces: { media: { top: 12, left: 25 } } }, s, "media"), null);
+  assert.equal(sceneGapsFor(null, s, "media"), null);
 });

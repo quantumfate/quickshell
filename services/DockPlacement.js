@@ -7,6 +7,7 @@
 //     region: { x, y, w, h },   // monitor-local gutter the isle may occupy
 //     anchor: { x, y },         // the point the isle's growth corner aligns to
 //     grow:   "up"|"down"|"left"|"right",  // away from the window
+//     align:  "start"|"center"|"end",      // which part of the isle the anchor is
 //     orientation: "horizontal"|"vertical",
 //     state:  "docked"|"fallback"|"resting",
 //   }
@@ -18,82 +19,133 @@
 
 /**
  * The growth-corner rect for an isle of the given size against a dock
- * document's anchor + grow, with NO clamping applied yet.
+ * document's anchor + grow + align, with NO clamping applied yet.
  *
- * The anchor point is the corner of the isle that touches the window: for a
- * vertical growth ("up"/"down") anchor.x is the isle's left edge and
- * anchor.y is the touching edge; for a horizontal growth ("left"/"right")
- * anchor.y is the isle's top edge and anchor.x is the touching edge.
+ * `grow` settles the axis the isle extends along: the anchor is the edge it
+ * touches, and the isle runs away from it. `align` settles the OTHER axis —
+ * the one running along the gutter — by saying which part of the isle the
+ * anchor point is: its start, its middle, or its end. A top gutter takes all
+ * three (`top-left`, `top-center`, `top-right`), and reading every anchor as
+ * a start (what this did before align was published) put a right-aligned
+ * isle's LEFT edge on the window's right edge, one isle-width too far out,
+ * where the bounds clamp then flattened it against the screen edge.
  *
  * @param {{x:number,y:number}} anchor
  * @param {"up"|"down"|"left"|"right"} grow
  * @param {number} width
  * @param {number} height
+ * @param {"start"|"center"|"end"} [align] defaults to "start" (pre-align docs)
  * @returns {{x:number,y:number}}
  */
-function rawRect(anchor, grow, width, height) {
-  switch (grow) {
-    case "up":
-      return { x: anchor.x, y: anchor.y - height };
-    case "down":
-      return { x: anchor.x, y: anchor.y };
-    case "left":
-      return { x: anchor.x - width, y: anchor.y };
-    case "right":
-      return { x: anchor.x, y: anchor.y };
-    default:
-      return { x: anchor.x, y: anchor.y };
-  }
+function rawRect(anchor, grow, width, height, align) {
+  const vertical = grow === "up" || grow === "down";
+  const along = vertical ? width : height;
+  const shift = align === "end" ? -along : align === "center" ? -along / 2 : 0;
+
+  const x = vertical ? anchor.x + shift : grow === "left" ? anchor.x - width : anchor.x;
+  const y = vertical ? (grow === "up" ? anchor.y - height : anchor.y) : anchor.y + shift;
+  return { x: x, y: y };
 }
 
 /**
  * Place an isle per its published dock document.
  *
  * Clamp rule (LEO-420 §4): an isle larger than its region forfeits the
- * surplus — it is centred in the gutter (`region`), then clamped inside the
- * screen bounds. `clamped` is true whenever either step moved the isle off
- * the raw anchor placement, so the caller can warn once per state change
- * rather than per frame.
+ * surplus — it is pushed toward the screen edge the gutter faces, then
+ * clamped inside the screen bounds. `clamped` is true whenever either step
+ * moved the isle off the raw anchor placement, so the caller can warn once
+ * per state change rather than per frame.
+ *
+ * `edgeMargin` is how far the isle floats clear of the edge it stands on —
+ * the bar's own styling, not the desk's geometry, and the same margin a
+ * resting isle keeps. It is added or subtracted on the GROWTH axis alone,
+ * by the sign of `grow`; the along-edge axis stays where the scene's
+ * alignment put it.
  *
  * @param {object} dock the per-screen, per-isle dock document (region/anchor/grow)
  * @param {{width:number,height:number}} isleSize the isle's own natural size
  * @param {{width:number,height:number}} screenSize the monitor's size
- * @returns {{x:number,y:number,clamped:boolean}}
+ * @param {number} [edgeMargin] clearance from the edge the isle stands on
+ * @returns {{x:number,y:number,clamped:boolean}|null} null when the document
+ *   carries no geometry to place by
  */
-function placeDock(dock, isleSize, screenSize) {
+function placeDock(dock, isleSize, screenSize, edgeMargin) {
+  // A document with no geometry is not placeable: `hidden` and `resting` both
+  // publish a bare state, and a scene can change under a live read. Answer
+  // null rather than reading `anchor.x` off undefined — the caller already
+  // treats null as "stay resting".
+  if (!dock || !dock.anchor || !dock.region) return null;
+  const finite = (value) => typeof value === "number" && Number.isFinite(value);
+  const numbers = [
+    dock.anchor.x, dock.anchor.y, dock.region.x, dock.region.y,
+    dock.region.w, dock.region.h, isleSize.width, isleSize.height,
+    screenSize.width, screenSize.height,
+  ];
+  // A hook can publish a half-built geometry document while a monitor or an
+  // empty scene is settling. Never turn that document into an off-screen Item.
+  if (numbers.some((value) => !finite(value))
+      || isleSize.width <= 0 || isleSize.height <= 0
+      || screenSize.width <= 0 || screenSize.height <= 0) return null;
+
   const region = dock.region;
-  const rect = rawRect(dock.anchor, dock.grow, isleSize.width, isleSize.height);
+  const margin = edgeMargin || 0;
+  const rect = rawRect(dock.anchor, dock.grow, isleSize.width, isleSize.height, dock.align);
+  if (dock.grow === "down") rect.y += margin;
+  else if (dock.grow === "up") rect.y -= margin;
+  else if (dock.grow === "right") rect.x += margin;
+  else if (dock.grow === "left") rect.x -= margin;
 
   // Overflow is per axis, and only the growth axis gives way. An isle taller
   // than its gutter still starts where the anchor says along the edge —
   // centring both axes (what this did first) slid every isle into the middle
   // of the window it was supposed to hang off the corner of.
   const vertical = dock.grow === "up" || dock.grow === "down";
-  const overflowsGrowth = vertical ? isleSize.height > region.h : isleSize.width > region.w;
 
-  let x = rect.x;
-  let y = rect.y;
-  if (overflowsGrowth) {
-    // Forfeit the surplus toward the screen edge the gutter faces, keeping the
-    // along-edge alignment the anchor gave it.
-    if (vertical) {
-      y = dock.grow === "up" ? region.y : region.y + region.h - isleSize.height;
-    } else {
-      x = dock.grow === "left" ? region.x : region.x + region.w - isleSize.width;
-    }
+  // The growth axis is bounded by the gutter first, so an isle never covers
+  // the window it hangs from. The final screen clamp below is a second guard:
+  // a narrow empty-scene gutter must not leave a bar outside the output.
+  //
+  // Which end of the region the window sits at follows from the EDGE, not
+  // from `grow`: a window dock hugs its target and grows away from it, while
+  // a `screen` dock stands on the monitor's edge and grows inward — opposite
+  // directions in the same gutter. A top or left gutter has the window at
+  // the region's far end; a bottom or right gutter has it at the start.
+  // A document published before `edge` existed is read the old way, by
+  // `grow` alone — correct for every dock the inward model produced.
+  const start = vertical ? region.y : region.x;
+  const extent = vertical ? region.h : region.w;
+  const size = vertical ? isleSize.height : isleSize.width;
+  const towardEnd = dock.edge
+    ? dock.edge === "top" || dock.edge === "left"
+    : dock.grow === "down" || dock.grow === "right";
+  const raw = vertical ? rect.y : rect.x;
+
+  let along = raw;
+  if (size <= extent) {
+    along = Math.min(Math.max(raw, start), start + extent - size);
+  } else {
+    // Too big to stand in the gutter: put the edge that faces the window
+    // exactly on the boundary and let the rest hang off the screen.
+    along = towardEnd ? start + extent - size : start;
   }
 
-  const maxX = Math.max(0, screenSize.width - isleSize.width);
-  const maxY = Math.max(0, screenSize.height - isleSize.height);
-  const clampedX = Math.min(Math.max(x, 0), maxX);
-  const clampedY = Math.min(Math.max(y, 0), maxY);
+  // The along-edge axis is the scene's declared alignment; it is bounded by
+  // the screen so an isle can still run the length of the gutter.
+  const acrossMax = vertical
+    ? Math.max(0, screenSize.width - isleSize.width)
+    : Math.max(0, screenSize.height - isleSize.height);
+  const across = Math.min(Math.max(vertical ? rect.x : rect.y, 0), acrossMax);
+
+  const rawX = vertical ? across : along;
+  const rawY = vertical ? along : across;
+  const x = Math.min(Math.max(rawX, 0), Math.max(0, screenSize.width - isleSize.width));
+  const y = Math.min(Math.max(rawY, 0), Math.max(0, screenSize.height - isleSize.height));
 
   return {
-    x: clampedX,
-    y: clampedY,
-    clamped: overflowsGrowth || clampedX !== rect.x || clampedY !== rect.y,
+    x: x,
+    y: y,
+    clamped: size > extent || x !== rect.x || y !== rect.y,
   };
-
 }
 
 /**
@@ -110,6 +162,17 @@ function shouldWarnClamp(wasClamped, isClamped) {
 }
 
 /**
+ * Whether a mode carries geometry to place the isle by. The two resolved
+ * states do; "resting" and "hidden" do not.
+ *
+ * @param {string} mode
+ * @returns {boolean}
+ */
+function isPlaced(mode) {
+  return mode === "docked" || mode === "fallback";
+}
+
+/**
  * Resolve which dock document (if any) applies, and what visual state the
  * isle should render.
  *
@@ -118,8 +181,14 @@ function shouldWarnClamp(wasClamped, isClamped) {
  *   while the hypr side has not published yet.
  * - `dock === false` -> "hidden": the isle draws nothing.
  * - dock.state "docked" -> placed per placeDock.
- * - dock.state "fallback" -> keep the isle at its last docked rect (frozen),
- *   or resting if it was never docked.
+ * - dock.state "fallback" -> ALSO placed per placeDock. "fallback" is the
+ *   publisher's word for "resolved, but down the ladder" (the declared
+ *   fallback spec, or the implicit same-anchor-on-screen rung) -- it carries
+ *   a full region/anchor/grow exactly like "docked" does. Reading it as
+ *   "freeze where you were" threw that geometry away, which is why an isle
+ *   that stepped down never moved: every scene puts two isles on one block's
+ *   top gutter, so one of them is always the fallback. The distinction
+ *   survives for styling and telemetry, not for placement.
  * - dock.state "resting" -> today's static layout, same as no document.
  *
  * @param {object|null|undefined} docksForScreen geometry.docks[screenName]

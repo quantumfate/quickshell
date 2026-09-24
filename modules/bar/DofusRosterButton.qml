@@ -28,6 +28,10 @@ Rectangle {
     id: root
 
     property string text: ""
+    // A glyph INSTEAD of the label (JetBrainsMono Nerd Font). A control whose
+    // whole meaning is one verb reads faster as its symbol, and the tooltip
+    // still carries the word for anyone hunting for it.
+    property string icon: ""
     property color tone: Theme.accent
     property bool toggled: false
     property bool compact: false
@@ -77,9 +81,13 @@ Rectangle {
 
         Text {
             id: label
-            text: root.text
+            text: root.icon !== "" ? root.icon : root.text
             color: root.toggled ? root.tone : (area.containsMouse ? Theme.text : Theme.subtext)
-            font { family: Theme.fontFamily; pixelSize: Theme.fs.xs; bold: root.toggled }
+            font {
+                family: Theme.fontFamily
+                pixelSize: root.icon !== "" ? Theme.fs.md : Theme.fs.xs
+                bold: root.toggled
+            }
             Layout.alignment: Qt.AlignVCenter
 
             Behavior on color { ColorAnimation { duration: root._fade } }

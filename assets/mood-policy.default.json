@@ -8,7 +8,7 @@
       "bar_autohide": false,
       "notifications": {
         "policy": "all",
-        "position": "top-right",
+        "position": "top-center",
         "timeout": 6000,
         "queue": false,
         "digest_on_exit": false
@@ -32,7 +32,7 @@
       "bar_autohide": true,
       "notifications": {
         "policy": "critical-only",
-        "position": "top-right",
+        "position": "top-center",
         "timeout": 0,
         "queue": true,
         "digest_on_exit": true
@@ -62,7 +62,7 @@
       "bar_autohide": true,
       "notifications": {
         "policy": "critical-only",
-        "position": "top-right",
+        "position": "top-center",
         "timeout": 0,
         "queue": true,
         "digest_on_exit": true
@@ -92,7 +92,7 @@
       "bar_autohide": false,
       "notifications": {
         "policy": "none",
-        "position": "top-right",
+        "position": "top-center",
         "timeout": 0,
         "queue": true,
         "digest_on_exit": false

@@ -51,6 +51,27 @@ Singleton {
     // asks for on exit (metadata only: the logs already hold the details).
     property var _queued: []
     property string _queueMood: ""
+    // Notifications that arrive while the hyprfocus mode-transition veil is up
+    // are held here and re-ingested once the veil lifts, so they are routed by
+    // the new mode's policy instead of flashing under the veil.
+    property var _transitionBuffer: []
+    property bool _transitionWasPresent: false
+
+    // The compositor publishes { active, present, mode, duration_ms }; prefer
+    // `present` (genuine transitions only) and fall back to `active` for older
+    // writers or the brief instant before the store lands.
+    readonly property bool transitionPresent: {
+        const p = transitionStore.get("present");
+        if (p === true) return true;
+        if (p === undefined) return transitionStore.get("active") === true;
+        return false;
+    }
+
+    Store {
+        id: transitionStore
+        name: "hyprfocus.transition"
+        defaults: ({ active: false, present: false })
+    }
 
     // Two stores, one distinction (LEO-281): `notifications` holds the
     // history — an observation, capped and erasable — and `notify-prefs`
@@ -82,6 +103,13 @@ Singleton {
             root.dnd = !!(store.get("dnd"));
         }
         root.history = store.get("history") || [];
+    }
+
+    onTransitionPresentChanged: {
+        if (root._transitionWasPresent && !root.transitionPresent) {
+            root._releaseTransitionBuffer();
+        }
+        root._transitionWasPresent = root.transitionPresent;
     }
 
     // The daemon. Owning the DBus name requires no other server (mako) running.
@@ -161,6 +189,14 @@ Singleton {
     // and, when it is not suppressed, to the live toast queue. Transient
     // records stay feedback-only and never land in the log.
     function _ingest(rec) {
+        // During a mode transition the veil is up: hold every toast-bound
+        // notification and re-ingest it once the new mode's policy is in force.
+        // Records already being re-ingested must not loop back into the buffer.
+        if (root.transitionPresent && !rec._reingesting) {
+            root._transitionBuffer = root._transitionBuffer.concat([rec]);
+            return;
+        }
+
         const route = root._route(rec);
         if (!rec.transient) {
             const meta = Object.assign({}, rec); delete meta._n;
@@ -186,11 +222,12 @@ Singleton {
         }
 
         if (route) return;
+        const ttl = root._ttl(rec);
+        rec.ttl = ttl;   // the toast draws its countdown from the same number
         root.items = root.items.concat([rec]);
         // Sticky for critical notifications and for moods whose policy timeout
         // is 0 (persist until dismissed); transient feedback is always
         // ephemeral and auto-expires.
-        const ttl = root._ttl(rec);
         if (ttl > 0)
             _expire.createObject(root, { rid: rec.id, interval: ttl });
     }
@@ -259,6 +296,25 @@ Singleton {
         return (typeof t === "number" && t > 0) ? t : 0;
     }
 
+    // Re-ingest everything that arrived while the transition veil was up, then
+    // tell the user how much was buffered. The individual records are routed by
+    // the mode now in force; the summary toast itself is emitted afterwards so
+    // it rides above the released batch.
+    function _releaseTransitionBuffer() {
+        const recs = root._transitionBuffer;
+        if (!recs.length) return;
+        root._transitionBuffer = [];
+        for (const rec of recs) {
+            rec._reingesting = true;
+            root._ingest(rec);
+        }
+        const names = [...new Set(recs.map(r => r.appName || "notification"))];
+        const label = names.slice(0, 3).join(", ") + (names.length > 3 ? ", \u2026" : "");
+        const count = recs.length + " notification" + (recs.length === 1 ? "" : "s");
+        const mode = transitionStore.get("mode") ?? Hyprfocus.mode ?? "transition";
+        root.send(count + " while " + mode + " was on", label, "info");
+    }
+
     // Fold a finished mode's buffered work into ONE digest toast. Fires when
     // the mode ends however it ends — a switch away, an explicit stop, or a
     // timed lapse — and when the mode asked for it (digest_on_exit) or a rule
@@ -291,7 +347,31 @@ Singleton {
 
     // Remove a toast from the queue (no client-side close). The `closed` signal
     // and our own dismiss both funnel here.
-    function _drop(rid) { root.items = root.items.filter(t => t.id !== rid); }
+    function _drop(rid) {
+        const timer = root._expirers[rid];
+        if (timer) { timer.running = false; timer.destroy(); delete root._expirers[rid]; }
+        root.items = root.items.filter(item => item.id !== rid);
+    }
+
+    // Live auto-expiry timers, keyed by toast id (LEO-424). A hovered toast
+    // pauses only its own countdown, so a stack of toasts does not all wait on
+    // the slowest one. A QML Timer restarts its whole interval on `running`, so
+    // the remaining time is kept on the timer and restored on resume rather
+    // than handing the toast a fresh lifetime.
+    property var _expirers: ({})
+    function pause(rid) {
+        const t = root._expirers[rid];
+        if (!t || !t.running) return;
+        t._remaining = Math.max(1, t._deadline - Date.now());
+        t.running = false;
+    }
+    function resume(rid) {
+        const t = root._expirers[rid];
+        if (!t || t.running) return;
+        t.interval = Math.max(1, t._remaining > 0 ? t._remaining : t.interval);
+        t._deadline = Date.now() + t.interval;
+        t.running = true;
+    }
 
     // Dismiss a live toast (and close the client notification if it's a real one).
     // Guarded: a real notification may already be gone (destroyed C++ object).
@@ -324,13 +404,21 @@ Singleton {
     function hideHistory() { root.historyOpen = false; }
 
     // One self-destructing timer per auto-expiring toast (independent lifetimes).
-    // `interval` is injected at creation from the policy ttl (see _ttl).
+    // `interval` is injected at creation from the policy ttl (see _ttl). It
+    // registers itself so a hover can pause just this toast (LEO-424).
     Component {
         id: _expire
         Timer {
+            id: expireTimer
             property int rid
+            property double _deadline: 0
+            property double _remaining: 0
             interval: root._ttlMs; running: true; repeat: false
-            onTriggered: { root.dismiss(rid); destroy(); }
+            Component.onCompleted: {
+                root._expirers[rid] = expireTimer;
+                expireTimer._deadline = Date.now() + expireTimer.interval;
+            }
+            onTriggered: { delete root._expirers[rid]; root.dismiss(rid); destroy(); }
         }
     }
 

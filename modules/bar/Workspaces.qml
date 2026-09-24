@@ -83,47 +83,77 @@ Rectangle {
     //   - `workspace`/`workspacev2` fire on EVERY workspace change on a
     //     monitor, same-monitor switch or cross-monitor alike — posted
     //     unconditionally from `CMonitor::changeWorkspace`.
-    //   - `focusedmon`/`focusedmonv2` fire ONLY when the globally-focused
-    //     monitor itself changes: `CFocusState::rawMonitorFocus` opens with
-    //     `if (m_focusMonitor == pMonitor) return;`, so a same-monitor
-    //     switch posts no `focusedmon` event at all.
+    //   - `focusedmon` fires ONLY when the globally-focused monitor itself
+    //     changes and carries the workspace NAME.
+    //   - `focusedmonv2` fires for the same monitor change but carries a
+    //     workspace ID, which must be resolved to a name before the bar can
+    //     use it (Hyprland IPC: MONNAME,WORKSPACEID).
     // That lines up exactly with the observed staleness, so this reads the
     // active workspace off the raw event payload directly rather than off
     // the monitor's cached reference — cross-checked against that
     // workspace's own `.monitor` field (independently fresh; `_sorted`
     // above already relies on it) so an event for another monitor is
     // ignored. `focusedmonv2` is handled too, matched by monitor name
-    // against `root.screen.name`, as a second source for a focus change
-    // that crosses monitors without either monitor's active workspace
-    // changing.
+    // against `root.screen.name` and resolved through `Hyprland.workspaces`,
+    // as a second source for a focus change that crosses monitors without
+    // either monitor's active workspace changing.
     property string _activeWsName: root._monitor?.activeWorkspace?.name ?? ""
     Connections {
         target: Hyprland
+        function _resolveId(id) {
+            const values = Hyprland.workspaces?.values ?? [];
+            return values.find(w => w.id === id && w.monitor?.name === root.screen.name)
+                || values.find(w => w.id === id);
+        }
         function onRawEvent(event) {
             const data = event.data ?? "";
             const comma = data.indexOf(",");
+            let name = null;
+            if (event.name === "workspace") {
+                // payload: WORKSPACENAME
+                name = data;
+            } else if (event.name === "workspacev2") {
+                // payload: WORKSPACEID,WORKSPACENAME
+                if (comma === -1) return;
+                name = data.slice(comma + 1);
+            } else if (event.name === "focusedmon") {
+                // payload: MONNAME,WORKSPACENAME
+                if (comma === -1) return;
+                if (data.slice(0, comma) !== root.screen.name) return;
+                name = data.slice(comma + 1);
+            } else if (event.name === "focusedmonv2") {
+                // payload: MONNAME,WORKSPACEID
+                if (comma === -1) return;
+                if (data.slice(0, comma) !== root.screen.name) return;
+                const id = parseInt(data.slice(comma + 1), 10);
+                if (isNaN(id)) return;
+                name = _resolveId(id)?.name ?? "";
+                if (!name) return;
+            }
+            if (!name) return;
+            // For workspace events the payload does not name the monitor, so
+            // match by the workspace's own `.monitor` field; only when the
+            // model has not caught up yet fall back to "this event is for the
+            // focused monitor", which is what a bare `workspace` event means.
             if (event.name === "workspace" || event.name === "workspacev2") {
-                // payload: "name" (workspace) or "name,displayName" (workspacev2)
-                const name = comma === -1 ? data : data.slice(0, comma);
-                // Match the monitor by NAME, never by object identity against
-                // `Hyprland.workspaces`: that is the same model this property
-                // exists to stop trusting, and identity held only while
-                // Quickshell happened to hand back the very same reference --
-                // a workspace the model had not caught up on yet (or re-wrapped)
-                // failed the test silently and the highlight simply never moved.
-                // `screen.name` is the compositor's own output name, so an
-                // unknown workspace falls back to "this event is for the
-                // focused monitor", which is what a bare `workspace` event means.
                 const live = (Hyprland.workspaces?.values ?? []).find(w => w.name === name);
                 const onThisScreen = live?.monitor?.name !== undefined
                     ? live.monitor.name === root.screen.name
                     : root._monitor?.focused ?? false;
-                if (onThisScreen) root._activeWsName = name;
-            } else if (event.name === "focusedmon" || event.name === "focusedmonv2") {
-                // payload: "monitorName,workspaceNameOrAddress"
-                if (comma === -1) return;
-                if (data.slice(0, comma) === root.screen.name) root._activeWsName = data.slice(comma + 1);
+                if (!onThisScreen) return;
             }
+            root._activeWsName = name;
+        }
+    }
+
+    // A mode switch changes which rows exist without necessarily emitting a
+    // workspace event (the target workspace may already be active on this
+    // monitor). Re-seed the active workspace name from the monitor's own
+    // reference so the highlight updates in the same frame as the row list.
+    Connections {
+        target: Hyprfocus
+        function onModeChanged() {
+            root._activeWsName = root._monitor?.activeWorkspace?.name ?? "";
         }
     }
 
