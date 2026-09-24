@@ -18,7 +18,10 @@ Shared state and monitor routing for bar-triggered and IPC-triggered panels.
   and shared with gap-aware surfaces such as Toasts. `workspacev2` carries
   `WORKSPACEID,WORKSPACENAME`; `focusedmonv2` carries `MONNAME,WORKSPACEID`,
   which is resolved to a name through `Hyprland.workspaces` before the map is
-  updated.
+  updated. The map is also seeded once at startup from `hyprctl monitors`,
+  because a shell that just started has missed every event and would render
+  nothing until the first workspace change. The seed never overwrites an
+  entry, so an event that lands while the snapshot is in flight wins.
 - `activeScreen` — the currently focused Hyprland monitor, read reactively from
   `Hyprland.focusedMonitor` (no polling).
 
