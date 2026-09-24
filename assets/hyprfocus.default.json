@@ -81,7 +81,8 @@
             "spawn": {
               "class": "zen-twilight-media",
               "command": "zen-twilight -P Media --name zen-twilight-media --new-window",
-              "max_spawns": 1
+              "max_spawns": 1,
+              "auto_start": true
             }
           },
           {
@@ -100,7 +101,7 @@
           "Ankama Launcher"
         ],
         "strays": "float",
-        "icon": "\uf7fb",
+        "icon": "",
         "bindings": [
           "dofus"
         ],
@@ -111,37 +112,22 @@
         "docks": {
           "bar.workspaces": {
             "at": "top-left",
-            "of": "block:1",
-            "fallback": {
-              "at": "top-left",
-              "of": "screen"
-            }
+            "of": "block:1"
           },
           "bar.center": {
             "at": "top-left",
-            "of": "block:2",
-            "fallback": {
-              "at": "top-center",
-              "of": "screen"
-            }
+            "of": "block:2"
           },
           "bar.clock": {
             "at": "top-right",
-            "of": "block:2",
-            "fallback": {
-              "at": "top-right",
-              "of": "screen"
-            }
+            "of": "block:2"
           },
           "dofus.roster": {
             "at": "top-right",
-            "of": "block:1",
-            "fallback": {
-              "at": "top-center",
-              "of": "screen"
-            }
+            "of": "block:1"
           }
-        }
+        },
+        "bar_follows_scene_gaps": true
       },
       "pokemon": {
         "blocks": [
@@ -150,11 +136,23 @@
               "com.libretro.RetroArch"
             ],
             "order": 1,
-            "share": 0.3
+            "share": 0.3,
+            "spawns": [
+              {
+                "class": "zen-twilight-pokemon-left",
+                "command": "zen-twilight -P pokemon-left --name zen-twilight-pokemon-left --new-window",
+                "max_spawns": 1
+              },
+              {
+                "class": "zen-twilight-pokemon-right",
+                "command": "zen-twilight -P pokemon-right --name zen-twilight-pokemon-right --new-window",
+                "max_spawns": 1
+              }
+            ]
           },
           {
             "classes": [
-              "zen-twilight-media"
+              "zen-twilight-pokemon-left"
             ],
             "slot": "pokemon/chat",
             "order": 2,
@@ -163,7 +161,7 @@
           },
           {
             "classes": [
-              "zen-twilight-media"
+              "zen-twilight-pokemon-right"
             ],
             "slot": "pokemon/stream",
             "order": 3,
@@ -173,35 +171,24 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "\udb81\udf21",
+        "icon": "󰜡",
         "bindings": [],
         "docks": {
           "bar.workspaces": {
             "at": "top-left",
-            "of": "block:1",
-            "fallback": {
-              "at": "top-left",
-              "of": "screen"
-            }
+            "of": "block:1"
           },
           "bar.center": {
             "at": "top-left",
-            "of": "block:3",
-            "fallback": {
-              "at": "top-center",
-              "of": "screen"
-            }
+            "of": "block:3"
           },
           "bar.clock": {
             "at": "top-right",
-            "of": "block:3",
-            "fallback": {
-              "at": "top-right",
-              "of": "screen"
-            }
+            "of": "block:3"
           },
           "dofus.roster": false
-        }
+        },
+        "bar_follows_scene_gaps": true
       },
       "steam-games": {
         "blocks": [
@@ -216,7 +203,7 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "\uf1b6",
+        "icon": "",
         "bindings": [],
         "drawers": [
           "steam"
@@ -224,11 +211,7 @@
         "docks": {
           "bar.workspaces": {
             "at": "top-left",
-            "of": "block:1",
-            "fallback": {
-              "at": "top-left",
-              "of": "screen"
-            }
+            "of": "block:1"
           },
           "bar.center": {
             "at": "top-center",
@@ -239,7 +222,8 @@
             "of": "screen"
           },
           "dofus.roster": false
-        }
+        },
+        "bar_follows_scene_gaps": true
       },
       "media": {
         "blocks": [
@@ -250,21 +234,22 @@
               "zen-twilight-media"
             ],
             "order": 1,
-            "share": 1.0
+            "share": 1.0,
+            "spawn": {
+              "class": "zen-twilight-media",
+              "command": "zen-twilight -P Media --name zen-twilight-media",
+              "max_spawns": 1
+            }
           }
         ],
         "barred": [],
         "strays": "float",
-        "icon": "\uf16a",
+        "icon": "",
         "bindings": [],
         "docks": {
           "bar.workspaces": {
             "at": "top-left",
-            "of": "block:1",
-            "fallback": {
-              "at": "top-left",
-              "of": "screen"
-            }
+            "of": "block:1"
           },
           "bar.center": {
             "at": "top-center",
@@ -275,7 +260,8 @@
             "of": "screen"
           },
           "dofus.roster": false
-        }
+        },
+        "bar_follows_scene_gaps": true
       },
       "code": {
         "blocks": [
@@ -302,20 +288,27 @@
           },
           {
             "classes": [
-              "Proj-scripts"
+              "Proj-nvim"
             ],
             "order": 4,
             "group": true
           },
           {
             "classes": [
-              "Kitty-Main"
+              "Proj-security-and-privacy"
             ],
             "order": 5,
+            "group": true
+          },
+          {
+            "classes": [
+              "Kitty-Main"
+            ],
+            "order": 6,
             "group": false,
             "spawn": {
               "class": "zen-twilight",
-              "command": "zen-twilight --name zen-twilight",
+              "command": "zen-twilight --new-window --name zen-twilight",
               "max_spawns": 1
             }
           },
@@ -324,12 +317,12 @@
               "zen-twilight",
               "firefox-developer-edition"
             ],
-            "order": 6
+            "order": 7
           }
         ],
         "barred": [],
         "strays": "float",
-        "icon": "\uf120",
+        "icon": "",
         "bindings": [],
         "layout": "deck",
         "columns": [
@@ -340,7 +333,8 @@
               "Proj-hypr",
               "Proj-quickshell",
               "Proj-system-config",
-              "Proj-scripts",
+              "Proj-nvim",
+              "Proj-security-and-privacy",
               "Kitty-Main"
             ],
             "deck": "projects"
@@ -357,30 +351,19 @@
         "docks": {
           "bar.workspaces": {
             "at": "top-left",
-            "of": "block:5",
-            "fallback": {
-              "at": "top-left",
-              "of": "screen"
-            }
+            "of": "block:6"
           },
           "bar.center": {
             "at": "top-left",
-            "of": "block:6",
-            "fallback": {
-              "at": "top-center",
-              "of": "screen"
-            }
+            "of": "block:7"
           },
           "bar.clock": {
             "at": "top-right",
-            "of": "block:6",
-            "fallback": {
-              "at": "top-right",
-              "of": "screen"
-            }
+            "of": "block:7"
           },
           "dofus.roster": false
-        }
+        },
+        "bar_follows_scene_gaps": true
       },
       "obsidian-linear": {
         "blocks": [
@@ -401,37 +384,26 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "\uf249",
+        "icon": "",
         "bindings": [
           "obsidian"
         ],
         "docks": {
           "bar.workspaces": {
             "at": "top-left",
-            "of": "block:1",
-            "fallback": {
-              "at": "top-left",
-              "of": "screen"
-            }
+            "of": "block:1"
           },
           "bar.center": {
             "at": "top-left",
-            "of": "block:2",
-            "fallback": {
-              "at": "top-center",
-              "of": "screen"
-            }
+            "of": "block:2"
           },
           "bar.clock": {
             "at": "top-right",
-            "of": "block:2",
-            "fallback": {
-              "at": "top-right",
-              "of": "screen"
-            }
+            "of": "block:2"
           },
           "dofus.roster": false
-        }
+        },
+        "bar_follows_scene_gaps": true
       },
       "proton": {
         "blocks": [
@@ -456,41 +428,30 @@
         ],
         "barred": [],
         "strays": "float",
-        "icon": "\ueb1b",
+        "icon": "",
         "bindings": [],
         "docks": {
           "bar.workspaces": {
             "at": "top-left",
-            "of": "block:1",
-            "fallback": {
-              "at": "top-left",
-              "of": "screen"
-            }
+            "of": "block:1"
           },
           "bar.center": {
             "at": "top-left",
-            "of": "block:2",
-            "fallback": {
-              "at": "top-center",
-              "of": "screen"
-            }
+            "of": "block:2"
           },
           "bar.clock": {
             "at": "top-right",
-            "of": "block:2",
-            "fallback": {
-              "at": "top-right",
-              "of": "screen"
-            }
+            "of": "block:2"
           },
           "dofus.roster": false
-        }
+        },
+        "bar_follows_scene_gaps": true
       },
       "logs": {
         "blocks": [],
         "barred": [],
         "strays": "float",
-        "icon": "\ue64e",
+        "icon": "",
         "bindings": [
           "logs"
         ],
@@ -508,7 +469,8 @@
             "of": "screen"
           },
           "dofus.roster": false
-        }
+        },
+        "bar_follows_scene_gaps": true
       }
     },
     "wants": {
@@ -521,6 +483,7 @@
   "modes": {
     "neutral": {
       "name": "Neutral",
+      "icon": "",
       "hidden": true,
       "scenes": [
         {
@@ -547,6 +510,7 @@
     },
     "work": {
       "name": "Work",
+      "icon": "",
       "scenes": [
         {
           "name": "code",
@@ -583,6 +547,7 @@
     },
     "study": {
       "name": "Study",
+      "icon": "",
       "scenes": [
         {
           "name": "code",
@@ -615,6 +580,7 @@
     },
     "gaming": {
       "name": "Gaming",
+      "icon": "",
       "scenes": [
         {
           "name": "dofus",
