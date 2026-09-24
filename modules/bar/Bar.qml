@@ -256,6 +256,7 @@ Scope {
 
                 Workspaces { screen: bar.screen }
                 SubmapIndicator {}
+                OpenProjects { screenName: bar.screen.name }
                 GroupChip {}
             }
 

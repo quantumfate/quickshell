@@ -10,12 +10,26 @@ documents speak when they publish a placement into the `geometry` store's
 for the placement contract this repo consumes it against). Adding an isle to
 the bar means adding its id here in the same change.
 
-| id               | isle                                                             |
-| ---------------- | ---------------------------------------------------------------- |
-| `bar.workspaces` | left isle — workspaces, submap indicator, group chip             |
-| `dofus.roster`   | Dofus roster (gaming workspace only)                             |
-| `bar.center`     | centre isle — media, brightness, volume                          |
-| `bar.clock`      | right isle — mode pill, clock, notifications entry, power button |
+| id               | isle                                                                |
+| ---------------- | ------------------------------------------------------------------- |
+| `bar.workspaces` | left isle — workspaces, submap indicator, open projects, group chip |
+| `dofus.roster`   | Dofus roster (gaming workspace only)                                |
+| `bar.center`     | centre isle — media, brightness, volume                             |
+| `bar.clock`      | right isle — mode pill, clock, notifications entry, power button    |
+
+### Open projects
+
+`OpenProjects` is the way BACK to a project that is already running: it lists
+them, marks the focused one, and a click goes there. `,proj.sh pick` offers
+only the projects that are NOT open, so the bar and the picker never present
+the same choice twice — which makes this the switcher rather than a
+decoration. It shows nothing when no project is running.
+
+It reads `ProjectWindows`, which groups `hyprctl clients -j` by the
+`Proj-<name>` class, because a project exists exactly as long as its windows
+do and there is no state file that could disagree. Not to be confused with
+`ProjectsPill`, which is repo HEALTH (branch, dirty counts) over the projects
+store; this one is about what is on screen now.
 
 An isle with no published dock document keeps its resting (today's static)
 position — the hypr side does not need to publish every isle at once. A

@@ -1,10 +1,15 @@
 pragma Singleton
 // Project dashboard metadata — a thin view over a generic Store.
 //
-// Deliberately does not know a project's path: that stays `,proj.sh`'s alone
-// (scraped from the tms config), so this file cannot disagree with it about
-// where a project lives. `,proj.sh drift` is the check that catches a name
-// surviving here after its tms/tmux entry is gone. See schemas/projects.schema.json.
+// Deliberately does not know a project's path: that stays `,proj.sh`'s alone,
+// so this file cannot disagree with it about where a project lives. Nothing
+// discovers projects — the store is hand-curated, `,proj.sh add` is the one
+// gesture that puts one in it, and `sync` only refreshes what each project's
+// own `.proj.toml` declares. See schemas/projects.schema.json.
+//
+// This is the CATALOGUE (what exists). Which projects are open right now, and
+// which one is focused, is ProjectWindows — read from the compositor, since a
+// project exists exactly as long as its windows do.
 import Quickshell
 import Quickshell.Io
 import QtQuick

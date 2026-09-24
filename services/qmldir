@@ -8,6 +8,7 @@ singleton Sound Sound.qml
 singleton DofusState DofusState.qml
 singleton DofusClasses DofusClasses.qml
 singleton DofusWindows DofusWindows.qml
+singleton ProjectWindows ProjectWindows.qml
 singleton DofusSwap DofusSwap.qml
 singleton Hypr Hypr.qml
 singleton Notify Notify.qml
