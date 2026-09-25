@@ -265,7 +265,7 @@
         "gaps_out": {
           "top": 28,
           "right": 32,
-          "bottom": 32,
+          "bottom": 19,
           "left": 32
         }
       },
@@ -609,7 +609,7 @@
         "gaps_out": {
           "top": 28,
           "right": 32,
-          "bottom": 32,
+          "bottom": 19,
           "left": 32
         }
       }

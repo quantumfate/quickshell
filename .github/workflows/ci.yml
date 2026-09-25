@@ -12,13 +12,21 @@ on:
 # devShell. The flake that shell came from is gone (ARCHITECTURE.md), and with
 # it the second delivery path CI used to evaluate.
 #
-# Two things `just check` does locally are deliberately NOT here:
+# Two things `just check` does locally are deliberately NOT here, both for
+# the same reason — they need Quickshell itself, which is not packaged for
+# this runner:
 #
-#   * `smoke` boots the real shell (`qs`), which needs the Quickshell binary
-#     and a Wayland session — neither exists on a runner;
-#   * everything else runs, including the privacy gate, which lives in the
-#     sibling `hypr` repo — so that repo is checked out beside this one, the
-#     same layout a developer has.
+#   * `smoke` boots the real shell (`qs`), which also wants a Wayland
+#     session;
+#   * `qmllint` resolves every type through Quickshell's own QML modules.
+#     Without them EVERY root type is unknown — `ShellRoot was not found`,
+#     10047 warnings in one run — so it fails on the import path, says
+#     nothing about the code, and is worth exactly nothing here. It stays a
+#     local gate, where the modules exist.
+#
+# Everything else runs, including the privacy gate, which lives in the
+# sibling `hypr` repo — so that repo is checked out beside this one, the
+# same layout a developer has.
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -40,12 +48,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            just shfmt yamllint qt6-declarative-dev-tools
-          sudo npm install -g prettier
+            just shfmt yamllint
+          # Pinned: prettier's markdown table formatting changed between
+          # 3.8 and 3.9, so an unpinned CI disagrees with the version the
+          # repo was formatted by and fails on files nobody touched.
+          sudo npm install -g prettier@3.8.1
 
       - name: Gate
         working-directory: quickshell
-        run: just fmt-check qmllint tokens test
+        run: just fmt-check tokens test
 
       - name: Privacy gate
         working-directory: quickshell
