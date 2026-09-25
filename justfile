@@ -8,13 +8,11 @@ default:
 fmt:
 	shfmt -w -i 4 .
 	prettier --write '**/*.md'
-	nixpkgs-fmt .
 
 # Verify formatting without writing
 fmt-check:
 	shfmt -d -i 4 .
 	prettier --check '**/*.md'
-	nixpkgs-fmt --check .
 
 # `--cached --others --exclude-standard` rather than a bare `git ls-files`: the
 # latter lists only TRACKED files, so a brand-new .qml sails through every gate
@@ -116,10 +114,6 @@ ansible-syntax:
 check-ansible: ansible-syntax
 	ansible-lint ansible/
 
-# Validate the nix delivery path (evaluates modules + devShell)
-check-nix:
-	nix flake check
-
 # CI gate: formatting + ansible syntax (lint stays advisory, per `lint` above)
 check-all: check ansible-syntax
 
@@ -130,7 +124,3 @@ setup:
 # Install the system toolchain via ansible (needs sudo)
 provision:
 	ansible-playbook scripts/provision.yml --ask-become-pass
-
-# Enter the reproducible nix dev shell
-dev:
-	nix develop

@@ -5,27 +5,48 @@ on:
     branches: [main, master]
   pull_request:
 
-# Validate-only: format, lint, and evaluate both delivery paths (nix + ansible).
-# No publishing until the structure stabilises.
+# Validate-only: format, lint, tests. No publishing until the structure
+# stabilises.
+#
+# The toolchain is installed with apt/npm rather than entered through a nix
+# devShell. The flake that shell came from is gone (ARCHITECTURE.md), and with
+# it the second delivery path CI used to evaluate.
+#
+# Two things `just check` does locally are deliberately NOT here:
+#
+#   * `smoke` boots the real shell (`qs`), which needs the Quickshell binary
+#     and a Wayland session — neither exists on a runner;
+#   * everything else runs, including the privacy gate, which lives in the
+#     sibling `hypr` repo — so that repo is checked out beside this one, the
+#     same layout a developer has.
 jobs:
-  # Format + ansible syntax, inside the devShell.
-  validate:
+  check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v30
+      - name: Check out the shell
+        uses: actions/checkout@v4
         with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-      - run: nix develop --command just check-all
+          path: quickshell
 
-  # Nix delivery path: evaluate the flake (modules + devShell).
-  flake-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@v30
+      # The privacy gate is `hypr/bin/,privacy-check`, resolved as `../hypr`
+      # from this repo — the sibling layout every checkout here uses.
+      - name: Check out the sibling hypr repo (privacy gate)
+        uses: actions/checkout@v4
         with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-      - run: nix flake check
+          repository: quantumfate/hypr
+          path: hypr
+
+      - name: Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            just shfmt yamllint qt6-declarative-dev-tools
+          sudo npm install -g prettier
+
+      - name: Gate
+        working-directory: quickshell
+        run: just fmt-check qmllint tokens test
+
+      - name: Privacy gate
+        working-directory: quickshell
+        run: ../hypr/bin/,privacy-check

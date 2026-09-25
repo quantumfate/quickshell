@@ -14,21 +14,18 @@
         - pre-commit
         - yamllint
         - prettier
-        - nixpkgs-fmt
       Debian:
         - git
         - just
         - pre-commit
         - yamllint
         - prettier
-        - nixpkgs-fmt
       RedHat:
         - git
         - just
         - pre-commit
         - yamllint
         - prettier
-        - nixpkgs-fmt
   tasks:
     - name: Install toolchain packages
       ansible.builtin.package:

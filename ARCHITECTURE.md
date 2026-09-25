@@ -8,7 +8,7 @@ This repository bridges everything on my desktop with the concept of a `store`.
 | ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | [**quickshell**](https://github.com/quantumfate/quickshell)       | The desktop shell: widgets, theming, shared-state singletons.              |
 | [**hypr**](https://github.com/quantumfate/hypr)                   | The Hyprland config (Lua) + the `bin/` helpers binds and this shell spawn. |
-| [**system-config**](https://github.com/quantumfate/system-config) | Provisioning (Ansible/flake) and the `hyprfocus` engine docs.              |
+| [**system-config**](https://github.com/quantumfate/system-config) | Provisioning (Ansible) and the `hyprfocus` engine docs.                    |
 | [**dofus-scripts**](https://github.com/quantumfate/dofus-scripts) | Retired — its helpers live in hypr `bin/` now.                             |
 
 Agent entry points: hypr and system-config `AGENTS.md`, this repo's
@@ -120,12 +120,16 @@ qs -c quantumfate ipc call help all # annotated overview
 
 ## Delivery & dependencies
 
-Dual, equal delivery of the shell + runtime deps (mirrors the `hypr` repo):
+Delivery of the shell + runtime deps (mirrors the `hypr` repo):
 
-| Path        | Target machines           | Installs + deploys via                                                                                     |
-| ----------- | ------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Ansible** | Arch/CachyOS              | `ansible/roles/quickshell` (pacman)                                                                        |
-| **Nix**     | NixOS / nix-managed hosts | `flake.nix`: `nixosModules.quickshell` (packages) + `homeManagerModules.quickshell` (deploy + completions) |
+| Path        | Target machines | Installs + deploys via              |
+| ----------- | --------------- | ----------------------------------- |
+| **Ansible** | Arch/CachyOS    | `ansible/roles/quickshell` (pacman) |
+
+A nix flake (`nixosModules.quickshell` + `homeManagerModules.quickshell`, a
+pinned devShell, `nix flake check` in CI) was carried beside it as an equal
+path. It is gone: nothing here ran on it, so it drifted from the ansible role
+it mirrored and made every dependency change two edits instead of one.
 
 Dependencies not hard-linked from the `quickshell` package are declared
 explicitly: `Qt5Compat.GraphicalEffects` → `qt6-5compat`, `Services.UPower` →
