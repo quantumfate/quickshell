@@ -40,9 +40,27 @@ Rectangle {
     Connections { target: Hyprland; function onRawEvent(e) { root._tick++; } }
     readonly property var _sorted: {
         root._tick; // dependency
-        const all = (Hyprland.workspaces?.values ?? [])
-            .filter(w => w.monitor === root._monitor)
+        // Two lists, because they answer two different questions.
+        //
+        // `live` is every real workspace, unfiltered: it is what each row's
+        // live state (occupied, urgent, toplevels) is read from, and rows are
+        // matched to it BY NAME, which is unique. Filtering it by monitor
+        // first was measured to lose that state entirely -- a workspace's own
+        // `monitor` comes back unresolved on this build (`w.monitor?.name`
+        // was undefined for eleven of twelve workspaces, live 2026-09-25), so
+        // both the identity test and a name test drop nearly everything and
+        // every row reads as empty.
+        //
+        // `mine` is the monitor-scoped one, and its only job is the tail of
+        // the row: workspaces this mode does not admit that still hold
+        // windows. An unresolved monitor simply keeps a workspace out of that
+        // tail -- the admitted rows come from the declaration and do not
+        // depend on it.
+        const monitorName = root._monitor?.name ?? root.screen.name;
+        const live = (Hyprland.workspaces?.values ?? [])
             .filter(w => w.id > 0 || !w.name.startsWith("special:"));
+        const all = live.filter(w =>
+            w.monitor === root._monitor || (w.monitor?.name ?? "") === monitorName);
         const plain = all.map(w => ({
             id: w.id,
             name: w.name,
@@ -57,7 +75,7 @@ Rectangle {
         // counterpart and passes through as-is; the delegate below already
         // treats an absent `.toplevels`/`.active`/`.urgent` as
         // empty/false/false.
-        return WorkspaceSwitch.attachLive(order, all);
+        return WorkspaceSwitch.attachLive(order, live);
     }
 
     // This monitor's actually-displayed workspace, by NAME. Third bug in

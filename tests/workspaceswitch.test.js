@@ -66,6 +66,14 @@ test("iconFor() reads a scene's declared icon, falling back to id or a dot", () 
     assert.notEqual(iconFor(declaration, "", 12), "12"); // past 9: a dot, not the id
 });
 
+test("iconFor() never draws a zero-width row for a declared scene", () => {
+    // A scene whose glyph went missing in a declaration rewrite drew nothing
+    // at all: the row was in the model, clickable, and invisible. Its own
+    // initial stands in rather than an empty string.
+    assert.equal(iconFor(declaration, "creative", null), "C");
+    assert.equal(iconFor({}, "reference", null), "R");
+});
+
 test("orderBy() merges id-backed twins into their named workspace", () => {
     const rows = orderBy(["code", "creative"], [
         { id: 1, name: "code" },

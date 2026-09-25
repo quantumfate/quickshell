@@ -34,7 +34,14 @@ function iconFor(declaration, name, id) {
     const scenes = (declaration && declaration.base && declaration.base.scenes) || {};
     const scene = scenes[name];
     if (scene && scene.icon) return scene.icon;
-    return (id > 0 && id < 10) ? String(id) : "";
+    if (id > 0 && id < 10) return String(id);
+    // A declared scene with no glyph still has to be SEEN: it is a row of the
+    // mode, clickable, and the keyboard reaches it. `logs` lost its icon in a
+    // declaration rewrite and its row then drew zero pixels wide -- present in
+    // the model, invisible on the bar, which reads as the scene not being
+    // there at all (live, 2026-09-25). Its own initial stands in.
+    if (name) return name.charAt(0).toUpperCase();
+    return "";
 }
 
 // The config talks about named workspaces by name (binds, window rules, the
