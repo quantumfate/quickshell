@@ -182,6 +182,31 @@ Rectangle {
         }
     }
 
+    // Which row is the focused one, and the rule is that it must BE one of
+    // this screen's rows.
+    //
+    // Two sources, both of which lie in their own way. `_activeWsName` is
+    // event-fed: it starts empty (a shell restart has missed every event, and
+    // the monitor's own `activeWorkspace` can still be unresolved), and its
+    // raw-event handler falls back to "this event is for the focused monitor"
+    // when a workspace's `monitor.name` comes back undefined — which this
+    // build does for nearly every workspace. Measured: an event for `1`, a
+    // workspace on the ignored panel, set BOTH bars' active name to `1`, and
+    // since no row is called that, every dot read as unfocused.
+    //
+    // The published scene map is the layout's own truth (written by the pass
+    // that places the windows) and is what the scene pill beside this row
+    // reads. So: an event wins while it names a row this screen actually has,
+    // the publish answers otherwise, and a name belonging to neither leaves
+    // the row unhighlighted rather than highlighting the wrong thing.
+    readonly property string activeName: {
+        const rows = root._sorted || [];
+        const has = (name) => name !== "" && rows.some(r => r && r.name === name);
+        if (has(root._activeWsName)) return root._activeWsName;
+        const published = PanelBus.sceneOn(root.screen?.name ?? "");
+        return has(published) ? published : "";
+    }
+
     color: "transparent"
     implicitWidth: row.implicitWidth
     implicitHeight: 22
@@ -204,7 +229,7 @@ Rectangle {
                 // Name match against root._activeWsName, not modelData.active
                 // (see root._activeWsName's header — that flag lags on this
                 // Hyprland build).
-                readonly property bool active: root._activeWsName !== "" && modelData.name === root._activeWsName
+                readonly property bool active: root.activeName !== "" && modelData.name === root.activeName
                 readonly property bool occupied: (modelData.toplevels?.values?.length ?? 0) > 0
                 readonly property bool urgent: modelData.urgent ?? false
                 // rowState() (tests/workspaceswitch.test.js) names the row's
@@ -269,3 +294,4 @@ Rectangle {
         }
     }
 }
+

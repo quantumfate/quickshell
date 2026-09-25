@@ -63,10 +63,18 @@ Item {
     // — and it reports the deck's hold while a park is in flight. Falls back
     // to the event map for a screen the desk has not published yet.
     function sceneOn(screenName) {
-        if (!screenName) return "";
+        // Both sources are read FIRST, before the name is even checked. A QML
+        // binding tracks the properties it reads while evaluating, and the
+        // early `if (!screenName) return ""` registered none of them: a
+        // caller whose screen name resolves a moment after its first
+        // evaluation (the bar's own workspace row, after a shell restart)
+        // therefore never re-evaluated and stayed on "" for the life of the
+        // shell. Same trap OpenProjects.qml's `shown` documents.
         const scenes = geometryStore.data ? geometryStore.data.scenes : undefined;
+        const events = root.sceneByScreen;
+        if (!screenName) return "";
         const published = scenes ? scenes[screenName] : undefined;
-        return published || root.sceneByScreen[screenName] || "";
+        return published || events[screenName] || "";
     }
 
     // Seeded once at startup, because the map above is fed by EVENTS and a

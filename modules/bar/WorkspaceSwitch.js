@@ -219,12 +219,23 @@ function roleForScreen(roles, screenName) {
  * whichever workspace inserted last across every other row that resolved to
  * a real match (LEO-344).
  *
+ * A SYNTHESIZED row (`id: null`) takes its live object too, when one exists.
+ * It used to pass through untouched, and that was the bug the dot row made
+ * visible: the rows come from the declaration, and a row is only born with an
+ * id when the monitor-filtered list contained it — which needs
+ * `workspace.monitor.name`, unresolved on this build for nearly every
+ * workspace (see Workspaces.qml's `_sorted`). So every row stayed
+ * synthesized, and with it every row read as having no windows and never
+ * being the active one: four dim dots on a screen whose scene was standing
+ * right there with five windows in it. Synthesized means "not created yet",
+ * and a name that matches a live workspace is exactly the proof that it was.
+ *
  * rows: barWorkspaces()'s result — one entry per bar row, `id: null` marking
  *       a synthesized (not-yet-created) row.
  * live: the real Hyprland workspace objects rows may match by name.
- * -> rows, with each non-synthesized entry replaced by its live object.
+ * -> rows, each replaced by its live object where one exists by name.
  */
 function attachLive(rows, live) {
     const byName = new Map((live || []).map(w => [w.name, w]));
-    return (rows || []).map(w => w.id === null ? w : byName.get(w.name));
+    return (rows || []).map(w => byName.get(w.name) ?? w);
 }

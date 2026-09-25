@@ -241,6 +241,24 @@ test("attachLive() passes a synthesized row (id: null) through unmatched", () =>
     assert.deepEqual(attachLive(rows, []), rows);
 });
 
+test("attachLive() gives a synthesized row its live workspace once one exists", () => {
+    // The row list comes from the declaration, so a row only carries an id
+    // when the monitor-filtered list happened to contain it — and that needs
+    // `workspace.monitor.name`, unresolved on this build for nearly every
+    // workspace. Leaving such a row synthesized meant the bar reported "no
+    // windows, not active" for a scene standing right there: four dim dots on
+    // a workspace with five windows in it.
+    const rows = [
+        { id: null, name: "code", occupied: false },
+        { id: null, name: "logs", occupied: false }
+    ];
+    const live = [{ id: -1, name: "code", active: true, toplevels: { values: [1, 2] } }];
+
+    const attached = attachLive(rows, live);
+    assert.equal(attached[0], live[0], "the live workspace replaces the synthesized row");
+    assert.deepEqual(attached[1], rows[1], "a row with no live counterpart stays synthesized");
+});
+
 // LEO-337 follow-up: on this Hyprland build, every workspace's own
 // `active`/`focused` flag (Quickshell's id-keyed tracking) was observed live
 // to update only on a monitor-crossing focus change, not a plain
