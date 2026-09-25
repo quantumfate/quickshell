@@ -1,13 +1,20 @@
-// Workspaces bar module: a surface pill of per-workspace buttons for this
-// monitor, in the active hyprfocus mode's declared order, each shown as a
-// Nerd Font icon (see WorkspaceSwitch.js). Every scene the active mode
-// admits is shown, whether or not it has a live Hyprland workspace yet —
-// WorkspaceSwitch.rowState() names each row's play state:
-//   focused → icon tinted the active mode's accent colour (no pill/border)
+// Workspaces bar module: this monitor's row of scenes, in the active
+// hyprfocus mode's declared order, each drawn as a DOT. Every scene the
+// active mode admits is shown, whether or not it has a live Hyprland
+// workspace yet — WorkspaceSwitch.rowState() names each row's play state:
+//   focused → accent, and the only filled dot in the row
 //   playing → lavender (has windows)
-//   dormant → overlay0, further dimmed (admitted, no windows — may not even
-//             exist in Hyprland yet; its key still focuses/creates it)
+//   dormant → overlay0, smaller and dimmer (admitted, no windows — may not
+//             even exist in Hyprland yet; its key still focuses/creates it)
 //   urgent  → red, regardless of state
+//
+// Dots, not the scenes' own glyphs: `ScenePill` next to this row now draws
+// the CURRENT scene's icon beside its name, and a row of glyphs beside it
+// asked the reader to identify the same thing twice in two different
+// alphabets. The row's question is "where am I among how many", which is
+// exactly what a row of dots answers; the pill answers "what is this place".
+// The glyphs still live in the declaration and `WorkspaceSwitch.iconFor`
+// still reads them for the switcher and the pill.
 pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
@@ -182,7 +189,7 @@ Rectangle {
     RowLayout {
         id: row
         anchors.centerIn: parent
-        spacing: Theme.space.lg
+        spacing: Theme.space.sm
 
         Repeater {
             model: root._sorted
@@ -206,14 +213,28 @@ Rectangle {
                 readonly property string state: WorkspaceSwitch.rowState({ active: active, occupied: occupied })
                 readonly property bool dormant: state === "dormant"
 
-                implicitWidth: icon.implicitWidth
-                implicitHeight: icon.implicitHeight
+                // The hit target stays a comfortable square even though the
+                // dot inside it is small: a 6px click target is not one.
+                implicitWidth: Theme.barFontSize
+                implicitHeight: Theme.barFontSize
                 color: "transparent"
 
-                Text {
-                    id: icon
+                Rectangle {
+                    id: dot
                     anchors.centerIn: parent
-                    text: WorkspaceSwitch.iconFor(Hyprfocus.data, wsDelegate.modelData.name, wsDelegate.modelData.id)
+                    // The active dot is the largest, a dormant one the
+                    // smallest: size carries the state as well as colour, so
+                    // the row still reads at a glance in a palette where the
+                    // tiers are close together.
+                    // The active row is a CAPSULE, not a bigger dot: two
+                    // colour tiers a few steps apart are hard to tell apart
+                    // at 6px, and shape survives any palette. Everything else
+                    // stays a dot, dormant ones smaller.
+                    implicitWidth: wsDelegate.active ? Theme.space.sm * 3 : dot.implicitHeight
+                    implicitHeight: wsDelegate.dormant ? Theme.space.xs : Theme.space.sm
+                    width: dot.implicitWidth
+                    height: dot.implicitHeight
+                    radius: height / 2
                     // Dormant rows read via the same dim tier a fresh/idle
                     // workspace already used (overlay0) — LEO-373 just widens
                     // who reaches that state to admitted-but-windowless rows,
@@ -224,7 +245,17 @@ Rectangle {
                          : wsDelegate.occupied ? Theme.c.lavender
                          : Theme.c.overlay0
                     opacity: wsDelegate.dormant ? 0.7 : 1.0
-                    font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
+
+                    Behavior on width { NumberAnimation { duration: Theme.motion.fast; easing.type: Theme.motion.ease } }
+                    Behavior on color { ColorAnimation { duration: Theme.motion.fast } }
+                }
+
+                HoverTip {
+                    shown: ws.hovered
+                    screenName: root.screen.name
+                    // The row lost its labels with the glyphs, so hovering is
+                    // where the scene's name still lives.
+                    text: wsDelegate.modelData.name
                 }
 
                 HoverHandler { id: ws }

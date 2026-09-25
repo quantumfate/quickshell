@@ -206,7 +206,14 @@ Singleton {
 
 
     // Current raw palette (named colors: Theme.c.mauve, ...).
-    readonly property var c: palettes[name] ?? palettes.macchiato
+    //
+    // Merged OVER the seed rather than read straight out of the table: a pack
+    // palette only has to derive the roles it cares about, and every role a
+    // widget asks for still answers with a colour. Read raw, a pack missing
+    // `sapphire`/`sky` handed widgets `undefined` -- QML then logs "Unable to
+    // assign [undefined] to QColor" and paints the tint black, which is what
+    // the system panel's meters were doing on a packed palette.
+    readonly property var c: Object.assign({}, _seedPalettes.macchiato, palettes[name] ?? palettes.macchiato)
 
     // Semantic roles — prefer these in widgets so a palette swap Just Works.
     readonly property color background:    c.base

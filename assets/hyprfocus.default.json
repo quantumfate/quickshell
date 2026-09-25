@@ -172,7 +172,9 @@
         "barred": [],
         "strays": "float",
         "icon": "󰜡",
-        "bindings": [],
+        "bindings": [
+          "pokemon"
+        ],
         "docks": {
           "bar.workspaces": {
             "at": "top-left",
@@ -258,7 +260,14 @@
             "of": "block:1"
           }
         },
-        "bar_follows_scene_gaps": true
+        "bar_follows_scene_gaps": true,
+        "gaps_in": 24,
+        "gaps_out": {
+          "top": 28,
+          "right": 32,
+          "bottom": 32,
+          "left": 32
+        }
       },
       "code": {
         "blocks": [
@@ -595,6 +604,13 @@
             "at": "top-center",
             "of": "block:1"
           }
+        },
+        "gaps_in": 24,
+        "gaps_out": {
+          "top": 28,
+          "right": 32,
+          "bottom": 32,
+          "left": 32
         }
       }
     },
@@ -671,39 +687,6 @@
           "night": "frappe"
         },
         "accent_role": "blue",
-        "surface_alpha": 0.94,
-        "density": "compact",
-        "motion_energy": "instant",
-        "bar_autohide": false
-      },
-      "main": "code"
-    },
-    "study": {
-      "name": "Study",
-      "icon": "",
-      "scenes": [
-        {
-          "name": "code",
-          "monitor": "primary"
-        },
-        {
-          "name": "obsidian-linear",
-          "monitor": "secondary"
-        },
-        {
-          "name": "proton",
-          "monitor": "primary"
-        }
-      ],
-      "notify": {
-        "default": "queue"
-      },
-      "presentation": {
-        "palette": {
-          "day": "latte",
-          "night": "macchiato"
-        },
-        "accent_role": "red",
         "surface_alpha": 0.94,
         "density": "compact",
         "motion_energy": "instant",

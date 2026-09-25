@@ -139,13 +139,13 @@ test("the lint catches an unknown scene rather than letting it resolve to nothin
 
 test("the lint catches an unknown monitor role and a duplicate scene", () => {
     const broken = structuredClone(declaration);
-    broken.modes.study.scenes = [
+    broken.modes.work.scenes = [
         { name: "code", monitor: "DP-1" },
         { name: "code", monitor: "primary" },
     ];
     assert.deepEqual(lint(broken), [
-        "study.scenes: unknown monitor 'DP-1'",
-        "study.scenes: duplicate scene 'code'",
+        "work.scenes: unknown monitor 'DP-1'",
+        "work.scenes: duplicate scene 'code'",
     ]);
 });
 
@@ -272,14 +272,18 @@ test("every shipped scene opts into scene-gap bar alignment", () => {
     }
 });
 
-test("every mode declares a distinct accent role (LEO-330's four)", () => {
+test("every mode declares a distinct accent role", () => {
     // This declaration is the single accent store (LEO-334 item 12, LEO-339):
     // the compositor's colors.lua and the shell's Focus.accentRole both read
-    // `modes.*.presentation.accent_role` here, so a study/work collision here
-    // is a study/work collision on the desk.
+    // `modes.*.presentation.accent_role` here, so a gaming/work collision
+    // here is a gaming/work collision on the desk.
     const roles = Object.fromEntries(
         Object.entries(declaration.modes).map(([mode, spec]) => [mode, spec.presentation?.accent_role]),
     );
-    assert.deepEqual(roles, { neutral: "peach", work: "blue", study: "red", gaming: "lavender" });
-    assert.equal(new Set(Object.values(roles)).size, 4, "two modes share an accent role");
+    assert.deepEqual(roles, { neutral: "peach", work: "blue", gaming: "lavender" });
+    assert.equal(
+        new Set(Object.values(roles)).size,
+        Object.keys(roles).length,
+        "two modes share an accent role",
+    );
 });

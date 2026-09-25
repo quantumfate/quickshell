@@ -29,7 +29,7 @@ test("falls back to the id so an unknown mode is still named", () => {
 test("lists every user-facing mode, sorted, without the hidden fallback", () => {
     // neutral is the recovery fallback reached from a submap; offering it as
     // a peer of the real modes would make it a choice rather than a floor.
-    assert.deepEqual(ids(shipped), ["gaming", "study", "work"]);
+    assert.deepEqual(ids(shipped), ["gaming", "work"]);
     assert.equal(known(shipped, "neutral"), true, "hidden is not undeclared");
 });
 
@@ -51,10 +51,12 @@ test("excludes any mode flagged hidden, not just neutral by name", () => {
 });
 
 test("reads a mode's scene set with its monitor roles", () => {
-    assert.deepEqual(scenes(shipped, "study"), [
-        { name: "code", monitor: "primary" },
-        { name: "obsidian-linear", monitor: "secondary" },
+    assert.deepEqual(scenes(shipped, "gaming"), [
+        { name: "dofus", monitor: "primary" },
+        { name: "pokemon", monitor: "primary" },
+        { name: "steam-games", monitor: "primary" },
         { name: "proton", monitor: "primary" },
+        { name: "media", monitor: "secondary" },
     ]);
     assert.deepEqual(scenes(shipped, "ghost"), []);
 });
@@ -74,14 +76,13 @@ test("names what a mode explicitly removes", () => {
 });
 
 test("no mode withholds a base-level binding tree any more (LEO-376)", () => {
-    // The Dofus submap used to sit in base.bindings, withheld by work/study/
+    // The Dofus submap used to sit in base.bindings, withheld by work and
     // neutral's own `remove`. It now lives in base.scenes.dofus.bindings
     // (the same model as shelf-ankama/shelf-lutris) and is admitted only
     // while that scene is focused — a scene-level admission `withholds`
     // (mode-level deltas only) cannot see and does not need to report.
     assert.deepEqual(withholds(shipped, "neutral"), []);
     assert.deepEqual(withholds(shipped, "work"), []);
-    assert.deepEqual(withholds(shipped, "study"), []);
 });
 
 test("does not guess at what an exclusive set leaves out", () => {

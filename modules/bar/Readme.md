@@ -93,12 +93,36 @@ declares `docks["bar.projects"] = { at: "top-right", of: "block:N" }` — so
 the strip sits over the group it describes rather than across the desk from
 it.
 
+### Workspaces
+
+The row is DOTS, one per scene the active mode admits for this monitor, in
+declared order: the active one an accent capsule, a scene with windows a
+lavender dot, an admitted-but-empty one a smaller dim dot, urgent red. The
+scenes' own glyphs moved to `ScenePill` next to it — a row of glyphs beside a
+pill drawing the same glyph asked the reader to identify the same thing twice
+in two alphabets. The row answers "where am I among how many"; the pill
+answers "what is this place". Hovering a dot still names its scene.
+
+### Submap
+
+`SubmapIndicator` sits last in the left isle and says what the keyboard is
+doing: a hairline rule (the same divider the project strip uses between a
+project and its tabs), a keyboard glyph, and the submap's name. It draws
+nothing at root, so the bar never carries dead state.
+
+Its height is its CONTENT's, never `Theme.barHeight`: an isle is as tall as
+its tallest child, so a full-bar-height indicator made the whole island grow
+when a submap opened and shrink when it closed. The glyph replaced a bold
+"map" label for the same reason — one character's width instead of three.
+
 ### Scene
 
-`ScenePill` names the scene this screen is standing in — the name alone, no
-glyph: it sits beside the workspace row, which is already a row of glyphs,
-and a second one next to it read as another workspace rather than as the
-label for the one you are on. A scene owns its workspace, its layout and its binding trees,
+`ScenePill` names the scene this screen is standing in, with the scene's own
+declared `icon` in front of the name — a bare glyph against a word reads as
+that word's icon, which is what the declaration's `icon` is for; the
+workspace row beside it draws its glyphs in pills, so the two do not read as
+the same kind of thing. A scene with no declared icon shows its name alone.
+A scene owns its workspace, its layout and its binding trees,
 so it is the answer to why the keys and the tiling behave the way they do
 right now — the workspace row beside it says WHERE you are among the row,
 this says WHAT that place is. Per screen, never per desk: a mode places
@@ -157,6 +181,7 @@ anchors implicitly:
   started, a monitor mid-hotplug, a swept pass — and every isle rests;
   reading that as a refusal hid the tab strip on the very scenes that declare
   it.
+
 - **Panels** (projects, calendar, mood, notification centre) anchor to the
   published dock document of the isle that opened them (`PanelBus`
   `anchorIsleId`), so they track a live dock move. An isle that is resting has

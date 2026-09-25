@@ -141,7 +141,12 @@ RowLayout {
             DofusRosterButton {
                 visible: chipRow.named
                 compact: true
-                text: "learn"
+                // A camera, not the word: learning a character's turn popup
+                // is capturing it, and the two controls to the right of this
+                // strip already speak in glyphs -- one text label among them
+                // read as a different kind of thing. The verb stays in the
+                // tooltip below.
+                icon: "\uf030"
                 toggled: chipRow.learned
                 tone: Theme.c.green
                 tooltip: chipRow.learned

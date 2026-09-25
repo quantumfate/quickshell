@@ -39,7 +39,14 @@
 // mutations are queued in Theme.qml so two quick arrow presses each count
 // rather than the second overwriting the one in flight.
 //
-// Toggle from Hyprland:  qs -c quantumfate ipc call control toggle
+// The SYSTEM section at the top reads services/SysStats.qml — the same
+// sampler the bar cluster and SysPanel read, so the machine is described in
+// one place and this panel adds no second polling path. It is here because
+// the control centre is where the desk is inspected and adjusted; the bar
+// popout stays the glanceable version of the same numbers.
+//
+// Toggle from Hyprland:  qs -c quantumfate ipc call -- control toggle
+// (the `--` matters: `show`/`hide` collide with `qs ipc` subcommand names)
 pragma ComponentBehavior: Bound
 import Quickshell
 import Quickshell.Io
@@ -252,6 +259,69 @@ Scope {
         }
     }
 
+    // One machine reading: a label, the number, a meter, and a quiet line of
+    // detail. Fixed footprint so the grid stays a grid while the numbers
+    // change width underneath it -- a tile that resizes per sample makes the
+    // whole panel twitch once a second.
+    component StatTile: Rectangle {
+        id: tile
+        required property string label
+        required property string value
+        property string detail: ""
+        property real ratio: -1          // < 0 means "no meter, just numbers"
+        property color tint: Theme.accent
+
+        implicitHeight: tileBody.implicitHeight + Theme.space.md * 2
+        radius: Theme.radiusSmall
+        color: Theme.withAlpha(Theme.surface, 0.6)
+        border { width: 1; color: Theme.withAlpha(Theme.border, 0.5) }
+
+        ColumnLayout {
+            id: tileBody
+            anchors { fill: parent; margins: Theme.space.md }
+            spacing: Theme.space.xs
+
+            RowLayout {
+                Layout.fillWidth: true
+                Text {
+                    Layout.fillWidth: true
+                    text: tile.label
+                    color: Theme.subtextAlt
+                    font { pixelSize: Theme.fs.xs; letterSpacing: 1 }
+                    elide: Text.ElideRight
+                }
+                Text {
+                    text: tile.value
+                    color: Theme.text
+                    font { pixelSize: Theme.fs.md; bold: true }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                visible: tile.ratio >= 0
+                implicitHeight: Theme.space.xs
+                radius: height / 2
+                color: Theme.withAlpha(Theme.border, 0.5)
+                Rectangle {
+                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
+                    width: parent.width * ControlLogic.clamp(tile.ratio, 0, 1)
+                    radius: parent.radius
+                    color: tile.tint
+                }
+            }
+
+            Text {
+                Layout.fillWidth: true
+                visible: tile.detail !== ""
+                text: tile.detail
+                color: Theme.subtext
+                font.pixelSize: Theme.fs.xs
+                elide: Text.ElideRight
+            }
+        }
+    }
+
     component SectionTitle: Text {
         color: Theme.accentAlt
         font { pixelSize: Theme.fs.sm; bold: true; letterSpacing: 1 }
@@ -322,7 +392,10 @@ Scope {
                 // transitions, per-task cycling and the wallpaper grid want
                 // more than the half-screen slice the panel used to give, and
                 // the laptop lid budgets its own fraction (LEO-297).
-                width: Math.min(win.width * 0.62, Theme.fs.xl * 56)
+                // Wider than the old 0.62/56 slice: the system grid wants
+                // three tiles across before it starts stacking, and the
+                // wallpaper rows were already cramped at the old width.
+                width: Math.min(win.width * 0.72, Theme.fs.xl * 72)
                 height: Math.min(win.height * 0.85, content.implicitHeight + 2 * Theme.pad)
                 elevation: "modal"
                 radius: Theme.radius
@@ -343,6 +416,89 @@ Scope {
                             font { pixelSize: Theme.fs.xl; bold: true }
                         }
                         Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.border }
+
+                        // ---- System ---------------------------------------
+                        // Read-only: this is what the machine is doing, not a
+                        // dial. Every value comes from SysStats, which samples
+                        // /proc directly for the fast ones and shells out on a
+                        // slower cadence for disk and GPU.
+                        SectionTitle { text: "SYSTEM" }
+
+                        GridLayout {
+                            Layout.fillWidth: true
+                            // Three across on the ultrawide, one on the lid:
+                            // the column count follows the card, so no width
+                            // has a row of slivers.
+                            columns: Math.max(1, Math.floor(card.width / (Theme.fs.xl * 16)))
+                            columnSpacing: Theme.space.sm
+                            rowSpacing: Theme.space.sm
+
+                            StatTile {
+                                Layout.fillWidth: true
+                                label: "CPU"
+                                tint: Theme.c.lavender
+                                value: SysStats.cpuPct + "%"
+                                ratio: SysStats.cpuPct / 100
+                                detail: SysStats.cpuCores + " cores · load " + SysStats.loadAvg
+                            }
+                            StatTile {
+                                Layout.fillWidth: true
+                                label: "MEMORY"
+                                tint: Theme.c.green
+                                value: SysStats.memPct + "%"
+                                ratio: SysStats.memPct / 100
+                                detail: SysStats.memUsedG.toFixed(1) + " / " + SysStats.memTotalG.toFixed(1) + " G"
+                            }
+                            StatTile {
+                                Layout.fillWidth: true
+                                label: "SWAP"
+                                tint: Theme.c.peach
+                                visible: SysStats.swapTotalG > 0
+                                value: SysStats.swapTotalG > 0
+                                    ? Math.round(100 * SysStats.swapUsedG / SysStats.swapTotalG) + "%" : "—"
+                                ratio: SysStats.swapTotalG > 0 ? SysStats.swapUsedG / SysStats.swapTotalG : 0
+                                detail: SysStats.swapUsedG.toFixed(1) + " / " + SysStats.swapTotalG.toFixed(1) + " G"
+                            }
+                            // Absent on a machine with no NVIDIA card: the
+                            // tile is not a placeholder for hardware that is
+                            // not there (SysStats.gpuPresent).
+                            StatTile {
+                                Layout.fillWidth: true
+                                label: "GPU"
+                                tint: Theme.c.teal
+                                visible: SysStats.gpuPresent
+                                value: SysStats.gpuPct + "%"
+                                ratio: SysStats.gpuPct / 100
+                                detail: SysStats.gpuTemp + "°C · " + SysStats.gpuMemUsedG.toFixed(1)
+                                    + " / " + SysStats.gpuMemTotalG.toFixed(1) + " G"
+                            }
+                            StatTile {
+                                Layout.fillWidth: true
+                                label: "DISK /"
+                                tint: Theme.c.sapphire
+                                value: SysStats.diskUsedPct
+                                ratio: (parseInt(SysStats.diskUsedPct) || 0) / 100
+                                detail: SysStats.diskFree + " free"
+                            }
+                            StatTile {
+                                Layout.fillWidth: true
+                                label: SysStats.wifiSignal >= 0 ? "WI-FI" : "NETWORK"
+                                tint: Theme.c.sky
+                                value: SysStats.wifiSsid || SysStats.netState
+                                detail: "↓ " + SysStats.fmtRate(SysStats.rxRate)
+                                    + "   ↑ " + SysStats.fmtRate(SysStats.txRate)
+                                    + (SysStats.wifiSignal >= 0 ? "   " + SysStats.wifiSignal + "%" : "")
+                            }
+                            StatTile {
+                                Layout.fillWidth: true
+                                label: "UPTIME"
+                                tint: Theme.c.mauve
+                                value: SysStats.uptime
+                                detail: SysStats.netIface
+                            }
+                        }
+
+                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.withAlpha(Theme.border, 0.5) }
 
                         // ---- Theme ----------------------------------------
                         SectionTitle { text: "THEME" }

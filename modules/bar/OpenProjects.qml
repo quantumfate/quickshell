@@ -60,11 +60,11 @@ Row {
             id: chip
             required property var modelData
 
-            // The focused project is the one carrying a surface; the rest are
-            // named in the quiet colour. One highlight, so "where am I" is
-            // answerable at a glance rather than by reading every label.
-            color: modelData.focused ? Theme.surfaceAlt
-                : hover.hovered ? Theme.surface : "transparent"
+            // No fill for the focused project: the chip stays negative space
+            // that flows into the isle behind it, and the accent-coloured
+            // bold label is the whole indicator. A surface here read as a
+            // second shape competing with the tab strip beside it.
+            color: hover.hovered ? Theme.surface : "transparent"
             radius: Theme.radiusPill
             implicitWidth: label.implicitWidth + Theme.space.md * 2
             implicitHeight: label.implicitHeight + Theme.space.xs * 2

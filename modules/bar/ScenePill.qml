@@ -36,11 +36,14 @@ Text {
     color: hover.hovered ? Theme.text : (root.claimed ? Theme.accent : Theme.c.subtext1)
     font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
     leftPadding: Theme.space.md; rightPadding: Theme.space.md
-    // The name alone. The scene's declared glyph is deliberately not drawn:
-    // the pill sits beside the workspace row, which is already a row of
-    // glyphs, and a second one next to it read as another workspace rather
-    // than as the label for the one you are on.
-    text: root.scene
+    // The scene's own glyph in front of its name. It was left off once for
+    // fear of reading as another workspace chip, but the row beside it draws
+    // glyphs in their own pills -- a bare glyph sitting against a word reads
+    // as that word's icon, which is what a scene's declared `icon` is for.
+    // A scene with no icon (or a workspace no scene claims) still gets its
+    // name, never a placeholder.
+    readonly property string glyph: (root.declared && root.declared.icon) ? root.declared.icon : ""
+    text: root.glyph !== "" ? (root.glyph + "  " + root.scene) : root.scene
 
     HoverHandler { id: hover }
     HoverTip {

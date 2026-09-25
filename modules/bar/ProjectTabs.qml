@@ -62,11 +62,11 @@ Row {
             id: tab
             required property var modelData
 
-            // The active tab is a filled pill; the rest are bare text. One
-            // filled shape in the strip, so "which tab am I in" is answered
-            // by shape before colour -- the project chip beside it is the
-            // only other filled thing, and it is a different shade.
-            color: modelData.focused ? Theme.accent : "transparent"
+            // Every tab is bare text: the active one is the accent-coloured,
+            // bold one. A filled pill here fought the project chip beside it
+            // for attention -- two filled shapes in a strip this small read as
+            // two lists, not one answer.
+            color: "transparent"
             radius: Theme.radiusPill
             implicitWidth: label.implicitWidth + Theme.space.sm * 2
             implicitHeight: label.implicitHeight + Theme.space.xs * 2
@@ -78,7 +78,7 @@ Row {
                 // with no name yet; a dot keeps the strip's shape rather than
                 // collapsing it for the beat before the tag lands.
                 text: tab.modelData.slot || "·"
-                color: tab.modelData.focused ? Theme.c.crust
+                color: tab.modelData.focused ? Theme.accent
                     : hover.hovered ? Theme.text : Theme.overlay
                 font {
                     family: Theme.fontFamily
