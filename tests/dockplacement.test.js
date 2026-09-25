@@ -246,3 +246,28 @@ test("a hugged bottom dock is pinned at the region's start", () => {
    assert.ok(placed.y >= 0, "the bar stays on screen");
    assert.ok(placed.y + 48 <= 800, "the bar stays within the output");
 });
+
+test("resolveDockMode: a scene-owned widget is opt-in — absent means absent", () => {
+  // The three always-on isles rest when a scene says nothing; anything else
+  // appears only where a scene names it with an anchor.
+  assert.equal(resolveDockMode({}, "bar.projects"), "hidden");
+  assert.equal(resolveDockMode({ "bar.clock": false }, "dofus.roster"), "hidden");
+  assert.equal(resolveDockMode({}, "bar.center"), "resting");
+  assert.equal(resolveDockMode({}, "bar.clock"), "resting");
+});
+
+test("resolveDockMode: no map at all is an unpublished screen, not a refusal", () => {
+  // A map that exists and does not name the isle is the scene declining it.
+  // NO map is a screen the desk has not published for yet — a shell that just
+  // started, a monitor mid-hotplug, a swept pass. Reading the two the same
+  // way hid the tab strip on the very scenes that declare it.
+  assert.equal(resolveDockMode(undefined, "bar.projects"), "resting");
+  assert.equal(resolveDockMode(null, "dofus.roster"), "resting");
+  assert.equal(resolveDockMode(undefined, "bar.clock"), "resting");
+});
+
+test("resolveDockMode: a scene that names a widget with an anchor places it", () => {
+  const docks = { "bar.projects": { state: "docked", region: { x: 0, y: 0, w: 10, h: 10 } } };
+  assert.equal(resolveDockMode(docks, "bar.projects"), "docked");
+  assert.equal(isPlaced(resolveDockMode(docks, "bar.projects")), true);
+});

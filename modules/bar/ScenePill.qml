@@ -18,15 +18,15 @@ Text {
     id: root
     property string screenName: ""
 
-    readonly property string scene: PanelBus.sceneByScreen[root.screenName] ?? ""
+    // The scene the DESK published for this screen, not the event-fed cache:
+    // the cache goes stale whenever a workspace event is missed, and this
+    // pill then names a scene the screen left (measured in the nested
+    // instance: `loose` while the screen stood on `code-deck`).
+    readonly property string scene: PanelBus.sceneOn(root.screenName)
 
     // The scene's own entry in the declaration, or nothing for a workspace no
     // scene claims (a bare numbered one, a special).
     readonly property var declared: (Hyprfocus.data.base?.scenes?.[root.scene]) ?? null
-
-    // Declared glyph, same contract the mode pill's icon has: a scene without
-    // one degrades to the name alone, never a broken glyph.
-    readonly property string icon: (root.declared?.icon) || ""
 
     // A workspace no scene claims is a real state worth showing plainly
     // rather than blanking the pill, which would read as "nothing on".
@@ -36,7 +36,11 @@ Text {
     color: hover.hovered ? Theme.text : (root.claimed ? Theme.accent : Theme.c.subtext1)
     font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
     leftPadding: Theme.space.md; rightPadding: Theme.space.md
-    text: (root.icon ? root.icon + " " : "") + root.scene
+    // The name alone. The scene's declared glyph is deliberately not drawn:
+    // the pill sits beside the workspace row, which is already a row of
+    // glyphs, and a second one next to it read as another workspace rather
+    // than as the label for the one you are on.
+    text: root.scene
 
     HoverHandler { id: hover }
     HoverTip {

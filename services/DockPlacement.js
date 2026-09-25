@@ -176,9 +176,9 @@ function isPlaced(mode) {
  * Resolve which dock document (if any) applies, and what visual state the
  * isle should render.
  *
- * - No published dock for this screen/isle -> "resting": today's static
- *   layout, unaffected by anything below. This is the defensive default
- *   while the hypr side has not published yet.
+ * - No published dock for this screen/isle -> "resting" for the three isles
+ *   every bar has (ALWAYS below), "hidden" for a scene-owned widget: those
+ *   are opt-in, named by the scene that wants them.
  * - `dock === false` -> "hidden": the isle draws nothing.
  * - dock.state "docked" -> placed per placeDock.
  * - dock.state "fallback" -> ALSO placed per placeDock. "fallback" is the
@@ -195,9 +195,24 @@ function isPlaced(mode) {
  * @param {string} isleId
  * @returns {"resting"|"hidden"|"docked"|"fallback"} the mode Bar.qml should render
  */
+// The isles a bar always has, wherever it stands. Everything else is a
+// SCENE-OWNED widget: it appears only where a scene's `docks` map names it,
+// with an anchor. A scene that says nothing about the tab strip or the Dofus
+// roster does not get one -- opt-in, so a scene has explicit control over
+// what it puts on its screen rather than inheriting whatever the shell
+// decided to draw from what happened to be focused.
+const ALWAYS = ["bar.workspaces", "bar.center", "bar.clock"];
+
 function resolveDockMode(docksForScreen, isleId) {
-  const dock = docksForScreen ? docksForScreen[isleId] : undefined;
-  if (dock === undefined) return "resting";
+  // NO MAP AT ALL is not a scene saying no: it is a screen the desk has not
+  // published for yet (a shell that just started, a monitor mid-hotplug, a
+  // pass whose docks were swept). Reading it as "no" hid every scene-owned
+  // isle on a scene that declares it -- the tab strip vanished from the code
+  // deck for the life of the shell. Opt-in is decided by a map that EXISTS
+  // and does not name the isle; without a map, every isle rests.
+  if (!docksForScreen) return "resting";
+  const dock = docksForScreen[isleId];
+  if (dock === undefined) return ALWAYS.indexOf(isleId) === -1 ? "hidden" : "resting";
   if (dock === false) return "hidden";
   if (dock.state === "docked") return "docked";
   if (dock.state === "fallback") return "fallback";

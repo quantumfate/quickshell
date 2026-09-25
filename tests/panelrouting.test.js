@@ -89,7 +89,12 @@ test("SysMon IPC routes to the active monitor", () => {
 test("Toasts frames itself with the bar's own gap resolution", () => {
     const src = read("modules/bar/Toasts.qml");
     assert.match(src, /Store\s*\{\s*id:\s*geometryStore;\s*name:\s*"geometry"/s);
-    assert.match(src, /PanelBus\.sceneByScreen\[/);
+    // `sceneOn`, not the raw `sceneByScreen` map: the desk PUBLISHES the
+    // scene per screen (geometry.scenes, written by the layout pass that
+    // places the windows), and the event-fed map is only its fallback. The
+    // map goes stale whenever an event is missed — measured, a screen
+    // standing on `code-deck` read as `loose`.
+    assert.match(src, /PanelBus\.sceneOn\(/);
     // The same opt-in rule the bar applies: BarGaps for the sides, the
     // scene's resolved gap only when the scene opts in.
     assert.match(src, /BarGaps\.insetFor\(/);

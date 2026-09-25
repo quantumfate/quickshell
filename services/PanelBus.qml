@@ -54,6 +54,21 @@ Item {
     // raw-event listener.
     property var sceneByScreen: ({})
 
+    // The scene each screen is standing in, as the compositor PUBLISHED it
+    // (geometry store, written by the same layout pass that places the
+    // windows). Prefer this over `sceneByScreen` wherever a widget describes
+    // its own screen's contents: the event-fed map goes stale the moment an
+    // event is missed — measured, a screen standing on `code-deck` read as
+    // `loose`, and every scene-scoped widget filtered itself down to nothing
+    // — and it reports the deck's hold while a park is in flight. Falls back
+    // to the event map for a screen the desk has not published yet.
+    function sceneOn(screenName) {
+        if (!screenName) return "";
+        const scenes = geometryStore.data ? geometryStore.data.scenes : undefined;
+        const published = scenes ? scenes[screenName] : undefined;
+        return published || root.sceneByScreen[screenName] || "";
+    }
+
     // Seeded once at startup, because the map above is fed by EVENTS and a
     // shell that just started has missed all of them: until the first
     // workspace change, every surface reading it sees an empty map and

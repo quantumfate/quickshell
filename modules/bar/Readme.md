@@ -1,6 +1,6 @@
 # Bar
 
-One top bar per monitor (except the excluded portrait panel). Four isles:
+One top bar per monitor (except the excluded portrait panel). Five isles:
 
 ## Isle registry (LEO-420)
 
@@ -10,17 +10,95 @@ documents speak when they publish a placement into the `geometry` store's
 for the placement contract this repo consumes it against). Adding an isle to
 the bar means adding its id here in the same change.
 
-| id               | isle                                                                       |
-| ---------------- | -------------------------------------------------------------------------- |
-| `bar.workspaces` | left isle — scene, workspaces, submap indicator, open projects, group chip |
-| `dofus.roster`   | Dofus roster (gaming workspace only)                                       |
-| `bar.center`     | centre isle — media, brightness, volume                                    |
-| `bar.clock`      | right isle — mode pill, clock, notifications entry, power button           |
+| id               | isle                                                                |
+| ---------------- | ------------------------------------------------------------------- |
+| `bar.workspaces` | left isle — workspaces, scene, submap indicator                     |
+| `dofus.roster`   | Dofus roster (gaming workspace only)                                |
+| `bar.center`     | centre isle — media, brightness, volume                             |
+| `bar.projects`   | right of centre — open projects, and the current project's tab chip |
+| `bar.clock`      | right isle — mode pill, clock, notifications entry, power button    |
+
+### Who reserves the top strip
+
+The bar is two layer surfaces and exactly one of them reserves space at a
+time: the full-screen overlay while this screen has no placed dock, the thin
+strip once it does. Both ask for `Theme.barReserved`, so the handover is meant
+to be invisible.
+
+It was not, because the strip asked for its zone at `implicitHeight: 0` — a
+layer surface's exclusive zone comes with its own size, so the compositor had
+nothing to reserve and the reservation disappeared the moment a scene's docks
+arrived. Every tile jumped UP by the bar's height, and the isles, which follow
+the published tile geometry, jumped after them: the "bump" on a workspace
+swap. Measured in the nested instance with the real bar attached — tile
+`y 65 -> 14` across one round trip, `y 65 -> 65` with the strip sized
+(`tests/e2e/scenarios/99_bar_reserve_bump.sh` in the hypr repo).
+
+### Reading the bar's own state
+
+```sh
+qs -c quantumfate ipc call bar report
+```
+
+One line per screen: the scene it believes it is on, the event-cached value
+beside it, how many projects the model holds and how many are on that screen,
+and the resolved mode of every published dock. Diagnosing "the widget is not
+showing" otherwise means guessing at three layers at once — what the desk
+published, how the shell resolved it, and what the model found — with a shell
+restart between guesses.
+
+### Which scene a widget describes
+
+A scene-scoped widget asks `PanelBus.sceneOn(screenName)`, which reads what
+the compositor **published** (`geometry.scenes[screen]`, written by the same
+layout pass that places the windows). The event-fed `sceneByScreen` map is
+the fallback only: it goes stale the moment an event is missed — measured, a
+screen standing on `code-deck` read as `loose`, so every scene-scoped widget
+filtered itself down to nothing — and it reports the deck's hold workspace
+while a park is in flight.
+
+**A binding tracks properties, not function calls.** `shown: projectsOn(scene)`
+evaluated once, while the model was still empty moments after startup,
+registered no dependency on `ProjectWindows.projects`, and never ran again —
+the widget stayed empty for the life of the shell while the same call made by
+hand returned both projects. Read the property inside the binding
+(`const all = ProjectWindows.projects`) so the dependency is real.
+
+### Hopping between scenes
+
+An isle's docked position comes from the scene on screen, and two scenes gap
+their tiles differently — so a workspace hop changes every docked isle's
+coordinates at once. That transition is a **cut, not a slide**: animating it
+made every hop end with the isles chasing the new workspace after it had
+already drawn. Within one scene, a geometry edit still animates, so a live
+gap change stays smooth.
+
+### Projects and tabs
+
+`OpenProjects` names every project with windows open and marks the one you
+are in; `ProjectTabs` names that project's tabs and marks the one the
+keyboard is in. Both read `ProjectWindows`, which reads the compositor — a
+project exists as long as its windows do, and so does a tab.
+
+The tab strip exists because the compositor's groupbar is off (hyprrepo
+`hypr/conf.lua`): Hyprland reserves the strip's height inside the group's own
+box, so every group and ungroup resized the tile and the isles that follow
+the published tile geometry jumped with it. A project is several terminals in
+one tile, so without a strip nothing says which one you are typing into.
+Tabs read in the template's order, the same order `mod+j`/`mod+k` walk
+(hyprrepo `docs/declared-groups.md`); clicking one focuses that window.
+
+The isle docks at the **top-right of the project column** — the scene
+declares `docks["bar.projects"] = { at: "top-right", of: "block:N" }` — so
+the strip sits over the group it describes rather than across the desk from
+it.
 
 ### Scene
 
-`ScenePill` names the scene this screen is standing in, with the glyph the
-scene declares. A scene owns its workspace, its layout and its binding trees,
+`ScenePill` names the scene this screen is standing in — the name alone, no
+glyph: it sits beside the workspace row, which is already a row of glyphs,
+and a second one next to it read as another workspace rather than as the
+label for the one you are on. A scene owns its workspace, its layout and its binding trees,
 so it is the answer to why the keys and the tiling behave the way they do
 right now — the workspace row beside it says WHERE you are among the row,
 this says WHAT that place is. Per screen, never per desk: a mode places
@@ -64,7 +142,21 @@ anchors implicitly:
   target that is absent or refused means the isle **rests**; the old implicit
   "same anchor on screen" ladder rung is gone (hypr `docs/scenes.md` "Docks"),
   so two isles on one workspace can no longer disagree about their failure
-  mode.
+  mode. Declaring a blanket screen `fallback` on every isle reintroduces
+  exactly that: two isles land on one screen anchor, one takes it and the
+  other rests, and both move on every window event. **Resting is the bar's
+  own row** — the one position that does not follow a window — so each isle's
+  resting seat is computed from the row alone, never from a neighbour's live
+  `x`: the roster used to ride the left isle's live edge and the project strip
+  the clock's, which dragged a resting isle clean across the desk whenever
+  its neighbour docked to a window over there.
+
+  An isle is **hidden** only when the screen's published dock map exists and
+  does not name it (the scene declining it) or names it `false`. No map at
+  all is a screen the desk has not published for yet — a shell that just
+  started, a monitor mid-hotplug, a swept pass — and every isle rests;
+  reading that as a refusal hid the tab strip on the very scenes that declare
+  it.
 - **Panels** (projects, calendar, mood, notification centre) anchor to the
   published dock document of the isle that opened them (`PanelBus`
   `anchorIsleId`), so they track a live dock move. An isle that is resting has

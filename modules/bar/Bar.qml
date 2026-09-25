@@ -54,6 +54,31 @@ Scope {
     IpcHandler {
         target: "bar"
         function reveal(): void { scope.revealTick++; }
+
+        // What the bar believes, per screen: which scene it thinks is there,
+        // what the desk published for it, and how much the scene-scoped
+        // widgets found to draw. Diagnosing "the widget is not showing" from
+        // outside meant guessing at three layers at once (publish, resolve,
+        // model) and restarting the shell between guesses; this answers all
+        // three in one call.
+        //   qs -c quantumfate ipc call bar report
+        function report(): string {
+            const lines = [];
+            for (const screen of Quickshell.screens) {
+                const name = screen.name;
+                const docks = (geometryStore.data?.docks || {})[name] || {};
+                const modes = Object.keys(docks).sort()
+                    .map(id => id + "=" + Dock.resolveDockMode(docks, id)).join(" ");
+                const scene = PanelBus.sceneOn(name);
+                lines.push(name
+                    + " scene=" + (scene || "-")
+                    + " cached=" + (PanelBus.sceneByScreen[name] || "-")
+                    + " projects(all)=" + ProjectWindows.projects.length
+                    + " projects(here)=" + (scene ? ProjectWindows.projectsOn(scene).length : 0)
+                    + " docks[" + (modes || "none") + "]");
+            }
+            return lines.join("\n");
+        }
     }
 
     // The workspace name active on each bar's screen is tracked in PanelBus
@@ -92,7 +117,15 @@ Scope {
             required property var modelData
             screen: modelData
 
-            readonly property var docksForScreen: (geometryStore.data?.docks || {})[reserve.screen.name]
+            // Keyed off the MODEL's screen, not the window's own `screen`.
+            // A PanelWindow re-resolves `screen` as its surface maps, and this
+            // window's size and exclusive zone depend on what is published for
+            // that screen — so reading its own `screen.name` closed the loop
+            // (QML: "Binding loop detected for property docksForScreen", and
+            // the property then stops updating, which is an isle that never
+            // appears). `modelData` is the screen this instance was created
+            // for and never changes.
+            readonly property var docksForScreen: (geometryStore.data?.docks || {})[reserve.modelData.name]
             readonly property bool docked: {
                 const docks = reserve.docksForScreen;
                 if (!docks) return false;
@@ -102,7 +135,16 @@ Scope {
 
             visible: reserve.docked
             anchors { top: true; left: true; right: true }
-            implicitHeight: 0
+            // A real height, not zero. A layer surface asks for its exclusive
+            // zone as part of its own size: at `implicitHeight: 0` the
+            // compositor had nothing to reserve, so the moment a scene's
+            // docks arrived and the overlay handed this strip the
+            // reservation, the reservation simply vanished — every tile on
+            // the screen jumped UP by the bar's height, and the isles, which
+            // follow the published tile geometry, jumped after them. That is
+            // the "bump" on every workspace swap (measured in the nested
+            // instance: tile y 65 -> 14 across one round trip).
+            implicitHeight: Theme.barReserved
             exclusiveZone: reserve.docked ? Theme.barReserved : 0
             color: "transparent"
             WlrLayershell.layer: WlrLayer.Top
@@ -223,7 +265,10 @@ Scope {
             // `geometry` store's `docks[screen]` map. Read defensively: an
             // isle with no entry here (a fresh install, or the hypr side not
             // caught up yet) resolves to "resting" (see DockPlacement.js).
-            readonly property var docksForScreen: (geometryStore.data?.docks || {})[bar.screen.name]
+            // The model's screen, for the same reason the reserve strip's is
+            // (see there): this window's anchors and exclusive zone depend on
+            // what is published for its screen.
+            readonly property var docksForScreen: (geometryStore.data?.docks || {})[bar.modelData.name]
 
             // LEO-340 + scene alignment: this screen's tiled outer gap.
             // An opt-in scene (bar_follows_scene_gaps) subscribes to the
@@ -239,7 +284,7 @@ Scope {
             // no reload.
             readonly property var edgeInset: BarGaps.insetFor(
                 geometryStore.data, hyprfocusStore.data,
-                PanelBus.sceneByScreen[bar.screen.name], bar.screen.name, Theme.barInset * 2)
+                PanelBus.sceneOn(bar.modelData.name), bar.modelData.name, Theme.barInset * 2)
 
             // The vertical centre of the old top strip — every isle's resting
             // (undocked) position keeps living there, unchanged from before
@@ -247,6 +292,9 @@ Scope {
             readonly property real restingY: (Theme.barReserved - Theme.barHeight) / 2
 
             // --- left isle: bar.workspaces ---
+            // Where you are, what that place is, what the keyboard is doing:
+            // the row first, then the label for the one you are on, then the
+            // submap. Projects moved out to their own isle (bar.projects).
             DockedIsle {
                 id: leftIsland
                 isleId: "bar.workspaces"
@@ -254,28 +302,31 @@ Scope {
                 restingX: bar.edgeInset.left
                 restingY: bar.restingY
 
-                ScenePill { screenName: bar.screen.name }
                 Workspaces { screen: bar.screen }
+                ScenePill { screenName: bar.screen.name }
                 SubmapIndicator {}
-                OpenProjects { screenName: bar.screen.name }
-                GroupChip {}
             }
 
             // --- dofus.roster: appears only on the gaming workspace while
-            // Dofus clients are present. Its resting position keeps riding
-            // the left isle's right edge, same as before this refactor. ---
+            // Dofus clients are present. Rests just right of the left isle's
+            // OWN RESTING seat, never of its live x: the left isle may be
+            // docked to a window on the far side of the screen, and riding its
+            // live edge dragged this isle across the desk with it -- a resting
+            // isle chasing a docked neighbour, which is the "isles run around
+            // when they have nothing to anchor to" this fixes. Resting is the
+            // bar row, and the bar row does not move. ---
             DockedIsle {
                 id: dofusIsle
                 isleId: "dofus.roster"
                 bar: bar
-                restingX: leftIsland.x + leftIsland.width + Theme.barInset * 2
+                restingX: leftIsland.restingX + leftIsland.width + Theme.barInset * 2
                 restingY: bar.restingY
                 active: roster.shouldShow
 
                 DofusRoster {
                     id: roster
                     screen: bar.screen
-                    activeWorkspaceName: PanelBus.sceneByScreen[bar.screen.name] ?? ""
+                    activeWorkspaceName: PanelBus.sceneOn(bar.modelData.name)
                 }
             }
 
@@ -307,6 +358,37 @@ Scope {
                 Clock { screenName: bar.screen.name }
                 NotifIndicator { screenName: bar.screen.name }
                 Wlogout {}
+            }
+
+            // --- bar.projects: what is open, and the tabs of the current one.
+            // Its own isle on the right rather than a rung of the left one:
+            // it is about the work, not about where you are, and the
+            // compositor's groupbar (which used to carry the tab strip) is
+            // off -- Hyprland reserved its height inside the group's box, so
+            // every group/ungroup resized the tile and the isles that follow
+            // the published tile geometry jumped with it. Rests just left of
+            // the clock isle's own RESTING seat -- not its live x, for the
+            // reason the roster's does not either (see there). ---
+            DockedIsle {
+                id: projectsIsland
+                isleId: "bar.projects"
+                bar: bar
+                restingX: rightIsland.restingX - width - Theme.barInset * 2
+                restingY: bar.restingY
+                // Nothing to say, nothing on screen: an isle whose contents
+                // are all hidden would otherwise draw an empty card over the
+                // column it docks to. Asked of the widgets' MODELS
+                // (`hasContent`), never of their `visible`: QML's `visible`
+                // is effective visibility, so a child of this isle reports
+                // false the moment the isle itself is hidden -- and an isle
+                // hidden because its children read as invisible, whose
+                // children read as invisible because the isle is hidden,
+                // never comes back. That latch is why the project isle never
+                // appeared once, on any scene, however the docks resolved.
+                active: openProjects.hasContent || projectTabs.hasContent
+
+                OpenProjects { id: openProjects; screenName: bar.screen.name }
+                ProjectTabs { id: projectTabs; screenName: bar.screen.name }
             }
 
             // Thin always-present strip at the true top edge: catches the
@@ -404,10 +486,37 @@ Scope {
         // back. The autohide slide (the old `content.y` behaviour) rides the
         // same y as an additional offset, so the two motions never fight
         // over the property.
+        //
+        // EXCEPT across a scene change. Two scenes gap their tiles
+        // differently, so their docks sit at different coordinates, and
+        // animating between them made every workspace hop end in a visible
+        // slide — the isles chasing the new workspace after it had already
+        // drawn. A hop is a cut, not a move: the isle belongs to the scene
+        // now on screen, so it is simply already there (live complaint,
+        // 2026-09-24). Within one scene, geometry edits still animate.
+        readonly property string placementScene: PanelBus.sceneOn(slot.bar.modelData.name)
+        property bool _sceneCut: false
+        onPlacementSceneChanged: {
+            slot._sceneCut = true;
+            sceneCutRelease.restart();
+        }
+        Timer {
+            id: sceneCutRelease
+            interval: Theme.motion.base + 40
+            repeat: false
+            onTriggered: slot._sceneCut = false
+        }
+
         x: slot.targetX
         y: slot.targetY + ((slot.bar.autohideOn && !slot.bar.revealed) ? -Theme.barReserved : 0)
-        Behavior on x { NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease } }
-        Behavior on y { NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease } }
+        Behavior on x {
+            enabled: !slot._sceneCut
+            NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease }
+        }
+        Behavior on y {
+            enabled: !slot._sceneCut
+            NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease }
+        }
 
         HoverHandler { onHoveredChanged: if (hovered) slot.bar.wake() }
 

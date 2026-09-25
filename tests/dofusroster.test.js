@@ -51,12 +51,16 @@ test("speaks only for clients on the workspace it is drawn over", () => {
 
 // `_mon.activeWorkspace` reads stale on a same-monitor switch (Workspaces.qml's
 // `_activeWsName` header root-causes it), and a same-monitor switch onto the
-// dofus workspace is how this isle is reached — so the name must come from the
-// bar's raw-event map, with the cached reference only as the pre-event seed.
-test("takes the active workspace from the bar's raw-event map, not the cached monitor", () => {
+// dofus workspace is how this isle is reached — so the name must not come
+// from the monitor. It now comes from what the desk PUBLISHED for the screen
+// (`PanelBus.sceneOn` -> geometry.scenes, written by the layout pass that
+// places the windows), which supersedes the raw-event map this used to read:
+// that map is still the fallback, but it goes stale the moment an event is
+// missed — measured, a screen standing on `code-deck` read as `loose`.
+test("takes the active workspace from what the desk published, not the cached monitor", () => {
     assert.match(src, /property string activeWorkspaceName/);
     assert.match(src, /_wsName:\s*root\.activeWorkspaceName !== ""/s);
-    assert.match(bar, /activeWorkspaceName:\s*PanelBus\.sceneByScreen\[bar\.screen\.name\]/);
+    assert.match(bar, /activeWorkspaceName:\s*PanelBus\.sceneOn\(/);
 });
 
 // An item's `visible` reports EFFECTIVE visibility in Qt Quick, so a child of

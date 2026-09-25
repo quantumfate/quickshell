@@ -10,20 +10,51 @@
 //
 // Not to be confused with ProjectsPill, which is repo HEALTH (branch, dirty
 // counts) over the projects store. This one is about what is on screen now.
+import Quickshell
+import Quickshell.Hyprland
 import QtQuick
-import "../../services"   // Theme, ProjectWindows
+import "../../services"   // Theme, ProjectWindows, PanelBus
 
 Row {
     id: root
     property string screenName: ""
 
-    visible: ProjectWindows.projects.length > 0
-    spacing: Theme.space.xs
-    leftPadding: Theme.space.md
-    rightPadding: Theme.space.md
+    // This screen's scene only (docs: the widgets describe the workspace the
+    // bar is on). A project open on another scene is that scene's business.
+    // What the DESK says is on this screen (PanelBus.sceneOn): published by
+    // the same layout pass that places the windows, so it cannot drift from
+    // the layout the way an event-fed cache does.
+    readonly property string scene: PanelBus.sceneOn(root.screenName)
+    // Scoped to this screen's scene when that is known. When it is NOT --
+    // `sceneByScreen` is event-fed and a freshly started shell has missed
+    // every event until the first workspace change -- showing everything
+    // beats showing nothing: an empty widget reads as a broken one, and this
+    // is exactly the state a shell restart lands in.
+    readonly property var shown: {
+        // Read the property FIRST, every time. A QML binding tracks the
+        // properties it reads, not the functions it calls: bound only to
+        // `projectsOn(scene)` this evaluated once — while the model was still
+        // empty, moments after startup — registered no dependency on
+        // `ProjectWindows.projects`, and never ran again. The widget then
+        // stayed empty for the life of the shell while a direct call to the
+        // same function returned both projects (measured in the nested
+        // instance: `filtered=2 shown=0`).
+        const all = ProjectWindows.projects;
+        return root.scene !== "" ? ProjectWindows.projectsOn(root.scene) : all;
+    }
 
+    // Whether this widget has anything to say, asked WITHOUT asking whether
+    // it is visible. `visible` in QML is effective visibility: a child of an
+    // invisible parent reports `false` whatever it was set to. The isle
+    // around this one is drawn only while its contents have something to
+    // say, so reading `openProjects.visible` there latched the pair off for
+    // the life of the shell -- the isle was invisible because the widget
+    // read as invisible because the isle was invisible. The model answers
+    // the question; visibility never does.
+    readonly property bool hasContent: root.shown.length > 0
+    visible: root.hasContent
     Repeater {
-        model: ProjectWindows.projects
+        model: root.shown
 
         Rectangle {
             id: chip

@@ -72,7 +72,7 @@ Scope {
         Store { id: geometryStore; name: "geometry" }
         Store { id: hyprfocusStore; name: "hyprfocus" }
         readonly property string _screenName: win.screen?.name ?? ""
-        readonly property string _sceneName: PanelBus.sceneByScreen[win._screenName] ?? ""
+        readonly property string _sceneName: PanelBus.sceneOn(win._screenName)
         readonly property var _sceneGaps: BarGaps.sceneGapsFor(
             geometryStore.data, hyprfocusStore.data, win._sceneName)
         readonly property int _smallGap: Theme.space.xs
