@@ -75,8 +75,11 @@ smoke:
 # Unit tests. Node's built-in runner, no dependency to install. The specs load
 # the real QML sources rather than copies, so a change to a palette or to the
 # cheatsheet parser is covered the moment it lands.
+# `tests/*.test.js`, not `tests/`: a bare directory is resolved as a MODULE by
+# node's older `--test` handling (node 22 on the CI runner: "Cannot find
+# module .../tests"), while the glob means the same thing to every version.
 test:
-	node --test tests/
+	node --test tests/*.test.js
 
 # QML static analysis. Must be Qt6's qmllint: on Arch the unprefixed binary on
 # PATH is Qt5's and exits 255 on every file here, so the recipe resolves a
