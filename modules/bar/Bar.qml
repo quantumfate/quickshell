@@ -282,9 +282,55 @@ Scope {
             // (hyprland re-publishes on a scene edit). Either change
             // re-binds this live — a scene redraw or a workspace switch,
             // no reload.
-            readonly property var edgeInset: BarGaps.insetFor(
+            readonly property string sceneName: PanelBus.sceneOn(bar.modelData.name)
+
+            // What the stores say right now, and whether that is hyprland's
+            // answer or the bare fallback.
+            readonly property var liveInset: BarGaps.insetFor(
                 geometryStore.data, hyprfocusStore.data,
-                PanelBus.sceneOn(bar.modelData.name), bar.modelData.name, Theme.barInset * 2)
+                bar.sceneName, bar.modelData.name, Theme.barInset * 2)
+            readonly property bool insetPublished: BarGaps.insetPublished(
+                geometryStore.data, hyprfocusStore.data, bar.sceneName)
+
+            // The last PUBLISHED inset per scene on this screen. An opt-in
+            // scene whose gap hyprland has not published yet (a switch onto a
+            // workspace whose resolved value has not been written, a store
+            // re-read in flight) otherwise took the bar's default inset and
+            // slid back to the real one a frame later — every resting isle on
+            // the screen moving twice per workspace switch. The remembered
+            // value is where those isles already were.
+            //
+            // Never authoritative: the moment a real value exists it is used
+            // AND overwrites the memory below.
+            property var insetMemory: ({})
+            readonly property var edgeInset: bar.insetPublished
+                ? bar.liveInset
+                : (bar.insetMemory[bar.sceneName] ?? bar.liveInset)
+
+            // The bookkeeping lives outside the binding on purpose: a binding
+            // that wrote to the map it reads would re-enter itself, and the
+            // same rule already governs the dock clamp warning below.
+            onInsetPublishedChanged: bar.rememberInset()
+            onLiveInsetChanged: bar.rememberInset()
+            function rememberInset() {
+                if (!bar.insetPublished || bar.sceneName === "") return;
+                const kept = bar.insetMemory[bar.sceneName];
+                if (kept && kept.left === bar.liveInset.left && kept.right === bar.liveInset.right) return;
+                // Reassigned, not mutated: QML re-evaluates on assignment.
+                const next = Object.assign({}, bar.insetMemory);
+                next[bar.sceneName] = { left: bar.liveInset.left, right: bar.liveInset.right };
+                bar.insetMemory = next;
+            }
+
+            // The invalidation a publish cannot do: a scene deleted from the
+            // declaration, or one that stopped opting in, would otherwise
+            // hand back its old inset the next time that name came around.
+            Connections {
+                target: hyprfocusStore
+                function onDataChanged() {
+                    bar.insetMemory = BarGaps.pruneInsetMemory(bar.insetMemory, hyprfocusStore.data);
+                }
+            }
 
             // The vertical centre of the old top strip — every isle's resting
             // (undocked) position keeps living there, unchanged from before

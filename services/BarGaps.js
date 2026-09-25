@@ -19,6 +19,18 @@
 //      (`geometry.monitors`, LEO-340), then the bar's own default
 //      (Theme.barInset*2) — the previous algorithm, unchanged.
 //
+// A THIRD state exists and is the reason `insetPublished` and
+// `pruneInsetMemory` are here: an opt-in scene whose resolved gap hyprland
+// has not published yet. `insetFor` answers the bare fallback there, which on
+// a workspace switch snapped every resting isle to the bar's default inset
+// and slid it back once the publish landed. The caller remembers the last
+// PUBLISHED inset per scene and uses it while that gap is missing; these two
+// functions are what make the remembering honest — one says whether an
+// answer is hyprland's or the fallback (so only real values are remembered),
+// the other drops scenes that no longer exist or no longer opt in (so the
+// memory cannot outlive its declaration). The memory is never authoritative:
+// a publish always overwrites it.
+//
 // Neither path needs a reload or a poll: a scene edit lands through the
 // `hyprfocus` Store's watchChanges (the file re-read re-emits `data`), the
 // resolved value through the `geometry` store's watchChanges when hyprland
@@ -95,4 +107,55 @@ function insetFor(geometryStore, hyprfocusStore, activeSceneName, screenName, fa
     left: monitorLeft != null ? monitorLeft : fallback,
     right: monitorRight != null ? monitorRight : fallback,
   };
+}
+
+/**
+ * Whether `insetFor`'s answer for this scene is hyprland's published value
+ * rather than the caller's fallback.
+ *
+ * Only the subscribed path can be unpublished: a resting bar's answer is the
+ * monitor's gap or the default, and both are as good as they will ever be.
+ * So this is false for a scene that does not opt in — there is nothing to
+ * remember and nothing to wait for.
+ *
+ * @param {object|null} geometryStore the `geometry` Store's decoded document
+ * @param {object|null} hyprfocusStore the `hyprfocus` Store's decoded document
+ * @param {string|null} activeSceneName the workspace name active on this screen
+ * @returns {boolean}
+ */
+function insetPublished(geometryStore, hyprfocusStore, activeSceneName) {
+  var scenes = hyprfocusStore && hyprfocusStore.base && hyprfocusStore.base.scenes;
+  var scene = activeSceneName && scenes && scenes[activeSceneName];
+  if (!scene || scene.bar_follows_scene_gaps !== true) return false;
+  var workspaces = (geometryStore && geometryStore.workspaces) || {};
+  var gap = workspaces[activeSceneName];
+  return !!gap && typeof gap.left === "number" && typeof gap.right === "number";
+}
+
+/**
+ * The remembered insets worth keeping: entries whose scene is still declared
+ * and still opts in.
+ *
+ * This is the invalidation that a publish cannot do. A publish overwrites one
+ * scene's entry, which covers an edited gap; it says nothing about a scene
+ * that was deleted from the declaration, or one that stopped subscribing —
+ * both leave an entry that would be handed back the next time that name came
+ * around. Called when the declaration changes, which is the only moment
+ * either can happen.
+ *
+ * Returns a new object rather than mutating: QML only re-evaluates bindings
+ * on assignment, and a mutated map would leave readers on the old value.
+ *
+ * @param {object|null} memory scene name -> {left, right}
+ * @param {object|null} hyprfocusStore the `hyprfocus` Store's decoded document
+ * @returns {object} the kept entries
+ */
+function pruneInsetMemory(memory, hyprfocusStore) {
+  var scenes = (hyprfocusStore && hyprfocusStore.base && hyprfocusStore.base.scenes) || {};
+  var kept = {};
+  for (var name in memory || {}) {
+    var scene = scenes[name];
+    if (scene && scene.bar_follows_scene_gaps === true) kept[name] = memory[name];
+  }
+  return kept;
 }

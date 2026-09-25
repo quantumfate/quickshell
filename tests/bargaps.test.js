@@ -8,7 +8,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { insetFor, sceneGapsFor } = loadLibrary("services/BarGaps.js");
+const { insetFor, sceneGapsFor, insetPublished, pruneInsetMemory } = loadLibrary("services/BarGaps.js");
 
 const monitors = {
   "DP-1": { left: 40, right: 40 },
@@ -191,4 +191,59 @@ test("sceneGapsFor: a missing or partial published entry is null, not a partial 
   assert.equal(sceneGapsFor({ workspaces: {} }, s, "media"), null);
   assert.equal(sceneGapsFor({ workspaces: { media: { top: 12, left: 25 } } }, s, "media"), null);
   assert.equal(sceneGapsFor(null, s, "media"), null);
+});
+
+// --- the caller's memory of the last published inset --------------------
+//
+// An opt-in scene whose gap hyprland has not published yet takes the bare
+// fallback, and on a workspace switch that snapped every resting isle to the
+// bar's default inset and slid it back a frame later. The caller keeps the
+// last published value per scene; these two functions are what keep that
+// memory honest.
+
+test("insetPublished() says whether the answer is hyprland's or the fallback", () => {
+  const opted = scenes({ media: { bar_follows_scene_gaps: true } });
+  assert.equal(insetPublished(geometry, opted, "media"), true);
+  // Opts in, but nothing published for it yet: insetFor answers the fallback,
+  // so there is something to remember instead.
+  assert.equal(insetPublished({ workspaces: {} }, opted, "media"), false);
+  assert.equal(insetPublished(null, opted, "media"), false);
+});
+
+test("insetPublished() is false for a scene that does not subscribe", () => {
+  // A resting bar's answer is the monitor's gap or the default — as good as
+  // it will ever be, with nothing to wait for and nothing to remember.
+  assert.equal(insetPublished(geometry, scenes({ code: {} }), "code"), false);
+  assert.equal(insetPublished(geometry, {}, "code"), false);
+  assert.equal(insetPublished(geometry, scenes({ code: {} }), null), false);
+});
+
+test("pruneInsetMemory() drops what a publish cannot invalidate", () => {
+  const memory = {
+    media: { left: 25, right: 60 },
+    retired: { left: 10, right: 10 },
+    resting: { left: 8, right: 8 },
+  };
+  const declaration = scenes({
+    media: { bar_follows_scene_gaps: true },
+    // Still declared, but no longer subscribing: its remembered inset must
+    // not be handed back the next time that name comes around.
+    resting: {},
+  });
+
+  assert.deepEqual(pruneInsetMemory(memory, declaration), {
+    media: { left: 25, right: 60 },
+  });
+  assert.deepEqual(pruneInsetMemory(memory, {}), {}, "no declaration keeps nothing");
+  assert.deepEqual(pruneInsetMemory(null, declaration), {});
+});
+
+test("pruneInsetMemory() returns a new object, never the one it was given", () => {
+  // QML re-evaluates bindings on assignment; a mutated map would leave every
+  // reader on the value it already had.
+  const memory = { media: { left: 25, right: 60 } };
+  const declaration = scenes({ media: { bar_follows_scene_gaps: true } });
+  const kept = pruneInsetMemory(memory, declaration);
+  assert.notEqual(kept, memory);
+  assert.deepEqual(kept, memory);
 });
