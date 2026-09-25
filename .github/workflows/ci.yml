@@ -38,11 +38,21 @@ jobs:
 
       # The privacy gate is `hypr/bin/,privacy-check`, resolved as `../hypr`
       # from this repo — the sibling layout every checkout here uses.
+      # Two siblings, both resolved by relative path from this repo — the
+      # layout a developer already has. `hypr` carries the privacy gate;
+      # `system-config` carries `docs/stores.md`, the store registry the
+      # classification test checks every schema against.
       - name: Check out the sibling hypr repo (privacy gate)
         uses: actions/checkout@v4
         with:
           repository: quantumfate/hypr
           path: hypr
+
+      - name: Check out the sibling system-config repo (store registry)
+        uses: actions/checkout@v4
+        with:
+          repository: quantumfate/system-config
+          path: system-config
 
       - name: Toolchain
         run: |
