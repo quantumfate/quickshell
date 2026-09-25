@@ -2,14 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/quantumfate/quickshell/schemas/hyprfocus.schema.json",
   "title": "hyprfocus.json",
-  "description": "The hyprfocus declaration: what may exist on the desk, per mode. `base` declares the scene catalog and every other resource; each mode names its active scene SET (with a monitor role per scene) and states the rest as deltas from the base. This is a materialisation model, not a permission model \u2014 a scene a mode does not list is not admitted, so there is nothing to ask permission about. A resolver folds base + mode into one complete desk BEFORE anything acts on it, and refuses a mode whose scene set is invalid (unknown scene or monitor role, a scene listed twice, two active scenes claiming the same class). Read by the compositor, the shell and the CLI; written by the shell's mode panel.",
+  "description": "The hyprfocus declaration: what may exist on the desk, per mode. `base` declares the scene catalog and every other resource; each mode names its active scene SET (with a monitor role per scene) and states the rest as deltas from the base. This is a materialisation model, not a permission model — a scene a mode does not list is not admitted, so there is nothing to ask permission about. A resolver folds base + mode into one complete desk BEFORE anything acts on it, and refuses a mode whose scene set is invalid (unknown scene or monitor role, a scene listed twice, two active scenes claiming the same class). Read by the compositor, the shell and the CLI; written by the shell's mode panel.",
   "classification": "declaration",
   "type": "object",
-  "required": ["version", "base", "modes"],
+  "required": [
+    "version",
+    "base",
+    "modes"
+  ],
   "additionalProperties": false,
   "properties": {
     "version": {
-      "description": "Declaration format version. Bumped when the grammar changes incompatibly, or when the shipped content changes enough that a stored declaration should be re-seeded (LEO-337) \u2014 the CLI (`,hyprfocus seed`) reseeds a store whose version is lower than this one, once, without --force.",
+      "description": "Declaration format version. Bumped when the grammar changes incompatibly, or when the shipped content changes enough that a stored declaration should be re-seeded (LEO-337) — the CLI (`,hyprfocus seed`) reseeds a store whose version is lower than this one, once, without --force.",
       "const": 9
     },
     "base": {
@@ -18,7 +22,9 @@
     "modes": {
       "description": "Every mode, keyed by id. `neutral` is the hidden recovery fallback and must exist with `hidden: true`: it is reached from a submap, never listed as a peer of the user-facing modes.",
       "type": "object",
-      "required": ["neutral"],
+      "required": [
+        "neutral"
+      ],
       "propertyNames": {
         "$ref": "#/$defs/id"
       },
@@ -27,7 +33,9 @@
       },
       "properties": {
         "neutral": {
-          "required": ["hidden"],
+          "required": [
+            "hidden"
+          ],
           "properties": {
             "hidden": {
               "const": true
@@ -38,46 +46,138 @@
     }
   },
   "$defs": {
-    "id": {
-      "description": "A stable kebab-case identifier. Names the thing, not the file that happens to implement it, so moving code does not change a declaration.",
-      "type": "string",
-      "pattern": "^[a-z0-9][a-z0-9-]*$",
-      "maxLength": 64
-    },
-    "spawn": {
-      "description": "One companion a block's presence keeps alive: launched when the block has a member and fewer than `max_spawns` of its class are on the desk, closed when the last member leaves. With `auto_start` it also opens whenever the scene is active, even before the member maps. Not a claim \u2014 presence is derived from live windows, never remembered. The engine folds the singular block `spawn` into the same shape.",
+    "block": {
       "type": "object",
-      "required": ["class", "command"],
+      "required": [
+        "classes",
+        "order"
+      ],
       "additionalProperties": false,
       "properties": {
-        "class": {
-          "description": "The companion's identity, matched against live windows.",
+        "classes": {
+          "description": "Literal class or Lua pattern, matched literal-first so a hyphenated class does not trip on `-` being a quantifier. Also the scene's CLAIM: two scenes active in one mode may not list the same string (compared textually). Two blocks in the SAME scene may share a class only when each also sets a distinct `slot`.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "slot": {
+          "description": "Identity suffix (LEO-364) disambiguating same-class blocks within one scene, e.g. `pokemon/chat` and `pokemon/stream` both matching `zen-gaming-media`. With this set, the block only claims a window already carrying the Hyprland tag `slot:<slot>`; `hypr/scene/identify.lua` stamps that tag, once, on whichever live window of the matching class is still unslotted.",
           "type": "string"
         },
-        "command": {
-          "description": "What runs the first time in (spawned through uwsm).",
-          "type": "string"
-        },
-        "max_spawns": {
-          "description": "Cap on how many of `class` the engine keeps alive while the block has a member.",
+        "order": {
+          "description": "Position in the left-to-right sequence. With a layout provider this is the order boxes are placed, not a correction applied afterwards.\n\nIt is also the block's IDENTITY, not merely a sort key: the compile emits it into the `block:<scene>/<order>` tag every window of the block wears, and a dock's `of` names it (`dofus`'s game block is `order = 0`, so its isles anchor to `block:0`). Zero is therefore a legitimate order — this once required 1 and the shipped declaration silently contradicted it — and renumbering under a running desk orphans that block's live windows.",
           "type": "integer",
-          "minimum": 1,
-          "default": 1
+          "minimum": 0
         },
-        "auto_start": {
-          "description": "Keep the companion alive whenever the running mode admits this scene, even with no member window currently present.",
+        "group": {
+          "description": "All matching windows live in one Hyprland group, so the block is a single tile however many windows it holds.",
           "type": "boolean",
           "default": false
+        },
+        "share": {
+          "description": "Fraction of the work area this block holds.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "guard": {
+          "description": "How a non-group block resists being grouped. `deny` also refuses a deliberate toggle, for a tile whose job is to be a fixed region beside a group.",
+          "enum": [
+            "barred",
+            "deny"
+          ],
+          "default": "barred"
+        },
+        "revoke": {
+          "$ref": "#/$defs/revocation",
+          "default": "hold"
+        },
+        "spawn": {
+          "$ref": "#/$defs/spawn"
+        },
+        "spawns": {
+          "$ref": "#/$defs/spawns"
         }
       }
     },
-    "spawns": {
-      "description": "Several companions sharing one block's presence, as a list of `spawn` entries \u2014 one block naming a console and each of its browsers, say. The singular `spawn` and this list fold into the same normalized `block.spawns` in the engine, so a consumer reads one shape.",
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/spawn"
+    "deck_column": {
+      "description": "One column of a `deck`-layout scene (docs/deck.md, `hypr/scene/spec.lua`'s `normalize_columns`). Shows exactly one subscribed thing at a time, flipped through by scrolling.",
+      "type": "object",
+      "required": [
+        "order"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "order": {
+          "description": "Left-to-right position, 1-3.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "share": {
+          "description": "Fraction of the row this column holds; columns with no declared share split whatever is left evenly.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "classes": {
+          "description": "Literal class or Lua pattern subscribing a window into this column, matched the same way a scene block's `classes` is.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deck": {
+          "description": "Self-declaration name: a window carrying the Hyprland tag `deck:<name>` joins this column regardless of class.",
+          "type": "string"
+        }
+      }
+    },
+    "delta": {
+      "description": "A change to one resource kind. `only` is exclusive and replaces the base's set; `add` and `remove` apply against it. The two forms are mutually exclusive, because a declaration that said both would have no single obvious meaning.\n\n`only` and `remove` differ in how they meet a requirement. `only` says what to inherit, so the requirement closure may still add to it. `remove` is an explicit statement that a resource should not be there, so a requirement that contradicts it is a conflict the resolver reports rather than silently resolving either way — silently starting it ignores what you said, and silently omitting it breaks whatever needed it.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "only": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "add": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        }
       },
-      "minItems": 1
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "only",
+              "add"
+            ]
+          },
+          {
+            "required": [
+              "only",
+              "remove"
+            ]
+          }
+        ]
+      }
     },
     "desk": {
       "description": "A complete desk: every resource that exists, named. This is both the shape of `base` and the shape a resolver produces.",
@@ -85,7 +185,7 @@
       "additionalProperties": false,
       "properties": {
         "bindings": {
-          "description": "Binding trees UNDER MODE CONTROL \u2014 the ones a mode may withhold. A tree not named here is always available and no mode can remove it.\n\nThe default is deliberately 'available', because the two mistakes cost wildly different amounts. A tree missing from this list means a mode does not take away as much as it meant to. A tree wrongly removed means a desk with no terminal and no way back to another mode, which is a reboot. So a mode names what it takes, never what it keeps.\n\n`root` and the modes tree are refused whatever a declaration says: root carries the leader key, and the modes tree is the only way into another mode.",
+          "description": "Binding trees UNDER MODE CONTROL — the ones a mode may withhold. A tree not named here is always available and no mode can remove it.\n\nThe default is deliberately 'available', because the two mistakes cost wildly different amounts. A tree missing from this list means a mode does not take away as much as it meant to. A tree wrongly removed means a desk with no terminal and no way back to another mode, which is a reboot. So a mode names what it takes, never what it keeps.\n\n`root` and the modes tree are refused whatever a declaration says: root carries the leader key, and the modes tree is the only way into another mode.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/id"
@@ -93,7 +193,7 @@
           "uniqueItems": true
         },
         "services": {
-          "description": "Background tasks that run, named from the scripts contract's task map rather than as raw units \u2014 so the declaration says what work happens and the contract says which units implement it.",
+          "description": "Background tasks that run, named from the scripts contract's task map rather than as raw units — so the declaration says what work happens and the contract says which units implement it.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/id"
@@ -160,7 +260,7 @@
           }
         },
         "wants": {
-          "description": "Soft composition edges, keyed by `kind:name`: what a resource USES but can run without. Pulled in by default like `requires`, but a mode may drop it and the resolver honours that silently rather than reporting a conflict.\n\nThis is the common case and the one to reach for first. Obsidian without its indexer is degraded, not broken \u2014 so a media mode can keep the window and stop the indexing to reclaim resources, which is behaviour that already ships today.\n\nMirrors systemd's `Wants=`.",
+          "description": "Soft composition edges, keyed by `kind:name`: what a resource USES but can run without. Pulled in by default like `requires`, but a mode may drop it and the resolver honours that silently rather than reporting a conflict.\n\nThis is the common case and the one to reach for first. Obsidian without its indexer is degraded, not broken — so a media mode can keep the window and stop the indexing to reclaim resources, which is behaviour that already ships today.\n\nMirrors systemd's `Wants=`.",
           "type": "object",
           "propertyNames": {
             "$ref": "#/$defs/ref"
@@ -175,93 +275,67 @@
         }
       }
     },
-    "verdict": {
-      "description": "What a notification does on screen. History records every notification with the verdict applied to it regardless \u2014 suppression governs what interrupts, never what is knowable afterwards.",
-      "enum": ["show", "queue", "digest", "drop"]
-    },
-    "revocation": {
-      "description": "What happens to a resource a mode stops admitting. `hold` parks it out of sight and restores it when the mode ends; `retire` stops it and does not bring it back. Holding buys attention, retiring buys capacity \u2014 so windows usually hold and services usually retire.",
-      "enum": ["hold", "retire"]
-    },
-    "scene": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "blocks": {
-          "description": "Ordered groups of window classes sharing the workspace.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/block"
-          }
+    "dock": {
+      "description": "One isle's dock, or `false` to withhold it on this scene (`hypr/lib/dock.lua`'s `valid_entry`, `hypr/scene/spec.lua`'s `normalize_dock_entry`). A malformed entry is dropped with a report rather than failing the scene, so this schema is the place a typo is caught before the desk silently rests an isle forever.",
+      "oneOf": [
+        {
+          "const": false
         },
-        "barred": {
-          "description": "Classes that legitimately open here without belonging to a block. Barred because auto_group grabs whatever opens while a group holds focus.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "bindings": {
-          "description": "Binding trees admitted while this scene is active. A tree is enabled if the mode admits it OR the active scene admits it; scene-admitted trees follow the workspace, not only the mode (LEO-266).",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "uniqueItems": true
-        },
-        "strays": {
-          "description": "What happens to a window matching no block: `slot` gives it a tile, `float` floats it above the declared split so the split never shifts.",
-          "enum": ["slot", "float"],
-          "default": "slot"
-        },
-        "gaps_in": {
-          "description": "Scene-declared inner gap (LEO-397), in px: wins over the host workspace-spec and the global `general:gaps_in` where set.",
-          "type": "number",
-          "minimum": 0
-        },
-        "gaps_out": {
-          "description": "Scene-declared outer gap (LEO-397), in px or per side ({top,right,bottom,left}); same precedence as `gaps_in`. Must be a single number or a plain object with only numeric sides.",
-          "anyOf": [
-            {
-              "type": "number",
-              "minimum": 0
+        {
+          "type": "object",
+          "required": [
+            "at",
+            "of"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "at": {
+              "description": "The nine-grid cell the isle anchors to, plus the four mirrored corners (`left-top`, `left-bottom`, `right-top`, `right-bottom`) that name the SIDE gutter aligned to one end of it. A corner leads with its dominant axis: `top-left` stands in the top gutter, `left-top` in the left one.",
+              "enum": [
+                "top-left",
+                "top-center",
+                "top-right",
+                "middle-left",
+                "center",
+                "middle-right",
+                "bottom-left",
+                "bottom-center",
+                "bottom-right",
+                "left-top",
+                "left-bottom",
+                "right-top",
+                "right-bottom"
+              ]
             },
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "top": { "type": "number", "minimum": 0 },
-                "right": { "type": "number", "minimum": 0 },
-                "bottom": { "type": "number", "minimum": 0 },
-                "left": { "type": "number", "minimum": 0 }
-              }
+            "of": {
+              "description": "What the isle hangs off: `screen` (the monitor's own frame), `block:<order>` / `column:<order>` (a block or deck column this scene declares — naming one it does not is reported, since it can never resolve), `slot:<name>`, or `class:<class>`.",
+              "type": "string",
+              "pattern": "^(screen|block:[0-9]+|column:[0-9]+|slot:.+|class:.+)$"
+            },
+            "orientation": {
+              "description": "Overrides the edge's default orientation for the isle's own layout.",
+              "enum": [
+                "horizontal",
+                "vertical"
+              ]
+            },
+            "fallback": {
+              "description": "Where the isle goes when this entry cannot resolve — the same grammar, chained.",
+              "$ref": "#/$defs/dock"
             }
-          ]
-        },
-        "bar_follows_scene_gaps": {
-          "description": "While this scene's workspace is active on a screen, the bar on that screen follows the gap the workspace actually tiles at by subscribing to the value hyprland resolved for it (quickshell BarGaps): the scene's own `gaps_out` when declared, else the host workspace-spec gap, else the live global, folded the way that scene's layout folds a gap. Hyprland publishes that final left/right pair to the `geometry` store and re-publishes it on any scene edit; the bar only reads it, never mirrors or re-derives. Without the flag the bar rests on its monitor's published gap. No reload and no poll: the bar re-reads the scene document and the published value through the stores' live change watches, and the active workspace from the compositor's own events.",
-          "type": "boolean",
-          "default": false
-        },
-        "icon": {
-          "description": "The glyph the bar's workspace pill shows for this scene's workspace (LEO-343), from the same icon font the bar already uses. Omit and the bar falls back to a numeric/dot glyph, the same as an undeclared workspace.",
-          "type": "string",
-          "maxLength": 8
-        },
-        "drawers": {
-          "description": "Drawers assigned to this scene, by reference into `base.drawers`. Reachable on their reserved key only while this scene is active (locking the scene does not withdraw them); a drawer may be assigned to more than one scene without duplicating its declaration. Every id here must exist in `base.drawers` — an unknown reference is a declaration error, checked the same way an unknown scene reference is.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "uniqueItems": true
+          }
         }
-      }
+      ]
     },
     "drawer": {
       "description": "A dependency app a scene needs (or the desk always needs) but that must never take a tile: an engine-managed special workspace that slides in over the current scene. Placement, admission and lifecycle are engine policy — this only names what the drawer is and how it starts.",
       "type": "object",
-      "required": ["key", "class", "desc", "launch"],
+      "required": [
+        "key",
+        "class",
+        "desc",
+        "launch"
+      ],
       "additionalProperties": false,
       "properties": {
         "key": {
@@ -289,97 +363,18 @@
         }
       }
     },
-    "block": {
-      "type": "object",
-      "required": ["classes", "order"],
-      "additionalProperties": false,
-      "properties": {
-        "classes": {
-          "description": "Literal class or Lua pattern, matched literal-first so a hyphenated class does not trip on `-` being a quantifier. Also the scene's CLAIM: two scenes active in one mode may not list the same string (compared textually). Two blocks in the SAME scene may share a class only when each also sets a distinct `slot`.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1
-        },
-        "slot": {
-          "description": "Identity suffix (LEO-364) disambiguating same-class blocks within one scene, e.g. `pokemon/chat` and `pokemon/stream` both matching `zen-gaming-media`. With this set, the block only claims a window already carrying the Hyprland tag `slot:<slot>`; `hypr/scene/identify.lua` stamps that tag, once, on whichever live window of the matching class is still unslotted.",
-          "type": "string"
-        },
-        "order": {
-          "description": "Position in the left-to-right sequence. With a layout provider this is the order boxes are placed, not a correction applied afterwards.",
-          "type": "integer",
-          "minimum": 1
-        },
-        "group": {
-          "description": "All matching windows live in one Hyprland group, so the block is a single tile however many windows it holds.",
-          "type": "boolean",
-          "default": false
-        },
-        "share": {
-          "description": "Fraction of the work area this block holds.",
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "maximum": 1
-        },
-        "guard": {
-          "description": "How a non-group block resists being grouped. `deny` also refuses a deliberate toggle, for a tile whose job is to be a fixed region beside a group.",
-          "enum": ["barred", "deny"],
-          "default": "barred"
-        },
-        "revoke": {
-          "$ref": "#/$defs/revocation",
-          "default": "hold"
-        },
-        "spawn": {
-          "$ref": "#/$defs/spawn"
-        },
-        "spawns": {
-          "$ref": "#/$defs/spawns"
-        }
-      }
-    },
-    "delta": {
-      "description": "A change to one resource kind. `only` is exclusive and replaces the base's set; `add` and `remove` apply against it. The two forms are mutually exclusive, because a declaration that said both would have no single obvious meaning.\n\n`only` and `remove` differ in how they meet a requirement. `only` says what to inherit, so the requirement closure may still add to it. `remove` is an explicit statement that a resource should not be there, so a requirement that contradicts it is a conflict the resolver reports rather than silently resolving either way \u2014 silently starting it ignores what you said, and silently omitting it breaks whatever needed it.",
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "only": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "uniqueItems": true
-        },
-        "add": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "uniqueItems": true
-        },
-        "remove": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/id"
-          },
-          "uniqueItems": true
-        }
-      },
-      "not": {
-        "anyOf": [
-          {
-            "required": ["only", "add"]
-          },
-          {
-            "required": ["only", "remove"]
-          }
-        ]
-      }
+    "id": {
+      "description": "A stable kebab-case identifier. Names the thing, not the file that happens to implement it, so moving code does not change a declaration.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "maxLength": 64
     },
     "mode": {
       "type": "object",
-      "required": ["name", "scenes"],
+      "required": [
+        "name",
+        "scenes"
+      ],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -396,7 +391,7 @@
           "default": false
         },
         "main": {
-          "description": "The scene this mode calls home: where a fresh mode entry lands, and the fallback when a reload cannot restore what a monitor was showing. Must name one of this mode's own `scenes`. Never a periodic correction \u2014 focus is not pulled home while the user works elsewhere.",
+          "description": "The scene this mode calls home: where a fresh mode entry lands, and the fallback when a reload cannot restore what a monitor was showing. Must name one of this mode's own `scenes`. Never a periodic correction — focus is not pulled home while the user works elsewhere.",
           "type": "string"
         },
         "scenes": {
@@ -443,20 +438,29 @@
           }
         },
         "presentation": {
-          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.\n\n`palette` is a LEASE, not a write (LEO-288): while the mode runs the desk shows this palette, and when it ends the baseline (the sun's, or the user's pick) comes back untouched. Omit it and the mode tints nothing \u2014 `accent_role` already picks a role within whatever palette is active, and this optional field is for the rare mode that must pick a different palette altogether. Wallpapers belong to palettes, not modes (LEO-365): the theme store's per-palette `wallpapers` binding is what changes the image, so a mode has nothing more to lease for it.",
+          "description": "How the desk looks while this mode runs. Passed through by the resolver untouched; the shell owns its meaning.\n\n`palette` is a LEASE, not a write (LEO-288): while the mode runs the desk shows this palette, and when it ends the baseline (the sun's, or the user's pick) comes back untouched. Omit it and the mode tints nothing — `accent_role` already picks a role within whatever palette is active, and this optional field is for the rare mode that must pick a different palette altogether. Wallpapers belong to palettes, not modes (LEO-365): the theme store's per-palette `wallpapers` binding is what changes the image, so a mode has nothing more to lease for it.",
           "type": "object",
           "properties": {
             "palette": {
-              "description": "The palette leased while this mode holds. Either a plain id (leased at every hour) or a `{ day, night }` pair (LEO-365) leased by the clock \u2014 day is 07:00 (inclusive) through 18:59, the same split hypr's `,theme.sh` `daytime()` uses. Must name a variant the shell carries (Theme.qml / a theme pack); an unknown name reads as no lease \u2014 resolution never fails.",
+              "description": "The palette leased while this mode holds. Either a plain id (leased at every hour) or a `{ day, night }` pair (LEO-365) leased by the clock — day is 07:00 (inclusive) through 18:59, the same split hypr's `,theme.sh` `daytime()` uses. Must name a variant the shell carries (Theme.qml / a theme pack); an unknown name reads as no lease — resolution never fails.",
               "oneOf": [
-                { "$ref": "#/$defs/id" },
+                {
+                  "$ref": "#/$defs/id"
+                },
                 {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["day", "night"],
+                  "required": [
+                    "day",
+                    "night"
+                  ],
                   "properties": {
-                    "day": { "$ref": "#/$defs/id" },
-                    "night": { "$ref": "#/$defs/id" }
+                    "day": {
+                      "$ref": "#/$defs/id"
+                    },
+                    "night": {
+                      "$ref": "#/$defs/id"
+                    }
                   }
                 }
               ]
@@ -466,14 +470,138 @@
       }
     },
     "ref": {
-      "description": "A resource reference, `kind:name` \u2014 `scene:`, `binding:`, `service:`, `project:`. Singular, and qualified because requirements cross kinds. A `scene:` reference is CHECKED, never added: a mode that admits something requiring a scene it does not list is refused.",
+      "description": "A resource reference, `kind:name` — `scene:`, `binding:`, `service:`, `project:`. Singular, and qualified because requirements cross kinds. A `scene:` reference is CHECKED, never added: a mode that admits something requiring a scene it does not list is refused.",
       "type": "string",
       "pattern": "^(scene|binding|service|project):[a-z0-9][a-z0-9-]*$"
+    },
+    "revocation": {
+      "description": "What happens to a resource a mode stops admitting. `hold` parks it out of sight and restores it when the mode ends; `retire` stops it and does not bring it back. Holding buys attention, retiring buys capacity — so windows usually hold and services usually retire.",
+      "enum": [
+        "hold",
+        "retire"
+      ]
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "blocks": {
+          "description": "Ordered groups of window classes sharing the workspace.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          }
+        },
+        "barred": {
+          "description": "Classes that legitimately open here without belonging to a block. Barred because auto_group grabs whatever opens while a group holds focus.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bindings": {
+          "description": "Binding trees admitted while this scene is active. A tree is enabled if the mode admits it OR the active scene admits it; scene-admitted trees follow the workspace, not only the mode (LEO-266).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "strays": {
+          "description": "What happens to a window matching no block: `slot` gives it a tile, `float` floats it above the declared split so the split never shifts.",
+          "enum": [
+            "slot",
+            "float"
+          ],
+          "default": "slot"
+        },
+        "gaps_in": {
+          "description": "Scene-declared inner gap (LEO-397), in px: wins over the host workspace-spec and the global `general:gaps_in` where set.",
+          "type": "number",
+          "minimum": 0
+        },
+        "gaps_out": {
+          "description": "Scene-declared outer gap (LEO-397), in px or per side ({top,right,bottom,left}); same precedence as `gaps_in`. Must be a single number or a plain object with only numeric sides.",
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "top": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "right": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "bottom": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "left": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          ]
+        },
+        "bar_follows_scene_gaps": {
+          "description": "While this scene's workspace is active on a screen, the bar on that screen follows the gap the workspace actually tiles at by subscribing to the value hyprland resolved for it (quickshell BarGaps): the scene's own `gaps_out` when declared, else the host workspace-spec gap, else the live global, folded the way that scene's layout folds a gap. Hyprland publishes that final left/right pair to the `geometry` store and re-publishes it on any scene edit; the bar only reads it, never mirrors or re-derives. Without the flag the bar rests on its monitor's published gap. No reload and no poll: the bar re-reads the scene document and the published value through the stores' live change watches, and the active workspace from the compositor's own events.",
+          "type": "boolean",
+          "default": false
+        },
+        "icon": {
+          "description": "The glyph the bar's workspace pill shows for this scene's workspace (LEO-343), from the same icon font the bar already uses. Omit and the bar falls back to a numeric/dot glyph, the same as an undeclared workspace.",
+          "type": "string",
+          "maxLength": 8
+        },
+        "drawers": {
+          "description": "Drawers assigned to this scene, by reference into `base.drawers`. Reachable on their reserved key only while this scene is active (locking the scene does not withdraw them); a drawer may be assigned to more than one scene without duplicating its declaration. Every id here must exist in `base.drawers` — an unknown reference is a declaration error, checked the same way an unknown scene reference is.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "layout": {
+          "description": "Opt-in to the deck layout (docs/deck.md): every scene defaults to `scene` (fixed blocks); `deck` reads `columns` instead and flips one thing per column at a time. `blocks` still governs auto-grouping/barring under either layout — `columns` only decides deck placement.",
+          "enum": [
+            "scene",
+            "deck"
+          ],
+          "default": "scene"
+        },
+        "columns": {
+          "description": "A `deck`-layout scene's columns, 1-3, left to right. Ignored (and normally omitted) under `layout: scene`.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/deck_column"
+          },
+          "minItems": 1,
+          "maxItems": 3
+        },
+        "docks": {
+          "description": "Where each of the bar's isles stands while this scene is active (docs/scenes.md \"Docks\"). Keyed by isle id (`bar.workspaces`, `bar.clock`, `dofus.roster`, …). `false` withholds the isle on this scene entirely; an entry says which target it hangs off and at which anchor. An isle whose target has no live window rests at its bar seat instead — resting is a state, not a failure.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/dock"
+          }
+        }
+      }
     },
     "scene_placement": {
       "description": "One active scene of a mode and the monitor role it is placed on.",
       "type": "object",
-      "required": ["name", "monitor"],
+      "required": [
+        "name",
+        "monitor"
+      ],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -482,9 +610,59 @@
         },
         "monitor": {
           "description": "A host monitor ROLE (conf/hosts/*.lua `primary_monitor`/`secondary_monitor`), never a raw output name. The mode's role wins over the host file's workspace pin; a role whose output is missing falls back to primary, and the scene moves back when it returns.",
-          "enum": ["primary", "secondary"]
+          "enum": [
+            "primary",
+            "secondary"
+          ]
         }
       }
+    },
+    "spawn": {
+      "description": "One companion a block's presence keeps alive: launched when the block has a member and fewer than `max_spawns` of its class are on the desk, closed when the last member leaves. With `auto_start` it also opens whenever the scene is active, even before the member maps. Not a claim — presence is derived from live windows, never remembered. The engine folds the singular block `spawn` into the same shape.",
+      "type": "object",
+      "required": [
+        "class",
+        "command"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "class": {
+          "description": "The companion's identity, matched against live windows.",
+          "type": "string"
+        },
+        "command": {
+          "description": "What runs the first time in (spawned through uwsm).",
+          "type": "string"
+        },
+        "max_spawns": {
+          "description": "Cap on how many of `class` the engine keeps alive while the block has a member.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "auto_start": {
+          "description": "Keep the companion alive whenever the running mode admits this scene, even with no member window currently present.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "spawns": {
+      "description": "Several companions sharing one block's presence, as a list of `spawn` entries — one block naming a console and each of its browsers, say. The singular `spawn` and this list fold into the same normalized `block.spawns` in the engine, so a consumer reads one shape.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/spawn"
+      },
+      "minItems": 1
+    },
+    "verdict": {
+      "description": "What a notification does on screen. History records every notification with the verdict applied to it regardless — suppression governs what interrupts, never what is knowable afterwards.",
+      "enum": [
+        "show",
+        "queue",
+        "digest",
+        "drop"
+      ]
     }
   }
 }
