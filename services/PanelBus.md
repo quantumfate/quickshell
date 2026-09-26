@@ -22,8 +22,15 @@ Shared state and monitor routing for bar-triggered and IPC-triggered panels.
   because a shell that just started has missed every event and would render
   nothing until the first workspace change. The seed never overwrites an
   entry, so an event that lands while the snapshot is in flight wins.
-- `activeScreen` — the currently focused Hyprland monitor, read reactively from
-  `Hyprland.focusedMonitor` (no polling).
+- `activeScreen` — the seat: the keyboard's monitor, read from hypr's
+  `seat.lua` publish to the `geometry` store's `seat.monitor` key (one seat,
+  cross-repo — the keyboard's monitor is the only answer to "where is the
+  user"). Falls back to `Hyprland.focusedMonitor` only before the first
+  publish (shell just started, or an old store with no `seat` key yet).
+  `focusedMonitor` itself tracks the POINTER on this desk
+  (`mouse_move_focuses_monitor = true`), never used past that fallback: a
+  widget opening "where the user is" must not follow the mouse to a different
+  monitor than the keyboard is on.
 
 ## Monitor routing contract
 

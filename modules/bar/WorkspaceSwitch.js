@@ -188,6 +188,40 @@ function activeName(rows, activeWsName) {
     return (w && w.name) || "";
 }
 
+// Only names `,desk.sh` itself accepts (`^[A-Za-z0-9._-]+$`) — anything else
+// is refused before it ever reaches a shell command.
+const _SAFE_NAME = /^[A-Za-z0-9._-]+$/;
+
+/**
+ * The argv for a monitor-scoped workspace switch (LEO cross-repo "one seat"):
+ * `,desk.sh switch <screenName> <row.name>`. The dot's TapHandler runs this
+ * on the dot's OWN screen, never the seat — a click only ever changes the
+ * monitor it was clicked on (`WorkspaceSwitcher.qml`'s `go()` is the seat's
+ * version of the same seam, see `sendCommand`).
+ *
+ * A synthesized row (no live workspace yet, or a numeric-only name that does
+ * not match `,desk.sh`'s own name pattern) returns null rather than a
+ * half-built command — nothing here guesses a fallback name.
+ */
+function switchCommand(screenName, row) {
+    const name = row && row.name;
+    if (!screenName || !name || !_SAFE_NAME.test(name)) return null;
+    return [",desk.sh", "switch", screenName, name];
+}
+
+/**
+ * The argv for a seat-scoped workspace switch or send, from the switcher
+ * overlay: `,desk.sh switch <seatMonitor> <row.name>`, or `send` instead of
+ * `switch` when bringing the focused window along. The overlay always acts on
+ * the SEAT (it opens over the keyboard's monitor), so unlike `switchCommand`
+ * this takes the seat's monitor rather than a bar instance's own screen.
+ */
+function sendCommand(seatMonitor, row, bringWindow) {
+    const name = row && row.name;
+    if (!seatMonitor || !name || !_SAFE_NAME.test(name)) return null;
+    return [",desk.sh", bringWindow ? "send" : "switch", seatMonitor, name];
+}
+
 /**
  * Which monitor role (`"primary"`/`"secondary"`) a screen plays, from the
  * `geometry` store's `roles` map (LEO-368): `{ primary: "<output>", secondary:

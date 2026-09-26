@@ -77,15 +77,21 @@ Scope {
         function hide(): void { scope.shown = false; }
     }
 
+    // Seat-scoped seam (one seat, cross-repo): the overlay opens over the
+    // keyboard's monitor, so it acts there — `switch` moves the workspace to
+    // that monitor and focuses it, `send` (bringWindow) additionally follows
+    // with the currently focused window. Replaces the old
+    // `Hyprland.dispatch('hl.dsp.workspace(...)')`/`movetoworkspace`, which has
+    // errored on every call since 2026-09-14: `hl.dsp.workspace` is a table on
+    // this Hyprland build, not callable.
     function go(row, bringWindow) {
         if (!row) return;
-        // A named workspace is dispatched by name — its auto id is an
-        // internal handle a fresh dispatch may not resolve.
-        const selector = row.name ? "name:" + row.name : String(row.id);
-        if (bringWindow) Hyprland.dispatch('hl.dsp.movetoworkspace("' + selector + '")');
-        Hyprland.dispatch('hl.dsp.workspace("' + selector + '")');
+        const argv = WorkspaceSwitch.sendCommand(PanelBus.activeScreen, row, bringWindow);
+        if (argv) { goProc.command = argv; goProc.running = true; }
         scope.shown = false;
     }
+
+    Process { id: goProc }
 
     PanelWindow {
         visible: scope.shown

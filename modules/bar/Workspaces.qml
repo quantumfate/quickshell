@@ -19,6 +19,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Hyprland
+import Quickshell.Io
 import "../../services"   // Theme, Hyprfocus
 import "WorkspaceSwitch.js" as WorkspaceSwitch
 
@@ -157,15 +158,17 @@ Rectangle {
             }
             if (!name) return;
             // For workspace events the payload does not name the monitor, so
-            // match by the workspace's own `.monitor` field; only when the
-            // model has not caught up yet fall back to "this event is for the
-            // focused monitor", which is what a bare `workspace` event means.
+            // match by the workspace's own `.monitor` field. There is no
+            // fallback to "this event is for the focused monitor" (dropped,
+            // one seat cross-repo): `monitors[].focused` follows the POINTER
+            // on this desk (`mouse_move_focuses_monitor = true`), not the
+            // keyboard, so that fallback silently attributed the event to
+            // whichever monitor the mouse was over. An unresolved monitor
+            // just leaves this event unattributed — `activeName` below still
+            // has the published scene map to fall back to.
             if (event.name === "workspace" || event.name === "workspacev2") {
                 const live = (Hyprland.workspaces?.values ?? []).find(w => w.name === name);
-                const onThisScreen = live?.monitor?.name !== undefined
-                    ? live.monitor.name === root.screen.name
-                    : root._monitor?.focused ?? false;
-                if (!onThisScreen) return;
+                if (live?.monitor?.name !== root.screen.name) return;
             }
             root._activeWsName = name;
         }
@@ -284,14 +287,23 @@ Rectangle {
                 }
 
                 HoverHandler { id: ws }
-                // Dispatched directly, not via modelData.activate(): a named
-                // workspace's auto id is an internal handle, so both are
-                // spoken through WorkspaceSwitch.selector().
+                // Monitor-scoped switch (`,desk.sh switch`, one seat
+                // cross-repo): the dot's OWN screen, never the seat — a click
+                // only ever changes the monitor it was clicked on.
+                // `Hyprland.dispatch('hl.dsp.workspace(...)')` has errored on
+                // every click since 2026-09-14 on this Hyprland build:
+                // `hl.dsp.workspace` is a table (`change_id move rename
+                // swap_monitors toggle_special`), not callable.
                 TapHandler {
-                    onTapped: Hyprland.dispatch('hl.dsp.workspace("' + WorkspaceSwitch.selector(wsDelegate.modelData) + '")')
+                    onTapped: {
+                        const argv = WorkspaceSwitch.switchCommand(root.screen.name, wsDelegate.modelData);
+                        if (argv) { switchProc.command = argv; switchProc.running = true; }
+                    }
                 }
             }
         }
     }
+
+    Process { id: switchProc }
 }
 

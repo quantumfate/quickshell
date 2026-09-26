@@ -40,13 +40,19 @@ Item {
         return (dock && dock.anchor) ? dock.anchor.x : root._fallbackAnchorX;
     }
 
-    // The currently focused Hyprland monitor name, read from the compositor's
-    // own reactive state (LEO-424). This used to fork a monitor query through
-    // `hyprctl` every second, which meant a panel opened by IPC could anchor to
-    // whatever monitor was focused up to a second ago — a visible jump when
-    // the focus had moved. `focusedMonitor` is updated by the compositor's
-    // events, so the anchor is already current when the panel opens.
-    readonly property string activeScreen: Hyprland.focusedMonitor?.name ?? ""
+    // The seat: the keyboard's monitor, published by hypr's `seat.lua` to the
+    // `geometry` store's `seat.monitor` key on every change (one seat,
+    // cross-repo). This used to read `Hyprland.focusedMonitor`, which tracks
+    // the POINTER on this desk (`mouse_move_focuses_monitor = true`) — a
+    // widget opening "where the user is" would follow the mouse, not the
+    // keyboard, the moment the two disagreed. `focusedMonitor` is kept only as
+    // the pre-publish fallback: before hypr's first `seat` write (shell just
+    // started, or an old store with no `seat` key yet) there is nothing else
+    // to read.
+    readonly property string activeScreen: {
+        const seat = geometryStore.data ? geometryStore.data.seat : undefined;
+        return (seat && seat.monitor) || Hyprland.focusedMonitor?.name || "";
+    }
 
     // Per-screen active workspace/scene name, fed by the compositor's raw
     // workspace events. Kept in this singleton so gap-aware surfaces (Toasts)

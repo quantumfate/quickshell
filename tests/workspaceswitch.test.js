@@ -11,11 +11,11 @@ import { loadLibrary } from "./qml.js";
 const {
     catalogOrder, modeOrder, iconFor, orderBy, canonical, barWorkspaces,
     rowState, selector, buildRows, filterRows, roleForScreen, activeName,
-    attachLive
+    attachLive, switchCommand, sendCommand
 } = loadLibrary("modules/bar/WorkspaceSwitch.js", [
     "catalogOrder", "modeOrder", "iconFor", "orderBy", "canonical",
     "barWorkspaces", "rowState", "selector", "buildRows", "filterRows",
-    "roleForScreen", "activeName", "attachLive"
+    "roleForScreen", "activeName", "attachLive", "switchCommand", "sendCommand"
 ]);
 
 // A small fixture declaration: catalog order code, creative, media; "work"
@@ -331,4 +331,35 @@ test("attachLive() preserves barWorkspaces()' row order (matches in place, never
     ];
     const attached = attachLive(rows, live);
     assert.deepEqual(attached.map(r => r.name), ["code", "obsidian", "proton"]);
+});
+
+test("switchCommand() builds a monitor-scoped ,desk.sh switch", () => {
+    assert.deepEqual(
+        switchCommand("DP-1", { name: "code" }),
+        [",desk.sh", "switch", "DP-1", "code"]
+    );
+});
+
+test("switchCommand() refuses a missing screen, missing row, or unsafe name", () => {
+    assert.equal(switchCommand("", { name: "code" }), null);
+    assert.equal(switchCommand("DP-1", null), null);
+    assert.equal(switchCommand("DP-1", { name: "" }), null);
+    assert.equal(switchCommand("DP-1", { name: "not a name!" }), null);
+});
+
+test("sendCommand() picks switch or send by bringWindow", () => {
+    assert.deepEqual(
+        sendCommand("DP-1", { name: "code" }, false),
+        [",desk.sh", "switch", "DP-1", "code"]
+    );
+    assert.deepEqual(
+        sendCommand("DP-1", { name: "code" }, true),
+        [",desk.sh", "send", "DP-1", "code"]
+    );
+});
+
+test("sendCommand() refuses a missing seat monitor, row, or unsafe name", () => {
+    assert.equal(sendCommand("", { name: "code" }, false), null);
+    assert.equal(sendCommand("DP-1", null, false), null);
+    assert.equal(sendCommand("DP-1", { name: "weird name" }, false), null);
 });

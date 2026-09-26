@@ -213,11 +213,27 @@ the overlay passes clicks through to the window underneath.
   (`Theme.c.lavender`), and the one active on this monitor is **focused**
   (tinted icon, `Theme.accent`) regardless of whether it is also playing.
   Dormant is a display state only — the workspace is still admitted and its
-  row still dispatches `name:<scene>` on click, focusing or creating it. The
-  active workspace is read off Hyprland's raw `workspace`/`workspacev2`/
-  `focusedmon` events directly rather than the monitor's cached
-  `activeWorkspace`, which was observed to lag on a same-monitor switch —
-  see `Workspaces.qml`'s `_activeWsName` header for the socket2 evidence.
+  row still switches or creates it on click. A dot's click runs
+  `,desk.sh switch <this bar's screen> <row name>` (one seat, cross-repo: the
+  dot's OWN screen, never the keyboard's — a click only ever changes the
+  monitor it was clicked on, it never pulls the keyboard across). This
+  replaced `Hyprland.dispatch('hl.dsp.workspace(...)')`, which has errored on
+  every click since 2026-09-14: on this Hyprland build `hl.dsp.workspace` is a
+  table (`change_id move rename swap_monitors toggle_special`), not callable —
+  every dot click silently no-opped. See
+  [`WorkspaceSwitch.js`](WorkspaceSwitch.js)'s `switchCommand` for the pure
+  argv builder (refuses a name `,desk.sh` itself would reject) and
+  `WorkspaceSwitcher.qml`'s `sendCommand` for the overlay's seat-scoped
+  `switch`/`send` seam. The active workspace is read off Hyprland's raw
+  `workspace`/`workspacev2`/`focusedmon` events directly rather than the
+  monitor's cached `activeWorkspace`, which was observed to lag on a
+  same-monitor switch — see `Workspaces.qml`'s `_activeWsName` header for the
+  socket2 evidence. An event is attributed to a screen only when it names
+  that screen's monitor explicitly; the old "no monitor named, so it must be
+  the focused one" fallback read `monitors[].focused`, which follows the
+  POINTER on this desk, not the keyboard — dropped with the same one-seat
+  change. `PanelBus.sceneOn(screen)` (the layout's own published scene map)
+  is the highlight's fallback when no event has named this screen's row yet.
   See [`WorkspaceSwitch.js`](WorkspaceSwitch.js) for the pure logic
   (`barWorkspaces`, `rowState`, `roleForScreen`, `activeName`) and its
   header for how a monitor's primary/secondary role is read off the
