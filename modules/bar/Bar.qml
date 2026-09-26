@@ -170,7 +170,11 @@ Scope {
                 right: true
                 bottom: true
             }
-            exclusiveZone: 0
+            // No `exclusiveZone` here, not even 0: setting it switches the
+            // surface to ExclusionMode.Normal, which silently undid the Ignore
+            // below -- the overlay sat 53px down, under the reserved strip, and
+            // every docked isle was drawn that far below where hypr placed it,
+            // flush onto its window (live, 2026-09-26).
             // Reserving nothing is not the same as being positioned as if
             // nothing were reserved. A four-sided layer surface is shrunk by
             // every OTHER surface's exclusive zone -- the reserve strip above
