@@ -327,6 +327,43 @@
         }
       ]
     },
+    "surface": {
+      "description": "Where one quickshell surface (a popup, a panel — anything not docked to the bar's own frame) is placed inside a scene's published area (hypr repo docs/scenes.md \"Areas\"). hypr does not read this: it is declaration-only, resolved by quickshell's `services/SurfacePlacement.js` against the hypr-published `geometry.areas` entry for the surface's screen.",
+      "type": "object",
+      "required": [
+        "of"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "of": {
+          "description": "The published area this surface asks for: `work` (the scene's whole usable area), `column:<order>` (a specific block/deck-column box), or `column:first`/`column:last` by declared order.",
+          "type": "string",
+          "pattern": "^(work|column:[0-9]+|column:first|column:last)$"
+        },
+        "scale": {
+          "description": "Fraction of the area's width the surface targets, before its own content size and the area's bounds are applied.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "align": {
+          "description": "Horizontal placement within the area.",
+          "enum": [
+            "left",
+            "right",
+            "center"
+          ]
+        },
+        "valign": {
+          "description": "Vertical placement within the area; defaults to `top`.",
+          "enum": [
+            "top",
+            "bottom",
+            "center"
+          ]
+        }
+      }
+    },
     "drawer": {
       "description": "A dependency app a scene needs (or the desk always needs) but that must never take a tile: an engine-managed special workspace that slides in over the current scene. Placement, admission and lifecycle are engine policy — this only names what the drawer is and how it starts.",
       "type": "object",
@@ -591,6 +628,13 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/dock"
+          }
+        },
+        "surfaces": {
+          "description": "Where quickshell's own popups/panels are placed inside this scene's published area (docs/scenes.md \"Areas\"), keyed by surface id (`notifications`, `toasts`, …). hypr does not read this field at all.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/surface"
           }
         }
       }
