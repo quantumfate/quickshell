@@ -122,6 +122,11 @@ declared `icon` in front of the name — a bare glyph against a word reads as
 that word's icon, which is what the declaration's `icon` is for; the
 workspace row beside it draws its glyphs in pills, so the two do not read as
 the same kind of thing. A scene with no declared icon shows its name alone.
+
+It is also the focus indicator: the pill greys out on every screen the
+keyboard is NOT on, read from the seat hypr publishes (`PanelBus.activeScreen`,
+see `services/PanelBus.md`). A scene belongs to its monitor, so "is this scene
+focused" and "is this monitor the seat" are the same question.
 A scene owns its workspace, its layout and its binding trees,
 so it is the answer to why the keys and the tiling behave the way they do
 right now — the workspace row beside it says WHERE you are among the row,

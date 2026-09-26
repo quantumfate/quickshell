@@ -32,8 +32,17 @@ Text {
     // rather than blanking the pill, which would read as "nothing on".
     readonly property bool claimed: root.declared !== null
 
+    // Whether the keyboard is on this screen: the seat hypr publishes
+    // (`PanelBus.activeScreen`). The scene is tied to its monitor, so the pill
+    // doubles as the focus indicator -- it greys out on every screen but the
+    // one the keys will act on. An unknown seat (shell start) reads as held.
+    readonly property bool seated: PanelBus.activeScreen === "" || PanelBus.activeScreen === root.screenName
+
     visible: root.scene !== ""
-    color: hover.hovered ? Theme.text : (root.claimed ? Theme.accent : Theme.c.subtext1)
+    color: hover.hovered ? Theme.text
+         : !root.seated ? Theme.c.overlay1
+         : (root.claimed ? Theme.accent : Theme.c.subtext1)
+    Behavior on color { ColorAnimation { duration: Theme.motion.fast } }
     font { family: Theme.fontFamily; pixelSize: Theme.barFontSize; weight: Theme.barFontWeight }
     leftPadding: Theme.space.md; rightPadding: Theme.space.md
     // The scene's own glyph in front of its name. It was left off once for
@@ -49,7 +58,8 @@ Text {
     HoverTip {
         shown: hover.hovered; screenName: root.screenName
         text: {
-            if (!root.claimed) return root.scene + " · no scene claims this workspace";
+            const away = root.seated ? "" : " · keyboard is on another monitor";
+            if (!root.claimed) return root.scene + " · no scene claims this workspace" + away;
             const lines = [root.scene];
             // The layout is why the windows sit the way they do, and the
             // binding trees are why the keys do what they do — the two things
@@ -57,7 +67,7 @@ Text {
             lines.push((root.declared.layout ?? "scene") + " layout");
             const trees = root.declared.bindings ?? [];
             if (trees.length) lines.push("binds: " + trees.join(", "));
-            return lines.join(" · ");
+            return lines.join(" · ") + away;
         }
     }
 }
