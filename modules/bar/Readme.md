@@ -276,40 +276,43 @@ Autohide follows `Hyprfocus.current.presentation.bar_autohide` — the
 declaration's own per-mode flag, not the retired `deep`/`game` mode ids. A
 SUPER-tap IPC reveal and a thin hot strip at the top edge both wake it.
 
-### Side insets (LEO-340 + scene alignment)
+### Resting: bars never dance (LEO-340, LEO cross-repo)
 
-Each bar's left/right insets follow the tiled outer gap of its own screen via
-[`services/BarGaps.js`](../../services/BarGaps.js). A scene opts in with
-`bar_follows_scene_gaps`; without it the bar rests at the monitor's published
-base gap:
+An isle that is not docked sits at a fixed position that depends on its
+**monitor only** — never the scene, its gaps, or what was last published.
+[`services/BarGaps.js`](../../services/BarGaps.js)'s `insetFor` is that rule:
+the monitor's published base gap (`geometry.monitors`, LEO-340), else
+`Theme.barInset * 2` when the store carries nothing for the monitor. An
+explicit `0` is a real gap, never a fallback signal. Every bar instance uses
+the same isle order, the same resting slots (each computed from the row
+alone, e.g. `restingX: bar.edgeInset.left` or a neighbour's own resting seat
+— never a neighbour's live, docked position), and the same reserve strip; the
+only per-monitor inputs anywhere in `Bar.qml` are the screen's own size and
+its base gap.
 
-1. **Subscribed (opt-in)** — the workspace active on this screen declares
-   `bar_follows_scene_gaps: true`; the bar takes the value hyprland resolved
-   for that workspace and published to the `geometry` store's `workspaces` map
-   (keyed by `default_name` == scene name). That value is the distance from
-   the monitor edge to the scene's outermost **visible** window, already
-   whole: the engine's own gap ladder — scene `gaps_out` → host workspace-spec
-   → live global — folded the way the scene's own layout folds a gap, PLUS the
-   workspace rule's `gaps_out` (which the compositor strips from the work area
-   before the layout runs) and, on any side the layout left inset, the rule's
-   `gaps_in` and the window border. Hyprland folds all of it in
-   `hypr/lib/geometry.lua`'s `resolved_gaps`; the bar only reads it — no
-   mirroring, no fall-through, no guess, no addition. Until the publish lands
-   (an edit that just arrived, or a stale store) the bar rests on the default
-   rather than inventing a gap.
-2. **Resting** — the monitor's published base gap (`geometry.monitors`, LEO-340),
-   then `Theme.barInset * 2`, when the store carries nothing for the monitor.
-   An explicit `0` is a real gap, never a fallback signal.
+Docked isles are unaffected: a scene's `docks` declaration still places them,
+cached per monitor+scene in hypr's `dock_publish.lua`, so a hop between
+scenes still moves a docked isle — resting isles just do not follow it.
 
-Everything refreshes live, so nothing here ever needs a shell reload: scene
-edits re-emit through the `hyprfocus` Store's FileView watchChanges, and the
-resolved value follows through the `geometry` store's watchChanges when the
-hyprland side re-publishes (at config load from `conf/host.lua`, and on a
-scene edit from `hypr/scene/spec.lua`'s first re-read of the declaration). A
-workspace switch arrives as the compositor's own
-`workspace`/`workspacev2`/`focusedmon` events, which the bar Scope turns into a
-per-screen active scene name — the same raw-event source `Workspaces.qml`
-root-causes in its `_activeWsName` header.
+This used to also carry a per-scene opt-in, `bar_follows_scene_gaps`: an
+isle whose active scene set the flag rode hyprland's resolved distance to
+that workspace's outermost visible window instead of resting, plus a memory
+of the last published value to paper over that path's publish lag (a
+workspace switch would otherwise snap every resting isle to the bar's
+default and slide it back a frame later). It is retired — every one of the
+11 shipped scenes had set it, so it was never really an opt-in, just a bar
+that redrew itself on every scene gap change, which is exactly the "dance"
+this rule now rules out. The schema still accepts the field (marked
+deprecated) so a live store written before the retirement stays valid; a
+fresh seed no longer writes it, and quickshell no longer reads it anywhere.
+Toasts and NotificationCenter, the two surfaces that used to read the
+scene's four-side gap for their own placement, now use the same monitor-only
+resting inset as the bar (see "Notifications" below) — a later phase
+(`SurfacePlacement.js`, published work areas) replaces that with real
+per-scene coordinates.
+
+Everything refreshes live, so nothing here ever needs a shell reload: the
+monitor's base gap follows through the `geometry` store's watchChanges.
 
 The Dofus isle uses `DofusWindows.windows` as its membership source and
 `DofusSwap` for detector state; it does not rebuild group membership or swap
@@ -341,12 +344,12 @@ Two surfaces over one daemon (`services/Notify.qml`, the freedesktop
   `notifications.position`, resolved by
   [`services/NotifyPlacement.js`](../../services/NotifyPlacement.js):
   top-centre under the bar by default, any edge/corner a mood names, always on
-  the focused monitor. The stack frames itself with the bar's own gap
+  the seat's monitor. The stack frames itself with the bar's own RESTING gap
   resolution ([`services/BarGaps.js`](../../services/BarGaps.js)): the sides
-  are the bar's insets and the vertical edge is the bar's reserved strip, so
-  the stack sits exactly where the bar sits on every scene and moves only
-  when a scene opts in with `bar_follows_scene_gaps` — same behaviour
-  everywhere unless told otherwise. It renders on the **Top** layer, with the
+  are the bar's monitor-only insets and the vertical edge is the bar's
+  reserved strip, so the stack sits exactly where the bar sits on every scene
+  — the scene-gap opt-in this used to also ride is retired (see "Resting:
+  bars never dance" above). It renders on the **Top** layer, with the
   bar, so the transition veil and the detail panels (Overlay) always cover
   it. Cards enter with a fade + slide and collapse on leave, gated by
   `Theme.motion` (the mood's `motion_energy`; `instant` collapses every
@@ -359,10 +362,11 @@ Two surfaces over one daemon (`services/Notify.qml`, the freedesktop
   from the right edge with the same motion contract; the panel stays mapped
   through the exit before unmapping.
 
-Both bind their `screen` through `PanelBus.screenObject(...)`. The history panel
-additionally reads the active scene's resolved gaps so it sits inside the tiled
-window area: its right edge is inset from the bar's right edge by a small gap,
-its top is dropped below the bar by `Theme.space.md`, and its width is capped at
+Both bind their `screen` through `PanelBus.screenObject(...)`. The history
+panel uses the same monitor-only resting inset as the bar (`BarGaps.insetFor`
+— the scene's resolved gaps it used to read are retired, see above): its
+right edge is inset from the bar's right edge by a small gap, its top is
+dropped below the bar by `Theme.space.md`, and its width is capped at
 `Theme.historyWidth` so it cannot span the screen.
 
 See [`services/DofusWindows.qml`](../services/DofusWindows.qml) and

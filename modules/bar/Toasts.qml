@@ -34,14 +34,12 @@ PanelWindow {
     readonly property string hAlign: win.placement.h
 
     // Deterministic frame, the same one the bar itself uses: the sides are
-    // the bar's own insets (BarGaps.insetFor — the monitor's published base
-    // gap, or the scene's resolved gap only when the scene opts in with
-    // `bar_follows_scene_gaps`), and the vertical edge is the bar's reserved
-    // strip plus a small gap. The stack therefore sits exactly where the bar
-    // sits on every scene, and moves only when a scene explicitly opts in —
-    // same behaviour everywhere unless told otherwise.
+    // the bar's own resting insets (BarGaps.insetFor — the monitor's
+    // published base gap; LEO cross-repo "bars never dance" retired the
+    // scene-gap opt-in this used to also ride), and the vertical edge is the
+    // bar's reserved strip plus a small gap. The stack therefore sits exactly
+    // where the bar sits on every scene.
     Store { id: geometryStore; name: "geometry" }
-    Store { id: hyprfocusStore; name: "hyprfocus" }
     Store {
         id: transitionStore
         name: "hyprfocus.transition"
@@ -54,15 +52,14 @@ PanelWindow {
         return false;
     }
     readonly property string _screenName: win.screen?.name ?? ""
-    readonly property string _sceneName: PanelBus.sceneOn(win._screenName)
-    readonly property var _inset: BarGaps.insetFor(
-        geometryStore.data, hyprfocusStore.data, win._sceneName, win._screenName, Theme.barInset * 2)
-    readonly property var _sceneGaps: BarGaps.sceneGapsFor(geometryStore.data, hyprfocusStore.data, win._sceneName)
+    readonly property var _inset: BarGaps.insetFor(geometryStore.data, win._screenName, Theme.barInset * 2)
     readonly property int _smallGap: Theme.space.md
 
-    readonly property int _topMargin: Theme.barReserved
-        + (win._sceneGaps ? win._sceneGaps.top + win._smallGap : Theme.space.xs)
-    readonly property int _bottomMargin: win._sceneGaps ? win._sceneGaps.bottom + win._smallGap : Theme.space.xs
+    // Rest rule as the fallback for now: a later phase (SurfacePlacement.js,
+    // published areas) replaces this fixed strip-height margin with the
+    // scene's actual work area.
+    readonly property int _topMargin: Theme.barReserved + Theme.space.xs
+    readonly property int _bottomMargin: Theme.space.xs
     readonly property int _leftMargin: win._inset.left + win._smallGap
     readonly property int _rightMargin: win._inset.right + win._smallGap
 

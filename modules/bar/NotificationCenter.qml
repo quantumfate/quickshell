@@ -70,16 +70,18 @@ Scope {
         WlrLayershell.namespace: "quickshell-notifications"
 
         Store { id: geometryStore; name: "geometry" }
-        Store { id: hyprfocusStore; name: "hyprfocus" }
         readonly property string _screenName: win.screen?.name ?? ""
-        readonly property string _sceneName: PanelBus.sceneOn(win._screenName)
-        readonly property var _sceneGaps: BarGaps.sceneGapsFor(
-            geometryStore.data, hyprfocusStore.data, win._sceneName)
+        // Rest rule as the fallback for now (LEO cross-repo "bars never
+        // dance" retired the scene-gap opt-in this used to ride): the
+        // monitor's own resting inset, same as the bar itself. A later phase
+        // (SurfacePlacement.js, published areas) places this panel inside
+        // the scene's actual work area instead.
+        readonly property var _inset: BarGaps.insetFor(geometryStore.data, win._screenName, Theme.barInset * 2)
         readonly property int _smallGap: Theme.space.xs
-        readonly property int _topGap: Theme.barReserved + (win._sceneGaps ? win._sceneGaps.top : 0) + win._smallGap
-        readonly property int _bottomGap: (win._sceneGaps ? win._sceneGaps.bottom : 0) + win._smallGap
-        readonly property int _rightGap: (win._sceneGaps ? win._sceneGaps.right : 0)
-        readonly property int _leftGap: (win._sceneGaps ? win._sceneGaps.left : 0)
+        readonly property int _topGap: Theme.barReserved + win._smallGap
+        readonly property int _bottomGap: win._smallGap
+        readonly property int _rightGap: win._inset.right
+        readonly property int _leftGap: win._inset.left
 
         // No dim backdrop (LEO-240): the panel is information, not a modal.
         // A click outside the panel still dismisses it.

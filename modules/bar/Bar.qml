@@ -45,7 +45,6 @@ Scope {
     // a constant. One shared Store instance: FileView.watchChanges means every
     // bar re-reads live (e.g. pulling the laptop's external monitor), no restart.
     Store { id: geometryStore; name: "geometry" }
-    Store { id: hyprfocusStore; name: "hyprfocus" }
 
     // Bumped by the IPC `reveal` call below (bound to a SUPER-tap keybind in
     // the hypr repo) so every bar instance drops out of autohide at once.
@@ -270,67 +269,17 @@ Scope {
             // what is published for its screen.
             readonly property var docksForScreen: (geometryStore.data?.docks || {})[bar.modelData.name]
 
-            // LEO-340 + scene alignment: this screen's tiled outer gap.
-            // An opt-in scene (bar_follows_scene_gaps) subscribes to the
-            // resolved per-workspace gap hyprland publishes to the
-            // `geometry` store's `workspaces` map — quickshell never
-            // derives a gap, so the inset cannot drift from the tiling.
-            // A resting bar uses the monitor's published gap, then the
-            // default. The scene rung rides `scope.sceneByScreen`,
-            // refreshed by the compositor's workspace events; both store
-            // rungs ride the `geometry`/`hyprfocus` stores' watchChanges
-            // (hyprland re-publishes on a scene edit). Either change
-            // re-binds this live — a scene redraw or a workspace switch,
-            // no reload.
-            readonly property string sceneName: PanelBus.sceneOn(bar.modelData.name)
-
-            // What the stores say right now, and whether that is hyprland's
-            // answer or the bare fallback.
-            readonly property var liveInset: BarGaps.insetFor(
-                geometryStore.data, hyprfocusStore.data,
-                bar.sceneName, bar.modelData.name, Theme.barInset * 2)
-            readonly property bool insetPublished: BarGaps.insetPublished(
-                geometryStore.data, hyprfocusStore.data, bar.sceneName)
-
-            // The last PUBLISHED inset per scene on this screen. An opt-in
-            // scene whose gap hyprland has not published yet (a switch onto a
-            // workspace whose resolved value has not been written, a store
-            // re-read in flight) otherwise took the bar's default inset and
-            // slid back to the real one a frame later — every resting isle on
-            // the screen moving twice per workspace switch. The remembered
-            // value is where those isles already were.
-            //
-            // Never authoritative: the moment a real value exists it is used
-            // AND overwrites the memory below.
-            property var insetMemory: ({})
-            readonly property var edgeInset: bar.insetPublished
-                ? bar.liveInset
-                : (bar.insetMemory[bar.sceneName] ?? bar.liveInset)
-
-            // The bookkeeping lives outside the binding on purpose: a binding
-            // that wrote to the map it reads would re-enter itself, and the
-            // same rule already governs the dock clamp warning below.
-            onInsetPublishedChanged: bar.rememberInset()
-            onLiveInsetChanged: bar.rememberInset()
-            function rememberInset() {
-                if (!bar.insetPublished || bar.sceneName === "") return;
-                const kept = bar.insetMemory[bar.sceneName];
-                if (kept && kept.left === bar.liveInset.left && kept.right === bar.liveInset.right) return;
-                // Reassigned, not mutated: QML re-evaluates on assignment.
-                const next = Object.assign({}, bar.insetMemory);
-                next[bar.sceneName] = { left: bar.liveInset.left, right: bar.liveInset.right };
-                bar.insetMemory = next;
-            }
-
-            // The invalidation a publish cannot do: a scene deleted from the
-            // declaration, or one that stopped opting in, would otherwise
-            // hand back its old inset the next time that name came around.
-            Connections {
-                target: hyprfocusStore
-                function onDataChanged() {
-                    bar.insetMemory = BarGaps.pruneInsetMemory(bar.insetMemory, hyprfocusStore.data);
-                }
-            }
+            // Resting inset (LEO cross-repo "bars never dance"): the
+            // monitor's own published base gap (`geometry.monitors`,
+            // LEO-340), else the bar's default — the scene, its gaps, and
+            // what was last published are never inputs. Used to also carry a
+            // per-scene opt-in (`bar_follows_scene_gaps`) that rode
+            // hyprland's resolved per-workspace gap, plus the inset memory
+            // below it that existed only to mask that path's publish lag; see
+            // BarGaps.js's header for why both are gone. Docked isles are
+            // unaffected — they still follow their scene via DockedIsle.
+            readonly property var edgeInset: BarGaps.insetFor(
+                geometryStore.data, bar.modelData.name, Theme.barInset * 2)
 
             // The vertical centre of the old top strip — every isle's resting
             // (undocked) position keeps living there, unchanged from before

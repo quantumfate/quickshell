@@ -257,17 +257,20 @@ test("the dofus tree is scene-scoped, not a base.requires dependency", () => {
     }
 });
 
-test("the dofus scene carries its bar icon and follows scene gaps", () => {
+test("the dofus scene carries its bar icon", () => {
     assert.ok(declaration.base.scenes.dofus.icon, "dofus scene has no bar icon");
-    assert.equal(declaration.base.scenes.dofus.bar_follows_scene_gaps, true);
 });
 
-test("every shipped scene opts into scene-gap bar alignment", () => {
+// LEO cross-repo "bars never dance": bar_follows_scene_gaps is retired — a
+// resting isle depends on its monitor only, never the scene. No shipped
+// scene should set it; the schema keeps the key only so an old live store
+// still carrying it (written before the retirement) stays valid.
+test("no shipped scene sets the retired bar_follows_scene_gaps flag", () => {
     for (const [name, scene] of Object.entries(declaration.base.scenes)) {
         assert.equal(
             scene.bar_follows_scene_gaps,
-            true,
-            `${name} should follow its scene gaps so the bar and its panels align with the tiled window area`,
+            undefined,
+            `${name} still sets bar_follows_scene_gaps, which is retired and ignored`,
         );
     }
 });

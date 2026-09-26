@@ -552,7 +552,7 @@
           ]
         },
         "bar_follows_scene_gaps": {
-          "description": "While this scene's workspace is active on a screen, the bar on that screen follows the gap the workspace actually tiles at by subscribing to the value hyprland resolved for it (quickshell BarGaps): the scene's own `gaps_out` when declared, else the host workspace-spec gap, else the live global, folded the way that scene's layout folds a gap. Hyprland publishes that final left/right pair to the `geometry` store and re-publishes it on any scene edit; the bar only reads it, never mirrors or re-derives. Without the flag the bar rests on its monitor's published gap. No reload and no poll: the bar re-reads the scene document and the published value through the stores' live change watches, and the active workspace from the compositor's own events.",
+          "description": "Deprecated, ignored since LEO cross-repo 'bars never dance': an isle that is not docked now rests at a fixed position that depends on its monitor only, never on the scene or its gaps. Kept in the schema (rather than removed) only so a live store still carrying this field on every scene — written before the retirement — does not fail schema validation; a fresh seed no longer sets it.",
           "type": "boolean",
           "default": false
         },

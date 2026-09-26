@@ -126,8 +126,7 @@
             "at": "top-right",
             "of": "block:0"
           }
-        },
-        "bar_follows_scene_gaps": true
+        }
       },
       "pokemon": {
         "blocks": [
@@ -188,8 +187,7 @@
             "at": "top-right",
             "of": "block:3"
           }
-        },
-        "bar_follows_scene_gaps": true
+        }
       },
       "steam-games": {
         "blocks": [
@@ -222,8 +220,7 @@
             "at": "top-right",
             "of": "block:1"
           }
-        },
-        "bar_follows_scene_gaps": true
+        }
       },
       "media": {
         "blocks": [
@@ -260,7 +257,6 @@
             "of": "block:1"
           }
         },
-        "bar_follows_scene_gaps": true,
         "gaps_in": 24,
         "gaps_out": {
           "top": 28,
@@ -363,8 +359,7 @@
             "at": "top-right",
             "of": "column:2"
           }
-        },
-        "bar_follows_scene_gaps": true
+        }
       },
       "obsidian-linear": {
         "blocks": [
@@ -402,8 +397,7 @@
             "at": "top-right",
             "of": "block:2"
           }
-        },
-        "bar_follows_scene_gaps": true
+        }
       },
       "proton": {
         "blocks": [
@@ -443,8 +437,7 @@
             "at": "top-right",
             "of": "block:2"
           }
-        },
-        "bar_follows_scene_gaps": true
+        }
       },
       "logs": {
         "blocks": [
@@ -482,7 +475,6 @@
             "of": "column:1"
           }
         },
-        "bar_follows_scene_gaps": true,
         "layout": "deck",
         "columns": [
           {
@@ -500,7 +492,6 @@
         "icon": "󰏔",
         "layout": "deck",
         "strays": "float",
-        "bar_follows_scene_gaps": true,
         "barred": [],
         "bindings": [],
         "blocks": [
@@ -572,7 +563,6 @@
       "reference": {
         "icon": "󰖟",
         "strays": "float",
-        "bar_follows_scene_gaps": true,
         "barred": [],
         "bindings": [],
         "blocks": [

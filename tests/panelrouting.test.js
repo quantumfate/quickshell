@@ -86,19 +86,14 @@ test("SysMon IPC routes to the active monitor", () => {
     assert.match(src, /PanelBus\.activeScreen/);
 });
 
-test("Toasts frames itself with the bar's own gap resolution", () => {
+test("Toasts frames itself with the bar's own resting gap resolution", () => {
     const src = read("modules/bar/Toasts.qml");
     assert.match(src, /Store\s*\{\s*id:\s*geometryStore;\s*name:\s*"geometry"/s);
-    // `sceneOn`, not the raw `sceneByScreen` map: the desk PUBLISHES the
-    // scene per screen (geometry.scenes, written by the layout pass that
-    // places the windows), and the event-fed map is only its fallback. The
-    // map goes stale whenever an event is missed — measured, a screen
-    // standing on `code-deck` read as `loose`.
-    assert.match(src, /PanelBus\.sceneOn\(/);
-    // The same opt-in rule the bar applies: BarGaps for the sides, the
-    // scene's resolved gap only when the scene opts in.
+    // Resting inset only (LEO cross-repo "bars never dance"): the monitor's
+    // published base gap, same call the bar itself makes. The scene-gap
+    // opt-in this used to also ride (BarGaps.sceneGapsFor) is retired.
     assert.match(src, /BarGaps\.insetFor\(/);
-    assert.match(src, /BarGaps\.sceneGapsFor\(/);
+    assert.doesNotMatch(src, /BarGaps\.sceneGapsFor\(/);
     assert.match(src, /margins\s*\{[^}]*_topMargin/s);
     assert.match(src, /_leftMargin/);
     assert.match(src, /_rightMargin/);
