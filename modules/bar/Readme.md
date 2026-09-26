@@ -20,19 +20,20 @@ the bar means adding its id here in the same change.
 
 ### Who reserves the top strip
 
-The bar is two layer surfaces and exactly one of them reserves space at a
-time: the full-screen overlay while this screen has no placed dock, the thin
-strip once it does. Both ask for `Theme.barReserved`, so the handover is meant
-to be invisible.
+The bar is two layer surfaces whose shape never changes: a full-screen,
+click-through overlay the isles stand in (exclusion ignored, so its frame is
+the monitor the published geometry is written in), and a thin strip that
+always reserves `Theme.barReserved`. Resting or docked only changes where an
+isle sits inside the overlay.
 
-It was not, because the strip asked for its zone at `implicitHeight: 0` — a
-layer surface's exclusive zone comes with its own size, so the compositor had
-nothing to reserve and the reservation disappeared the moment a scene's docks
-arrived. Every tile jumped UP by the bar's height, and the isles, which follow
-the published tile geometry, jumped after them: the "bump" on a workspace
-swap. Measured in the nested instance with the real bar attached — tile
-`y 65 -> 14` across one round trip, `y 65 -> 65` with the strip sized
-(`tests/e2e/scenarios/99_bar_reserve_bump.sh` in the hypr repo).
+It used to hand the reservation between the two whenever a scene's docks came
+or went. Two surfaces commit separately, so for a frame the strip was reserved
+twice or not at all, the tiles moved, and the isles -- which follow the tile
+geometry -- jumped after them: the glitch on every resting<->docked change
+(live, 2026-09-26), and before it the "bump" on a workspace swap
+(`tests/e2e/scenarios/99_bar_reserve_bump.sh` in the hypr repo). A change of
+mode is also a cut, never a slide: an isle only animates between two docked
+positions.
 
 ### Reading the bar's own state
 

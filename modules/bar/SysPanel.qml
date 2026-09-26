@@ -28,6 +28,10 @@ Scope {
         color: "transparent"
 
         anchors { top: true; left: true; right: true }
+        // The monitor itself is the frame: hypr publishes areas monitor-local, and
+        // a Normal surface is shrunk by the bar's reserved strip first, which drew
+        // every placed box that far off (docs: services/PanelBus.md "Surfaces").
+        exclusionMode: ExclusionMode.Ignore
         implicitHeight: card.implicitHeight
 
         WlrLayershell.layer: WlrLayer.Overlay

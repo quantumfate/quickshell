@@ -106,8 +106,15 @@ Scope {
     // click-through, anchored to the top edge, carrying nothing but the
     // exclusive zone. The compositor carves the strip, every scene's top
     // gutter clears an isle by construction, and the overlay stays free to
-    // place isles wherever the desk publishes them. Only while docked — an
-    // undocked bar is still the strip it always was and reserves its own.
+    // place isles wherever the desk publishes them.
+    //
+    // ALWAYS, docked or not. The resting bar used to be a top strip that
+    // reserved for itself and handed the reservation to this surface when a
+    // dock arrived: two surfaces committing separately, so for a frame the
+    // strip was reserved twice or not at all, the tiles jumped, and the isles
+    // -- which follow the tile geometry -- jumped after them. That was the
+    // glitch on every resting<->docked change (live, 2026-09-26). A surface
+    // whose shape never changes cannot hand anything over.
     Variants {
         model: Quickshell.screens.filter(s => !scope.excludedScreens.includes(s.name))
 
@@ -116,23 +123,6 @@ Scope {
             required property var modelData
             screen: modelData
 
-            // Keyed off the MODEL's screen, not the window's own `screen`.
-            // A PanelWindow re-resolves `screen` as its surface maps, and this
-            // window's size and exclusive zone depend on what is published for
-            // that screen — so reading its own `screen.name` closed the loop
-            // (QML: "Binding loop detected for property docksForScreen", and
-            // the property then stops updating, which is an isle that never
-            // appears). `modelData` is the screen this instance was created
-            // for and never changes.
-            readonly property var docksForScreen: (geometryStore.data?.docks || {})[reserve.modelData.name]
-            readonly property bool docked: {
-                const docks = reserve.docksForScreen;
-                if (!docks) return false;
-                for (const id in docks) if (Dock.isPlaced(Dock.resolveDockMode(docks, id))) return true;
-                return false;
-            }
-
-            visible: reserve.docked
             anchors { top: true; left: true; right: true }
             // A real height, not zero. A layer surface asks for its exclusive
             // zone as part of its own size: at `implicitHeight: 0` the
@@ -144,7 +134,7 @@ Scope {
             // the "bump" on every workspace swap (measured in the nested
             // instance: tile y 65 -> 14 across one round trip).
             implicitHeight: Theme.barReserved
-            exclusiveZone: reserve.docked ? Theme.barReserved : 0
+            exclusiveZone: Theme.barReserved
             color: "transparent"
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "quickshell-bar-reserve"
@@ -169,21 +159,18 @@ Scope {
             // sides (rather than sizing to Theme.barReserved) is what lets an
             // isle dock anywhere on the screen, not just the old top strip.
             //
-            // Until the hypr side publishes a dock for this screen there is
-            // nothing to place anywhere but the old top strip, and a
-            // zero-reservation full-screen overlay would let the windows take
-            // the very top edge with the isles floating over them. So the
-            // resting shell keeps the strip it always was -- anchored to the
-            // top and reserving Theme.barReserved -- and only becomes the
-            // four-sided overlay once a dock document actually arrives.
+            // Docked or resting, always this shape: the reserve
+            // surface above carves the strip in both states, so the overlay
+            // never changes shape and never hands a reservation over (the
+            // resting<->docked glitch, see the reserve's header). A resting
+            // isle simply sits at its fixed position inside it.
             anchors {
                 top: true
                 left: true
                 right: true
-                bottom: bar.docked
+                bottom: true
             }
-            implicitHeight: bar.docked ? 0 : Theme.barReserved
-            exclusiveZone: bar.docked ? 0 : Theme.barReserved
+            exclusiveZone: 0
             // Reserving nothing is not the same as being positioned as if
             // nothing were reserved. A four-sided layer surface is shrunk by
             // every OTHER surface's exclusive zone -- the reserve strip above
@@ -193,20 +180,8 @@ Scope {
             // vertical axis was wrong because the side zones are zero. Ignore
             // makes the overlay the whole output again, which is the frame
             // the published geometry is written in.
-            exclusionMode: bar.docked ? ExclusionMode.Ignore : ExclusionMode.Normal
+            exclusionMode: ExclusionMode.Ignore
             color: "transparent"
-
-            // This screen has at least one isle the desk actually placed.
-            // Counting every key (what this did first) counted `hidden` and
-            // `resting` documents too, so a scene that publishes an isle it
-            // withholds still dropped the reserved strip and let the windows
-            // tile under the bar. Only a mode that carries geometry counts.
-            readonly property bool docked: {
-                const docks = bar.docksForScreen;
-                if (!docks) return false;
-                for (const id in docks) if (Dock.isPlaced(Dock.resolveDockMode(docks, id))) return true;
-                return false;
-            }
 
             WlrLayershell.layer: WlrLayer.Top
             WlrLayershell.namespace: "quickshell-bar"
@@ -489,7 +464,18 @@ Scope {
         // drawn. A hop is a cut, not a move: the isle belongs to the scene
         // now on screen, so it is simply already there (live complaint,
         // 2026-09-24). Within one scene, geometry edits still animate.
+        //
+        // And across resting<->docked: the isle belongs somewhere else now,
+        // and sliding between the bar's fixed row and a window's gutter read
+        // as the isle glitching across the screen (live, 2026-09-26).
         readonly property string placementScene: PanelBus.sceneOn(slot.bar.modelData.name)
+        readonly property bool _isPlaced: slot.placed ? true : false
+        // What `_isPlaced` was before the latest change, caught up a tick
+        // later: while the two differ the isle is changing mode, and the
+        // Behaviors below are off for that write -- whichever order QML
+        // updates the bindings in.
+        property bool _wasPlaced: slot._isPlaced
+        on_IsPlacedChanged: Qt.callLater(() => { slot._wasPlaced = slot._isPlaced; })
         property bool _sceneCut: false
         onPlacementSceneChanged: {
             slot._sceneCut = true;
@@ -505,11 +491,11 @@ Scope {
         x: slot.targetX
         y: slot.targetY + ((slot.bar.autohideOn && !slot.bar.revealed) ? -Theme.barReserved : 0)
         Behavior on x {
-            enabled: !slot._sceneCut
+            enabled: !slot._sceneCut && slot._isPlaced && slot._wasPlaced
             NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease }
         }
         Behavior on y {
-            enabled: !slot._sceneCut
+            enabled: !slot._sceneCut && slot._isPlaced && slot._wasPlaced
             NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease }
         }
 

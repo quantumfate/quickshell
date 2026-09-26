@@ -57,8 +57,15 @@ repo `docs/scenes.md` "Areas"). Replaces the old per-scene gap number
 (`bar_follows_scene_gaps`, retired) with real coordinates: hypr publishes,
 per monitor, `geometry.areas[screen] = { scene, work, columns }` — `work` is
 the monitor less the bar's reserved strip less the scene's own outer gap;
-`columns` is each placed block/deck-column box. A surface can never overlap a
-bar because both are measured inside the reserved strip already.
+`columns` is the rect of the window standing in each block/deck column — the
+space a surface may span. A surface can never overlap a bar because both are
+measured inside the reserved strip already.
+
+Every placed surface sets `exclusionMode: ExclusionMode.Ignore`: the areas are
+monitor-local, and a Normal layer surface is shrunk by the bar's reserved
+strip first, which drew every box that far off. Margins are computed against
+the screen's size, never the window's own — a window sized by its margins
+that reads its own width back resolves them to nothing.
 
 `PanelBus.surfaceBox(screenName, surfaceId, contentSize)` is the seam every
 placed surface calls:

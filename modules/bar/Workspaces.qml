@@ -202,12 +202,18 @@ Rectangle {
     // reads. So: an event wins while it names a row this screen actually has,
     // the publish answers otherwise, and a name belonging to neither leaves
     // the row unhighlighted rather than highlighting the wrong thing.
+    //
+    // Published first, since hypr publishes what each monitor shows on every
+    // switch (`geometry.shown`, via `PanelBus.sceneOn`): the event cache kept
+    // winning while it still named a valid row, and a dropped event left it
+    // naming the row this screen had LEFT -- the highlight stuck on the
+    // previous workspace (live, 2026-09-26).
     readonly property string activeName: {
         const rows = root._sorted || [];
         const has = (name) => name !== "" && rows.some(r => r && r.name === name);
-        if (has(root._activeWsName)) return root._activeWsName;
         const published = PanelBus.sceneOn(root.screen?.name ?? "");
-        return has(published) ? published : "";
+        if (has(published)) return published;
+        return has(root._activeWsName) ? root._activeWsName : "";
     }
 
     color: "transparent"

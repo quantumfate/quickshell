@@ -79,11 +79,18 @@ Item {
         // evaluation (the bar's own workspace row, after a shell restart)
         // therefore never re-evaluated and stayed on "" for the life of the
         // shell. Same trap OpenProjects.qml's `shown` documents.
+        // `shown` first: hypr's seat publishes it on every workspace switch,
+        // keyed by the workspace's OWN monitor (hypr/events/seat.lua), so it
+        // is right the moment the switch happens. `scenes` is only rewritten
+        // by the next layout pass, and the event cache below cannot tell
+        // which monitor an event is for on this build.
+        const shown = geometryStore.data ? geometryStore.data.shown : undefined;
         const scenes = geometryStore.data ? geometryStore.data.scenes : undefined;
         const events = root.sceneByScreen;
         if (!screenName) return "";
-        const published = scenes ? scenes[screenName] : undefined;
-        return published || events[screenName] || "";
+        return (shown ? shown[screenName] : undefined)
+            || (scenes ? scenes[screenName] : undefined)
+            || events[screenName] || "";
     }
 
     // Seeded once at startup, because the map above is fed by EVENTS and a

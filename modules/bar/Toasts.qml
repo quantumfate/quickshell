@@ -52,9 +52,12 @@ PanelWindow {
     readonly property var _box: PanelBus.surfaceBox(win._screenName, "toasts", { width: Theme.toastWidth, height: 100000 })
 
     readonly property int _topMargin: win.isBottom ? 0 : win._box.y
-    readonly property int _bottomMargin: win.isBottom ? Math.max(0, win.height - win._box.y - win._box.height) : 0
+    // Against the SCREEN's size, never the window's own: the window is sized
+    // by these very margins, and reading it back resolved the right margin to
+    // nothing -- toasts pinned to the screen edge.
+    readonly property int _bottomMargin: win.isBottom ? Math.max(0, (win.screen?.height ?? 0) - win._box.y - win._box.height) : 0
     readonly property int _leftMargin: win._box.x
-    readonly property int _rightMargin: Math.max(0, win.width - win._box.x - win._box.width)
+    readonly property int _rightMargin: Math.max(0, (win.screen?.width ?? 0) - win._box.x - win._box.width)
 
     // Live cards, including ones animating out. Notify.items is the source;
     // this mirror is what the surface renders so a leave has time to play.
@@ -67,6 +70,10 @@ PanelWindow {
     screen: PanelBus.screenObject(PanelBus.activeScreen)
 
     anchors { top: !win.isBottom; bottom: win.isBottom; left: true; right: true }
+    // The monitor itself is the frame: hypr publishes areas monitor-local, and
+    // a Normal surface is shrunk by the bar's reserved strip first, which drew
+    // every placed box that far off (docs: services/PanelBus.md "Surfaces").
+    exclusionMode: ExclusionMode.Ignore
     margins {
         top: win.isBottom ? 0 : win._topMargin
         bottom: win.isBottom ? win._bottomMargin : 0
