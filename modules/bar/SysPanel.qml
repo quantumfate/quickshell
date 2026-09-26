@@ -40,7 +40,6 @@ Scope {
 
         WlrLayershell.namespace: "quickshell-syspanel"
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-        exclusiveZone: 0
         mask: Region { item: card }
 
         readonly property string _screenName: win.screen?.name ?? ""

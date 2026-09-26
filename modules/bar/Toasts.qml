@@ -88,7 +88,6 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "quickshell-toasts"
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    exclusiveZone: 0
     // Only the cards are interactive; clicks elsewhere pass through to windows.
     mask: Region { item: col }
 

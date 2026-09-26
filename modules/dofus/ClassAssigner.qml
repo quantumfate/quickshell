@@ -129,7 +129,6 @@ Scope {
         // a Normal surface is shrunk by the bar's reserved strip first, which drew
         // every placed box that far off (docs: services/PanelBus.md "Surfaces").
         exclusionMode: ExclusionMode.Ignore
-        exclusiveZone: 0
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "quickshell-class-assigner"

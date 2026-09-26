@@ -162,7 +162,6 @@ Scope {
         // a Normal surface is shrunk by the bar's reserved strip first, which drew
         // every placed box that far off (docs: services/PanelBus.md "Surfaces").
         exclusionMode: ExclusionMode.Ignore
-        exclusiveZone: 0
         WlrLayershell.layer: WlrLayer.Overlay
         // Team switching drives Hyprland, but the inline editors need the
         // keyboard — take focus on demand so typing works.
