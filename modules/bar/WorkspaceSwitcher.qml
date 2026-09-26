@@ -94,6 +94,7 @@ Scope {
     Process { id: goProc }
 
     PanelWindow {
+        id: win
         visible: scope.shown
         screen: PanelBus.screenObject(PanelBus.activeScreen)
         color: "transparent"
@@ -108,11 +109,18 @@ Scope {
         // Click outside the card dismisses, but there is no dim backdrop.
         MouseArea { anchors.fill: parent; onClicked: scope.shown = false }
 
+        readonly property string _screenName: win.screen?.name ?? ""
+        // Placed in the scene's published work area (docs/scenes.md
+        // "Areas"): same width/height ratios the card always used against
+        // the whole screen, now capped against the area.
+        readonly property var _box: PanelBus.surfaceBox(win._screenName, "workspaceswitcher", { width: 520, height: list.contentHeight + input.implicitHeight + Theme.pad * 3 })
+
         Surface {
             id: card
-            anchors.centerIn: parent
-            width: Math.min(parent.width * 0.42, 520)
-            height: Math.min(parent.height * 0.7, list.contentHeight + input.implicitHeight + Theme.pad * 3)
+            x: win._box.x
+            y: win._box.y
+            width: win._box.width
+            height: win._box.height
             elevation: "modal"
             radius: Theme.radius
 

@@ -80,6 +80,7 @@ Scope {
     }
 
     PanelWindow {
+        id: win
         visible: scope.shown
         screen: PanelBus.screenObject(PanelBus.activeScreen)
         color: "transparent"
@@ -91,10 +92,19 @@ Scope {
         // Click outside the card dismisses, but there is no dim backdrop.
         MouseArea { anchors.fill: parent; onClicked: scope.hide() }
 
+        readonly property string _screenName: win.screen?.name ?? ""
+        // Placed in the scene's published work area (docs/scenes.md
+        // "Areas"): same width ratio the card always used against the whole
+        // screen, now capped against the area so it can never sit under a
+        // bar. `card.reservedHeight` is read here too, so the box grows with
+        // the same "never shrink while open" watermark the card keeps.
+        readonly property var _box: PanelBus.surfaceBox(win._screenName, "cheatsheet", { width: 960, height: card.reservedHeight + 2 * Theme.pad })
+
         Surface {
             id: card
-            anchors.centerIn: parent
-            width: Math.min(parent.width * 0.62, 960)
+            x: win._box.x
+            y: win._box.y
+            width: win._box.width
 
             // A nested node has fewer rows than its parent almost always, so
             // sizing to the live content would shrink the card on every
@@ -124,7 +134,7 @@ Scope {
             }
             Behavior on reservedHeight { id: reservedBehavior; NumberAnimation { duration: Theme.motion.base; easing.type: Easing.OutQuad } }
 
-            height: Math.min(parent.height * 0.85, reservedHeight + 2 * Theme.pad)
+            height: win._box.height
             elevation: "modal"
             radius: Theme.radius
 

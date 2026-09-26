@@ -86,17 +86,54 @@ test("SysMon IPC routes to the active monitor", () => {
     assert.match(src, /PanelBus\.activeScreen/);
 });
 
-test("Toasts frames itself with the bar's own resting gap resolution", () => {
+test("Toasts frames itself from its placed surface box, not a fixed strip", () => {
     const src = read("modules/bar/Toasts.qml");
-    assert.match(src, /Store\s*\{\s*id:\s*geometryStore;\s*name:\s*"geometry"/s);
-    // Resting inset only (LEO cross-repo "bars never dance"): the monitor's
-    // published base gap, same call the bar itself makes. The scene-gap
-    // opt-in this used to also ride (BarGaps.sceneGapsFor) is retired.
-    assert.match(src, /BarGaps\.insetFor\(/);
-    assert.doesNotMatch(src, /BarGaps\.sceneGapsFor\(/);
+    // Areas (docs/scenes.md "Areas") replaced the resting-inset fallback this
+    // used to compute directly (LEO cross-repo "bars never dance" retired
+    // its scene-gap opt-in; SurfacePlacement/PanelBus.surfaceBox retired the
+    // resting-inset fixed strip that briefly stood in for it).
+    assert.match(src, /PanelBus\.surfaceBox\(/);
+    assert.doesNotMatch(src, /BarGaps\.insetFor\(/);
     assert.match(src, /margins\s*\{[^}]*_topMargin/s);
     assert.match(src, /_leftMargin/);
     assert.match(src, /_rightMargin/);
+});
+
+// Every surface with a placed box (docs/scenes.md "Areas"). WhichKey is the
+// one deliberate exception — a full-screen overlay by design, so it is never
+// listed here or in services/SurfaceDefaults.js.
+const PLACED_PANELS = [
+    "modules/bar/NotificationCenter.qml",
+    "modules/bar/Toasts.qml",
+    "modules/bar/SysPanel.qml",
+    "modules/control/ControlPanel.qml",
+    "modules/control/SystemCenter.qml",
+    "modules/cheatsheet/CheatSheet.qml",
+    "modules/bar/WorkspaceSwitcher.qml",
+    "modules/common/WindowRename.qml",
+    "modules/obsidian/ObsidianCreate.qml",
+    "modules/dofus/ClassAssigner.qml",
+    "modules/dofus/TeamSelector.qml",
+];
+
+test("every placed panel resolves its box through PanelBus.surfaceBox", () => {
+    for (const path of PLACED_PANELS) {
+        const src = read(path);
+        assert.match(src, /PanelBus\.surfaceBox\(/, `${path} does not use PanelBus.surfaceBox`);
+    }
+});
+
+test("WhichKey stays a full-screen overlay, with no placed box", () => {
+    const src = read("modules/whichkey/WhichKey.qml");
+    assert.doesNotMatch(src, /PanelBus\.surfaceBox\(/);
+});
+
+test("PanelBus exposes the surface-placement seam", () => {
+    assert.match(panelBus, /function surfaceRequest\(/);
+    assert.match(panelBus, /function surfaceBox\(/);
+    assert.match(panelBus, /SurfacePlacement\.resolveArea\(/);
+    assert.match(panelBus, /SurfacePlacement\.restingArea\(/);
+    assert.match(panelBus, /SurfacePlacement\.place\(/);
 });
 
 test("Toasts stays below the transition veil and the detail panels", () => {

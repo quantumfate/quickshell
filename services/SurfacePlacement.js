@@ -65,6 +65,27 @@ function resolveArea(areasForMonitor, of) {
 }
 
 /**
+ * The fallback area for a screen with no published `areas` entry yet (shell
+ * start, a workspace between scenes): the monitor less the bar's reserved
+ * strip and its resting inset — the same rule a resting bar isle uses
+ * (`BarGaps.insetFor`), so a surface can never overlap a bar even before
+ * hypr's first publish.
+ *
+ * @param {{width:number,height:number}} screenSize
+ * @param {number} barReserved px reserved at the top for the bar (`Theme.barReserved`)
+ * @param {{left:number,right:number}} inset the monitor's resting side inset
+ * @returns {{x:number,y:number,width:number,height:number}}
+ */
+function restingArea(screenSize, barReserved, inset) {
+  return {
+    x: inset.left,
+    y: barReserved,
+    width: Math.max(0, screenSize.width - inset.left - inset.right),
+    height: Math.max(0, screenSize.height - barReserved),
+  };
+}
+
+/**
  * Compute a surface's box inside `area`, per its placement request and its
  * own content size.
  *

@@ -71,6 +71,7 @@ Scope {
     }
 
     PanelWindow {
+        id: win
         visible: scope.shown
         screen: PanelBus.screenObject(PanelBus.activeScreen)
         color: "transparent"
@@ -84,10 +85,17 @@ Scope {
         // Click outside the card dismisses, but there is no dim backdrop.
         MouseArea { anchors.fill: parent; onClicked: scope.shown = false }
 
+        readonly property string _screenName: win.screen?.name ?? ""
+        // Placed in the scene's published work area (docs/scenes.md
+        // "Areas"): same width ratio the card always used against the whole
+        // screen, now capped against the area.
+        readonly property var _box: PanelBus.surfaceBox(win._screenName, "windowrename", { width: 460, height: col.implicitHeight + 2 * Theme.pad })
+
         Surface {
-            anchors.centerIn: parent
-            width: Math.min(parent.width * 0.4, 460)
-            implicitHeight: col.implicitHeight + 2 * Theme.pad
+            x: win._box.x
+            y: win._box.y
+            width: win._box.width
+            height: win._box.height
             radius: Theme.radius
             elevation: "modal"
 

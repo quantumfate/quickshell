@@ -631,7 +631,7 @@
           }
         },
         "surfaces": {
-          "description": "Where quickshell's own popups/panels are placed inside this scene's published area (docs/scenes.md \"Areas\"), keyed by surface id (`notifications`, `toasts`, …). hypr does not read this field at all.",
+          "description": "Where quickshell's own popups/panels are placed inside this scene's published area (docs/scenes.md \"Areas\"), keyed by surface id: `notifications`, `toasts`, `control`, `systemcenter`, `cheatsheet`, `whichkey`, `workspaceswitcher`, `windowrename`, `obsidiancreate`, `classassigner`, `teamselector`, `sysmon` (quickshell repo `services/PanelBus.md` \"Surfaces\" has the default request table; `whichkey` is a full-screen overlay by design and never reads one). An unrecognised id is simply never resolved by quickshell — hypr does not read this field at all.",
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/surface"

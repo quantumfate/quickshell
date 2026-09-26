@@ -22,12 +22,12 @@ Scope {
     id: scope
 
     PanelWindow {
+        id: win
         visible: SysMon.shown
         screen: PanelBus.screenObject(SysMon.activeScreen)
         color: "transparent"
 
         anchors { top: true; left: true; right: true }
-        margins { top: Theme.barReserved + Theme.space.md }
         implicitHeight: card.implicitHeight
 
         WlrLayershell.layer: WlrLayer.Overlay
@@ -39,10 +39,19 @@ Scope {
         exclusiveZone: 0
         mask: Region { item: card }
 
+        readonly property string _screenName: win.screen?.name ?? ""
+        // Placed in the scene's published work area (docs/scenes.md
+        // "Areas"): the top margin and the horizontal clamp both come from
+        // the area now, instead of a fixed `Theme.barReserved` strip, so the
+        // panel can never sit under a bar. The card still centres itself
+        // under the cluster (`SysMon.anchorX`) within those bounds.
+        readonly property var _box: PanelBus.surfaceBox(win._screenName, "sysmon", { width: 340, height: card.implicitHeight })
+        margins { top: win._box.y }
+
         Surface {
             id: card
-            // Centre under the cluster, clamped on-screen.
-            x: Math.max(6, Math.min(SysMon.anchorX - width / 2, parent.width - width - 6))
+            // Centre under the cluster, clamped to the placed area.
+            x: Math.max(win._box.x, Math.min(SysMon.anchorX - width / 2, win._box.x + win._box.width - width))
             y: 0
             width: 340
             implicitHeight: content.implicitHeight + 24

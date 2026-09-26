@@ -134,12 +134,18 @@ Scope {
         mask: scope._popupOpen ? null : cardRegion
         Region { id: cardRegion; item: card }
 
+        readonly property string _screenName: win.screen?.name ?? ""
+        // Placed in the scene's published work area (docs/scenes.md
+        // "Areas"): the card's own fixed 620px width, capped against the
+        // area so it can never sit under a bar.
+        readonly property var _box: PanelBus.surfaceBox(win._screenName, "classassigner", { width: 620, height: body.implicitHeight + 2 * Theme.pad })
+
         Surface {
             id: card
-            x: (win.width - width) / 2
-            y: 60
-            width: 620
-            height: Math.min(win.height - 120, body.implicitHeight + 2 * Theme.pad)
+            x: win._box.x
+            y: win._box.y
+            width: win._box.width
+            height: win._box.height
             radius: Theme.radius
             elevation: "modal"
 

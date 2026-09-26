@@ -101,6 +101,7 @@ Scope {
     }
 
     PanelWindow {
+        id: win
         visible: scope.shown
         screen: PanelBus.screenObject(PanelBus.activeScreen)
         color: "transparent"
@@ -116,11 +117,18 @@ Scope {
         // create), so swallow them so they don't fall through to the bar.
         MouseArea { anchors.fill: parent }
 
+        readonly property string _screenName: win.screen?.name ?? ""
+        // Placed in the scene's published work area (docs/scenes.md
+        // "Areas"): same width ratio the card always used against the whole
+        // screen, now capped against the area.
+        readonly property var _box: PanelBus.surfaceBox(win._screenName, "obsidiancreate", { width: 600, height: col.implicitHeight + 2 * 28 })
+
         Surface {
             id: card
-            anchors.centerIn: parent
-            width: Math.min(parent.width * 0.52, 600)
-            implicitHeight: col.implicitHeight + 2 * 28
+            x: win._box.x
+            y: win._box.y
+            width: win._box.width
+            height: win._box.height
             radius: Theme.radius
             elevation: "modal"
 

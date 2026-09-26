@@ -306,10 +306,10 @@ this rule now rules out. The schema still accepts the field (marked
 deprecated) so a live store written before the retirement stays valid; a
 fresh seed no longer writes it, and quickshell no longer reads it anywhere.
 Toasts and NotificationCenter, the two surfaces that used to read the
-scene's four-side gap for their own placement, now use the same monitor-only
-resting inset as the bar (see "Notifications" below) — a later phase
-(`SurfacePlacement.js`, published work areas) replaces that with real
-per-scene coordinates.
+scene's four-side gap for their own placement, now place themselves in
+hypr's published **areas** instead (see "Surfaces" in
+[`services/PanelBus.md`](../../services/PanelBus.md)) — real per-scene
+coordinates, not a fixed strip.
 
 Everything refreshes live, so nothing here ever needs a shell reload: the
 monitor's base gap follows through the `geometry` store's watchChanges.
@@ -340,34 +340,29 @@ to the click coordinate.
 Two surfaces over one daemon (`services/Notify.qml`, the freedesktop
 `NotificationServer`):
 
-- **Toasts** (`Toasts.qml`) — the live queue. Placement is the active mood's
-  `notifications.position`, resolved by
-  [`services/NotifyPlacement.js`](../../services/NotifyPlacement.js):
-  top-centre under the bar by default, any edge/corner a mood names, always on
-  the seat's monitor. The stack frames itself with the bar's own RESTING gap
-  resolution ([`services/BarGaps.js`](../../services/BarGaps.js)): the sides
-  are the bar's monitor-only insets and the vertical edge is the bar's
-  reserved strip, so the stack sits exactly where the bar sits on every scene
-  — the scene-gap opt-in this used to also ride is retired (see "Resting:
-  bars never dance" above). It renders on the **Top** layer, with the
-  bar, so the transition veil and the detail panels (Overlay) always cover
-  it. Cards enter with a fade + slide and collapse on leave, gated by
-  `Theme.motion` (the mood's `motion_energy`; `instant` collapses every
-  duration to zero). Hovering a card pauses its countdown line and `Notify`'s
-  expiry timer for that toast, so it cannot vanish mid-read; the surface
-  stays mapped until the last exit finishes. At most four cards show, with a
-  `+N more` pill that opens the history. A toast and its history entry both
-  read `services/NotifyCards.js`, so they name the same resolved source.
+- **Toasts** (`Toasts.qml`) — the live queue. Its horizontal alignment (which
+  corner of the box it hugs) is the active mood's `notifications.position`,
+  resolved by [`services/NotifyPlacement.js`](../../services/NotifyPlacement.js);
+  the box itself comes from `PanelBus.surfaceBox` (see "Surfaces" in
+  [`services/PanelBus.md`](../../services/PanelBus.md)) — the last column's
+  top-right corner of the active scene's published area by default, stacking
+  downward from there. It renders on the **Top** layer, with the bar, so the
+  transition veil and the detail panels (Overlay) always cover it. Cards enter
+  with a fade + slide and collapse on leave, gated by `Theme.motion` (the
+  mood's `motion_energy`; `instant` collapses every duration to zero).
+  Hovering a card pauses its countdown line and `Notify`'s expiry timer for
+  that toast, so it cannot vanish mid-read; the surface stays mapped until the
+  last exit finishes. At most four cards show, with a `+N more` pill that
+  opens the history. A toast and its history entry both read
+  `services/NotifyCards.js`, so they name the same resolved source.
 - **History** (`NotificationCenter.qml`) — the persisted, routed log. Slides in
   from the right edge with the same motion contract; the panel stays mapped
   through the exit before unmapping.
 
-Both bind their `screen` through `PanelBus.screenObject(...)`. The history
-panel uses the same monitor-only resting inset as the bar (`BarGaps.insetFor`
-— the scene's resolved gaps it used to read are retired, see above): its
-right edge is inset from the bar's right edge by a small gap, its top is
-dropped below the bar by `Theme.space.md`, and its width is capped at
-`Theme.historyWidth` so it cannot span the screen.
+Both bind their `screen` through `PanelBus.screenObject(...)` and their box
+through `PanelBus.surfaceBox(screen, "toasts"|"notifications", contentSize)`
+— see "Surfaces" in `services/PanelBus.md` for the full placement contract
+(default requests, scene overrides, the cap-and-warn rule).
 
 See [`services/DofusWindows.qml`](../services/DofusWindows.qml) and
 [`services/DofusSwap.qml`](../services/DofusSwap.qml) for the data contracts.

@@ -379,24 +379,24 @@ Scope {
         // Click outside the card dismisses, but there is no dim backdrop.
         MouseArea { anchors.fill: parent; onClicked: scope.hide() }
 
+        readonly property string _screenName: win.screen?.name ?? ""
+        // Placed in the scene's published work area (docs/scenes.md
+        // "Areas"): same width ratio the panel always used against the
+        // whole screen (services/SurfaceDefaults.js "control"), now capped
+        // against the area so it can never sit under a bar.
+        readonly property var _box: PanelBus.surfaceBox(win._screenName, "control", { width: Theme.fs.xl * 72, height: content.implicitHeight + 2 * Theme.pad })
+
         FocusScope {
             id: focusScope
-            anchors.centerIn: parent
-            width: card.width
-            height: card.height
+            x: win._box.x
+            y: win._box.y
+            width: win._box.width
+            height: win._box.height
             Keys.onEscapePressed: scope.hide()
 
             Surface {
                 id: card
-                // Room in steps of the scale, not pixels: the mood widget's
-                // transitions, per-task cycling and the wallpaper grid want
-                // more than the half-screen slice the panel used to give, and
-                // the laptop lid budgets its own fraction (LEO-297).
-                // Wider than the old 0.62/56 slice: the system grid wants
-                // three tiles across before it starts stacking, and the
-                // wallpaper rows were already cramped at the old width.
-                width: Math.min(win.width * 0.72, Theme.fs.xl * 72)
-                height: Math.min(win.height * 0.85, content.implicitHeight + 2 * Theme.pad)
+                anchors.fill: parent
                 elevation: "modal"
                 radius: Theme.radius
 

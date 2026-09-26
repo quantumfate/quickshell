@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLibrary } from "./qml.js";
 
-const { boxOf, resolveArea, place } = loadLibrary("services/SurfacePlacement.js");
+const { boxOf, resolveArea, place, restingArea } = loadLibrary("services/SurfacePlacement.js");
 
 const corners = (x, y, w, h) => ({
   top_left: { x, y },
@@ -109,4 +109,15 @@ test("place: nothing ever extends outside the area, even doubly oversized", () =
   const box = place(area, { scale: 1, align: "right", valign: "bottom" }, { width: 200, height: 200 });
   assert.ok(box.x >= area.x && box.x + box.width <= area.x + area.width);
   assert.ok(box.y >= area.y && box.y + box.height <= area.y + area.height);
+});
+
+test("restingArea: monitor less the bar's reserved strip and the resting inset", () => {
+  const box = restingArea({ width: 1920, height: 1080 }, 58, { left: 16, right: 16 });
+  assert.deepEqual(box, { x: 16, y: 58, width: 1888, height: 1022 });
+});
+
+test("restingArea: never negative even if the inset/reserve exceeds the monitor", () => {
+  const box = restingArea({ width: 100, height: 50 }, 80, { left: 60, right: 60 });
+  assert.equal(box.width, 0);
+  assert.equal(box.height, 0);
 });

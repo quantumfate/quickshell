@@ -13,7 +13,6 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Notify, PanelBus, Theme
-import "../../services/BarGaps.js" as BarGaps
 import "../../services/NotifyCards.js" as NotifyCards
 import "../common"        // Surface
 
@@ -69,19 +68,17 @@ Scope {
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "quickshell-notifications"
 
-        Store { id: geometryStore; name: "geometry" }
         readonly property string _screenName: win.screen?.name ?? ""
-        // Rest rule as the fallback for now (LEO cross-repo "bars never
-        // dance" retired the scene-gap opt-in this used to ride): the
-        // monitor's own resting inset, same as the bar itself. A later phase
-        // (SurfacePlacement.js, published areas) places this panel inside
-        // the scene's actual work area instead.
-        readonly property var _inset: BarGaps.insetFor(geometryStore.data, win._screenName, Theme.barInset * 2)
-        readonly property int _smallGap: Theme.space.xs
-        readonly property int _topGap: Theme.barReserved + win._smallGap
-        readonly property int _bottomGap: win._smallGap
-        readonly property int _rightGap: win._inset.right
-        readonly property int _leftGap: win._inset.left
+        // Placed in the scene's published area (docs/scenes.md "Areas"):
+        // the last column's top-right corner by default, a scene may
+        // override via its declaration's `surfaces.notifications`. The
+        // content height is left open-ended so the panel fills the box the
+        // area caps it to (PanelBus.surfaceBox), same as before this filled
+        // the monitor's resting strip.
+        readonly property var _box: PanelBus.surfaceBox(win._screenName, "notifications", { width: Theme.historyWidth, height: 100000 })
+        readonly property int _topGap: win._box.y
+        readonly property int _bottomGap: Math.max(0, win.height - win._box.y - win._box.height)
+        readonly property int _rightGap: Math.max(0, win.width - win._box.x - win._box.width)
 
         // No dim backdrop (LEO-240): the panel is information, not a modal.
         // A click outside the panel still dismisses it.
@@ -93,9 +90,9 @@ Scope {
             anchors.topMargin: win._topGap
             anchors.bottomMargin: win._bottomGap
             anchors.rightMargin: win._rightGap
-            // Keep the panel compact: never wider than the history width and
-            // always leave the published left gap clear.
-            width: Math.min(Theme.historyWidth, parent.width - win._leftGap - win._rightGap)
+            // The area already caps this to the column's width (never wider
+            // than the history width, never past the scene's own boundary).
+            width: win._box.width
             radius: Theme.radius
             elevation: "modal"
             // Slide in from the right edge; the exit is the shorter move.

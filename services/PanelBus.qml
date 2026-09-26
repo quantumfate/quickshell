@@ -15,6 +15,9 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import QtQuick
 import "."
+import "SurfacePlacement.js" as SurfacePlacement
+import "SurfaceDefaults.js" as SurfaceDefaults
+import "BarGaps.js" as BarGaps
 
 Item {
     id: root
@@ -194,6 +197,45 @@ Item {
         return Quickshell.screens.find(s => s.name === target)
             ?? Quickshell.screens[0]
             ?? null;
+    }
+
+    // ---- surface placement ---------------------------------------------------
+    // Where a popup/panel is placed inside hypr's published `areas` (hypr repo
+    // docs/scenes.md "Areas", this repo's services/PanelBus.md "Surfaces").
+    // The pure math lives in SurfacePlacement.js/SurfaceDefaults.js so it is
+    // node-testable; this is the seam that feeds it live state.
+
+    // The active scene's override for `surfaceId` (`Hyprfocus`'s declaration,
+    // `base.scenes[name].surfaces[id]`), or its own default when the scene
+    // says nothing. hypr never reads `surfaces` — this is quickshell's only
+    // consumer of the field.
+    function surfaceRequest(screenName, surfaceId) {
+        const areasForScreen = geometryStore.data ? (geometryStore.data.areas || {})[screenName] : undefined;
+        const scene = areasForScreen ? areasForScreen.scene : undefined;
+        const scenes = (Hyprfocus.data && Hyprfocus.data.base) ? Hyprfocus.data.base.scenes : undefined;
+        const declared = scene && scenes ? scenes[scene] : undefined;
+        const override = declared && declared.surfaces ? declared.surfaces[surfaceId] : undefined;
+        return override || SurfaceDefaults.defaultFor(surfaceId);
+    }
+
+    // The box a surface should render in on `screenName`, given its own
+    // content size. Resolves the request's `of` against hypr's published
+    // areas; when the screen has not published yet (shell start, a workspace
+    // between scenes), falls back to the monitor less the bar's reserved
+    // strip and its resting inset — the same rule a resting bar isle uses, so
+    // a surface can never overlap a bar either way. Any cap this applies logs
+    // once via console.warn, naming the surface and the overflow.
+    function surfaceBox(screenName, surfaceId, contentSize) {
+        const request = root.surfaceRequest(screenName, surfaceId);
+        const areasForScreen = geometryStore.data ? (geometryStore.data.areas || {})[screenName] : undefined;
+        let area = SurfacePlacement.resolveArea(areasForScreen, request.of);
+        if (!area) {
+            const screenObj = root.screenObject(screenName);
+            const screenSize = { width: screenObj ? screenObj.width : 0, height: screenObj ? screenObj.height : 0 };
+            const inset = BarGaps.insetFor(geometryStore.data, screenName, Theme.barInset * 2);
+            area = SurfacePlacement.restingArea(screenSize, Theme.barReserved, inset);
+        }
+        return SurfacePlacement.place(area, request, contentSize, (msg) => console.warn("SurfacePlacement:", msg), surfaceId);
     }
 
     // ---- active monitor resolution -----------------------------------------

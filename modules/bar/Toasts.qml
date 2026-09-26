@@ -20,7 +20,6 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import "../../services"   // Notify, Theme, Focus, PanelBus
-import "../../services/BarGaps.js" as BarGaps
 import "../../services/NotifyCards.js" as NotifyCards
 import "../../services/NotifyPlacement.js" as NotifyPlacement
 import "../common"        // Surface
@@ -33,13 +32,11 @@ PanelWindow {
     readonly property bool isBottom: win.placement.v === "bottom"
     readonly property string hAlign: win.placement.h
 
-    // Deterministic frame, the same one the bar itself uses: the sides are
-    // the bar's own resting insets (BarGaps.insetFor — the monitor's
-    // published base gap; LEO cross-repo "bars never dance" retired the
-    // scene-gap opt-in this used to also ride), and the vertical edge is the
-    // bar's reserved strip plus a small gap. The stack therefore sits exactly
-    // where the bar sits on every scene.
-    Store { id: geometryStore; name: "geometry" }
+    // Frame from the scene's published area (docs/scenes.md "Areas"): the
+    // last column's top-right corner by default (PanelBus.surfaceBox), so
+    // the stack sits inside the scene's actual work area rather than a fixed
+    // strip. `_box`'s height is left open-ended (its own content decides how
+    // far the stack grows); only its x/width/top matter for the frame below.
     Store {
         id: transitionStore
         name: "hyprfocus.transition"
@@ -52,16 +49,12 @@ PanelWindow {
         return false;
     }
     readonly property string _screenName: win.screen?.name ?? ""
-    readonly property var _inset: BarGaps.insetFor(geometryStore.data, win._screenName, Theme.barInset * 2)
-    readonly property int _smallGap: Theme.space.md
+    readonly property var _box: PanelBus.surfaceBox(win._screenName, "toasts", { width: Theme.toastWidth, height: 100000 })
 
-    // Rest rule as the fallback for now: a later phase (SurfacePlacement.js,
-    // published areas) replaces this fixed strip-height margin with the
-    // scene's actual work area.
-    readonly property int _topMargin: Theme.barReserved + Theme.space.xs
-    readonly property int _bottomMargin: Theme.space.xs
-    readonly property int _leftMargin: win._inset.left + win._smallGap
-    readonly property int _rightMargin: win._inset.right + win._smallGap
+    readonly property int _topMargin: win.isBottom ? 0 : win._box.y
+    readonly property int _bottomMargin: win.isBottom ? Math.max(0, win.height - win._box.y - win._box.height) : 0
+    readonly property int _leftMargin: win._box.x
+    readonly property int _rightMargin: Math.max(0, win.width - win._box.x - win._box.width)
 
     // Live cards, including ones animating out. Notify.items is the source;
     // this mirror is what the surface renders so a leave has time to play.

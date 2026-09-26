@@ -104,15 +104,33 @@ Scope {
     }
 
     PanelWindow {
+        id: win
         visible: scope.shown
         screen: PanelBus.screenObject(PanelBus.activeScreen)
         color: "transparent"
         anchors { top: true; bottom: true; right: true }
+
+        readonly property string _screenName: win.screen?.name ?? ""
+        // Placed in the scene's published work area (docs/scenes.md
+        // "Areas"): the same right-edge dock, same width ratio, now capped
+        // against the area instead of the whole screen so it never runs
+        // under a bar. Read from the SCREEN's own size, not `win.width`/
+        // `win.height` — with only the right edge anchored and margins fed
+        // by this same box, reading the window's own (margin-reduced) size
+        // back into the box would be circular.
+        readonly property real _screenW: win.screen ? win.screen.width : 0
+        readonly property real _screenH: win.screen ? win.screen.height : 0
+        readonly property var _box: PanelBus.surfaceBox(win._screenName, "systemcenter", { width: 480, height: 100000 })
+        margins {
+            top: win._box.y
+            bottom: Math.max(0, win._screenH - win._box.y - win._box.height)
+            right: Math.max(0, win._screenW - win._box.x - win._box.width)
+        }
         // Explicit size hint: with only a right edge anchored, the window would
         // otherwise size to its content, and the content's width reads the
         // window width — a cycle that collapses the dock to a sliver. The
         // anchoring engine sizes the window from this hint.
-        implicitWidth: screen ? Math.min(screen.width * 0.34, 480) : 480
+        implicitWidth: win._box.width
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         WlrLayershell.namespace: "quickshell-systemcenter"
