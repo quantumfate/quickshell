@@ -74,6 +74,18 @@ made every hop end with the isles chasing the new workspace after it had
 already drawn. Within one scene, a geometry edit still animates, so a live
 gap change stays smooth.
 
+**Decide the cut by comparing values, never from a change handler.** The scene,
+the dock target and the isles' `x`/`y` all arrive off the same store write, and
+QML does not order a change handler ahead of the bindings reading that same
+write. An isle once armed the cut from `onPlacementSceneChanged` and held it
+open on a timer, which is a race: the `x`/`y` bindings could re-evaluate first,
+the `Behavior` could see the cut already "not needed", and the hop animated
+anyway — the isle drifting to the arriving scene's coordinates after that
+workspace had already drawn. Compare a trailing copy of the value instead
+(`_drawnScene`, caught up by `Qt.callLater`), so the answer is the same whatever
+order the updates land in, and no timer is involved. `_isPlaced`/`_wasPlaced`
+is the same trick for resting<->docked, for the same reason.
+
 ### Projects and tabs
 
 `OpenProjects` names every project with windows open and marks the one you

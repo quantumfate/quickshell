@@ -472,34 +472,36 @@ Scope {
         // And across resting<->docked: the isle belongs somewhere else now,
         // and sliding between the bar's fixed row and a window's gutter read
         // as the isle glitching across the screen (live, 2026-09-26).
+        //
+        // Both are decided by comparing values, never by a change handler:
+        // `placementScene` and the x/y targets all come off the same store
+        // write, and QML does not order a change handler before the bindings
+        // that read the same write. A handler-armed window therefore raced the
+        // very update it meant to suppress, and the Behaviors below could
+        // start animating on the write that crossed the scene (LEO-420 §5).
+        // A trailing copy of the value is a comparison no ordering can lose.
         readonly property string placementScene: PanelBus.sceneOn(slot.bar.modelData.name)
         readonly property bool _isPlaced: slot.placed ? true : false
         // What `_isPlaced` was before the latest change, caught up a tick
         // later: while the two differ the isle is changing mode, and the
-        // Behaviors below are off for that write -- whichever order QML
-        // updates the bindings in.
+        // Behaviors below are off for that write.
         property bool _wasPlaced: slot._isPlaced
         on_IsPlacedChanged: Qt.callLater(() => { slot._wasPlaced = slot._isPlaced; })
-        property bool _sceneCut: false
-        onPlacementSceneChanged: {
-            slot._sceneCut = true;
-            sceneCutRelease.restart();
-        }
-        Timer {
-            id: sceneCutRelease
-            interval: Theme.motion.base + 40
-            repeat: false
-            onTriggered: slot._sceneCut = false
-        }
+        // Likewise the scene the isle is currently drawn for: equal to
+        // `placementScene` except on the write that changes it, and equal
+        // again once the callLater below has caught up.
+        property string _drawnScene: slot.placementScene
+        onPlacementSceneChanged: Qt.callLater(() => { slot._drawnScene = slot.placementScene; })
+        readonly property bool _sameScene: slot.placementScene === slot._drawnScene
 
         x: slot.targetX
         y: slot.targetY + ((slot.bar.autohideOn && !slot.bar.revealed) ? -Theme.barReserved : 0)
         Behavior on x {
-            enabled: !slot._sceneCut && slot._isPlaced && slot._wasPlaced
+            enabled: slot._sameScene && slot._isPlaced && slot._wasPlaced
             NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease }
         }
         Behavior on y {
-            enabled: !slot._sceneCut && slot._isPlaced && slot._wasPlaced
+            enabled: slot._sameScene && slot._isPlaced && slot._wasPlaced
             NumberAnimation { duration: Theme.motion.base; easing.type: Theme.motion.ease }
         }
 
